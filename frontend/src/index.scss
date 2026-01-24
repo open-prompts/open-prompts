@@ -39,6 +39,640 @@
   --transition-speed: 0.3s;
 }
 
+/* Light theme overrides: applied when `light-theme` class is on <html> */
+.light-theme {
+  --bg-color: #FFFFFF;
+  --surface-color: rgba(255, 255, 255, 0.8);
+  --surface-alt: #fbfdff; /* lighter alternate surface for previews */
+  --surface-solid: #FFFFFF;
+  --primary-color: #0b74ff; /* blue primary */
+  --primary-hover: #095ecf;
+  --secondary-color: #6b4bff;
+  --text-main: #0f172a; /* slate-900 */
+  --text-primary: #0f172a;
+  --text-secondary: #475569; /* slate-600 */
+  --border-color: #e6e9ef;
+  --border-neon: #0b74ff;
+
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Work Sans', sans-serif;
+
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: 1px solid rgba(15, 23, 42, 0.06);
+  --glass-blur: blur(6px);
+
+  --shadow-neon: 0 0 8px rgba(11, 116, 255, 0.08);
+  --shadow-card: 0 8px 24px 0 rgba(15, 23, 42, 0.06);
+}
+
+/* Light theme: ensure modal close icon uses dark color */
+.light-theme {
+  --modal-close-icon: var(--text-main);
+}
+
+/* Light theme: hover color for modal close icon (light on hover) */
+.light-theme {
+  --modal-close-icon-hover: #ffffff;
+}
+
+/* Component overrides for light theme to fix contrast and backgrounds */
+.light-theme {
+  /* Template content and preview/result areas */
+  .template-details-page {
+    color: var(--text-main);
+
+    .main-column {
+      .preview-area, .result-area {
+        background-color: var(--surface-alt) !important;
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+      }
+
+      .template-content {
+        textarea {
+          background-color: var(--surface-color) !important;
+          color: var(--text-main) !important;
+          border: 1px solid var(--border-color) !important;
+        }
+      }
+    }
+
+    /* Meta editor inputs */
+    .meta-input, .meta-textarea, .meta-select, .tag-input {
+      background: var(--surface-color) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+    }
+  }
+
+  /* Force dark labels/icons for list-box/select inside Create Template modal
+     This selector is intentionally higher-specificity than the global Carbon rule
+     so it overrides `.cds--list-box__label { color: #fff !important }`. */
+  .create-template-modal .cds--list-box__label,
+  .create-template-modal .cds--list-box__field:focus .cds--list-box__label,
+  .create-template-modal button.cds--list-box__field .cds--list-box__label,
+  .create-template-modal .cds--list-box__field,
+  .create-template-modal button.cds--list-box__field,
+  .create-template-modal .cds--select-input .cds--select-input__field,
+  .create-template-modal .cds--list-box__menu-item,
+  .create-template-modal .cds--list-box__menu-item *,
+  .create-template-modal .cds--list-box__field svg,
+  .create-template-modal .cds--list-box__field svg path,
+  .create-template-modal .cds--list-box__field svg circle {
+    color: var(--text-main) !important;
+    fill: var(--text-main) !important;
+    stroke: var(--text-main) !important;
+  }
+
+  /* All form inputs / textareas keep translucent surface for depth */
+  input, textarea, .cds--text-input, .cds--text-area, .cds--search-input {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Dropdowns / selects / listboxes should be opaque for better readability */
+  select,
+  .cds--select-input,
+  .cds--list-box__menu,
+  .cds--list-box__menu-item,
+  .cds--list-box__field,
+  .custom-select__menu,
+  .custom-select__toggle {
+    background-color: var(--surface-solid) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Focus / selected states for light theme: lighter bg + darker text, clear outline */
+  input:focus, textarea:focus, select:focus,
+  .cds--text-input:focus, .cds--text-area:focus, .cds--select-input:focus, .cds--search-input:focus,
+  .cds--list-box__field:focus {
+    background-color: var(--surface-alt) !important;
+    color: var(--text-main) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 4px 10px rgba(11,116,255,0.08) !important;
+    outline: none !important;
+  }
+
+  /* Chrome autofill (ensure autofill stays light in light theme) */
+  input:-webkit-autofill,
+  textarea:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  textarea:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill:focus,
+  .cds--text-input input:-webkit-autofill,
+  .cds--text-input input:-webkit-autofill:hover,
+  .cds--text-input input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-color) inset !important;
+    box-shadow: 0 0 0 1000px var(--surface-color) inset !important;
+    -webkit-text-fill-color: var(--text-main) !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Carbon text input specific focus styling for light theme */
+  .cds--text-input:focus,
+  .cds--text-input__field:focus,
+  .cds--text-input:focus input,
+  .cds--text-input .cds--text-input__field:focus,
+  .cds--text-area:focus,
+  .cds--select-input:focus,
+  .cds--search-input:focus {
+    background-color: var(--surface-alt) !important;
+    color: var(--text-main) !important;
+    border-bottom: 2px solid var(--primary-color) !important;
+    box-shadow: 0 6px 18px rgba(11,116,255,0.06) !important;
+  }
+
+  /* Ensure label and placeholder contrast remains for focused inputs */
+  .cds--text-input:focus ::placeholder,
+  .cds--text-area:focus ::placeholder,
+  .cds--select-input:focus ::placeholder,
+  input:focus::placeholder,
+  textarea:focus::placeholder {
+    color: #9aa4b2 !important;
+    opacity: 1;
+  }
+
+  /* Hover / active item in listboxes / menus */
+  .cds--list-box__menu-item,
+  .cds--list-box__menu-item:hover,
+  .cds--list-box__menu-item--active {
+    background-color: rgba(11,116,255,0.06) !important; /* subtle primary tint */
+    color: var(--text-main) !important;
+  }
+
+  /* Placeholder color: light gray */
+  input::placeholder, textarea::placeholder, select::placeholder,
+  .cds--text-input ::placeholder, .cds--text-area ::placeholder {
+    color: #9aa4b2 !important;
+    opacity: 1;
+  }
+
+  /* Primary buttons: use white text on primary colored background for better contrast */
+  .cds--btn--primary,
+  .action-btn.primary,
+  .save-btn,
+  .save-meta-btn,
+  .generator-actions .primary,
+  .create-template-modal .btn-primary {
+    color: #ffffff !important;
+  }
+
+  /* Notifications: use light background with dark text */
+  .notification-toast {
+    color: var(--text-main) !important;
+  }
+
+  .notification-toast.success {
+    background-color: #e6f8ec !important;
+    border-left-color: #198038 !important;
+  }
+  .notification-toast.error {
+    background-color: #ffecec !important;
+    border-left-color: #a2191f !important;
+  }
+  .notification-toast.info {
+    background-color: #e6f0ff !important;
+    border-left-color: #0043ce !important;
+  }
+
+  /* Code / pre blocks: dark text on light background */
+  pre {
+    color: var(--text-main) !important;
+    background: var(--surface-color) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 8px !important;
+    border-radius: 6px;
+  }
+
+  /* Ensure Carbon input components inherit light background and dark text */
+  .cds--text-input,
+  .cds--text-area,
+  .cds--select-input,
+  .cds--search-input,
+  .cds--list-box__field {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Specific template pre blocks for TemplateDetails page */
+  .template-details-page .preview-area pre,
+  .template-details-page .result-area pre,
+  .template-details-page .template-content pre {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Modal header label and heading should be dark in light theme */
+  .cds--modal-header__label,
+  .cds--modal-header__heading,
+  .cds--modal-header__label *,
+  .cds--modal-header__heading * {
+    color: var(--text-main) !important;
+  }
+
+  /* content-preview (PromptCard) -- use alternate gentle surface in light mode */
+  .content-preview {
+    background-color: var(--surface-alt) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* .count: lighter color in light theme */
+  .count {
+    color: #9aa4b2 !important;
+  }
+
+  /* meta-select and its children: light bg and dark text */
+  .meta-select,
+  .meta-select select,
+  .meta-select option,
+  .meta-select .cds--list-box__field {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  .meta-select option {
+    background-color: #ffffff !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Create Template Modal - light theme overrides to match app style */
+  .create-template-modal {
+    /* Modal surface */
+    .cds--modal-container,
+    .cds--modal {
+      background-color: var(--surface-alt) !important;
+      color: var(--text-main) !important;
+      border-radius: 12px;
+      border: 1px solid var(--border-color) !important;
+      box-shadow: var(--shadow-card) !important;
+    }
+
+    /* Header */
+    .cds--modal-header__heading {
+      color: var(--text-main) !important;
+      font-family: var(--font-heading) !important;
+      font-weight: 700;
+    }
+    .cds--modal-header__label {
+      color: var(--text-secondary) !important;
+    }
+
+    /* Form fields: inputs, textareas, dropdowns */
+    .cds--text-input,
+    .cds--text-area,
+    .cds--list-box__field,
+    .cds--select-input {
+      background-color: var(--surface-color) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 8px !important;
+    }
+
+    /* Dropdown menu items */
+    .cds--list-box__menu-item,
+    .cds--list-box__menu-item--active,
+    .cds--list-box__menu-item:hover {
+      background-color: rgba(11,116,255,0.06) !important;
+      color: var(--text-main) !important;
+    }
+
+    /* Labels and helper text */
+    label,
+    .cds--label {
+      color: var(--text-secondary) !important;
+      font-weight: 600;
+    }
+
+    /* Primary action button inside modal */
+    .cds--btn--primary,
+    .create-template-modal .btn-primary {
+      background-color: var(--primary-color) !important;
+      color: #ffffff !important;
+      border: 1px solid var(--primary-color) !important;
+      box-shadow: 0 8px 24px rgba(11,116,255,0.08) !important;
+    }
+
+    /* Secondary buttons */
+    .cds--btn--secondary {
+      background: transparent !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+    }
+
+    /* Validation / invalid text */
+    .cds--form-requirement,
+    .cds--text-input__invalid-text {
+      color: #a2191f !important;
+    }
+
+    /* Ensure spacing inside modal matches app cards */
+    .create-template-form {
+      padding: 18px 12px !important;
+    }
+
+    /* Close button: match surrounding modal surface, no border, dark icon */
+    .cds--modal-close {
+      background-color: var(--surface-alt) !important;
+      border: none !important;
+      color: var(--text-main) !important;
+    }
+    .cds--modal-close__icon {
+      fill: var(--text-main) !important;
+    }
+
+      /* Hover: make icon light for contrast */
+      .cds--modal-close:hover .cds--modal-close__icon,
+      .cds--modal-close:hover svg path,
+      .cds--modal-close:hover .cds--modal-close__icon * {
+        fill: var(--modal-close-icon-hover, #ffffff) !important;
+        stroke: var(--modal-close-icon-hover, #ffffff) !important;
+        color: var(--modal-close-icon-hover, #ffffff) !important;
+      }
+
+    /* Ensure category and visibility selected text is dark */
+    .cds--list-box__field,
+    .cds--select-input .cds--select-input__field,
+    .cds--text-input__field {
+      color: var(--text-main) !important;
+    }
+
+    /* Remove horizontal separators/lines inside dropdown menus for category/visibility */
+    .cds--list-box__menu,
+    .cds--list-box__menu-item {
+      border-top: none !important;
+      border-bottom: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  /* Fork confirmation modal styling in light theme */
+  .fork-modal {
+    .cds--modal-container,
+    .cds--modal {
+      background-color: var(--surface-alt) !important;
+      color: var(--text-main) !important;
+      border-radius: 10px;
+      border: 1px solid var(--border-color) !important;
+      box-shadow: var(--shadow-card) !important;
+      padding: 0 !important;
+    }
+
+    .cds--modal-header__heading {
+      color: var(--text-main) !important;
+      font-family: var(--font-heading) !important;
+      font-weight: 700 !important;
+      font-size: 1.05rem !important;
+    }
+
+    .cds--modal-header__label {
+      color: var(--text-secondary) !important;
+    }
+
+    .cds--modal-content {
+      padding: 18px 20px !important;
+      color: var(--text-main) !important;
+    }
+
+    p {
+      margin: 0 0 18px 0;
+      color: var(--text-main) !important;
+      line-height: 1.45;
+    }
+
+    .cds--btn--primary {
+      background-color: var(--primary-color) !important;
+      color: #ffffff !important;
+      border: 1px solid var(--primary-color) !important;
+      box-shadow: 0 6px 18px rgba(11,116,255,0.08) !important;
+    }
+
+    .cds--btn--secondary {
+      background: transparent !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+    }
+
+    .cds--modal-close {
+      background-color: var(--surface-alt) !important;
+      border: none !important;
+      color: var(--text-main) !important;
+    }
+    .cds--modal-close__icon { fill: var(--text-main) !important; }
+    .cds--modal-close:hover .cds--modal-close__icon { fill: var(--modal-close-icon-hover, #ffffff) !important; }
+  }
+
+  /* Ensure the custom select arrow is visible in light theme (use dark stroke) */
+  .template-details-page .version-selector select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") !important;
+    background-position: right 10px center !important;
+    background-size: 14px !important;
+  }
+
+  /* Notifications: ensure titles and messages use dark text */
+  .notification-toast,
+  .cds--inline-notification,
+  .cds--notification {
+    color: var(--text-main) !important;
+  }
+
+  .notification-toast .title,
+  .notification-toast .message,
+  .cds--inline-notification__title,
+  .cds--inline-notification__subtitle,
+  .cds--notification__title,
+  .cds--notification__subtitle {
+    color: var(--text-main) !important;
+  }
+
+  /* Keep parent form element background light when dropdown items are hovered */
+  .cds--list-box__field:hover,
+  .cds--text-input:hover,
+  .cds--text-area:hover,
+  .cds--select-input:hover,
+  .cds--search-input:hover,
+  input:hover, textarea:hover, select:hover {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Dropdown menu item hover only affects the item, not the trigger */
+  .cds--list-box__menu-item:hover {
+    background-color: rgba(11,116,255,0.08) !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Force list-box / text-input trigger to remain light in light-theme even when menu items are hovered/active */
+  .cds--list-box__field,
+  .cds--list-box__field:hover,
+  .cds--list-box__field:focus,
+  .cds--list-box__field.cds--dropdown--open,
+  .cds--text-input,
+  .cds--text-input:hover,
+  .cds--text-input:focus,
+  .cds--text-input.cds--dropdown--open,
+  .cds--select-input,
+  .cds--select-input:focus,
+  .cds--search-input,
+  .cds--search-input:focus {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* When menu-items apply hover/active colors (from carbon overrides), ensure the trigger's text remains dark */
+  .cds--list-box__menu-item:hover .cds--list-box__menu-item__option,
+  .cds--list-box__menu-item--active .cds--list-box__menu-item__option {
+    color: var(--text-main) !important;
+  }
+
+  /* Light-theme: modals and Carbon notifications should use dark text and neutral shadows */
+  .cds--modal-container {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.06) !important;
+  }
+
+  .cds--modal-header, .cds--modal-content {
+    background: transparent !important;
+    color: var(--text-main) !important;
+  }
+
+  .cds--modal-heading {
+    color: var(--text-main) !important;
+    text-shadow: none !important;
+  }
+
+  .cds--modal-close {
+    color: var(--text-main) !important;
+    &:hover {
+      background-color: rgba(0,0,0,0.04) !important;
+      border-color: var(--primary-color);
+    }
+  }
+
+  .cds--modal-footer {
+    background-color: transparent !important;
+    border-top: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Carbon notification components */
+  .cds--inline-notification,
+  .cds--notification {
+    background-color: transparent !important;
+    color: var(--text-main) !important;
+  }
+
+  .cds--inline-notification__title,
+  .cds--notification__title,
+  .cds--notification__subtitle,
+  .cds--inline-notification__subtitle {
+    color: var(--text-main) !important;
+  }
+
+  /* Ensure our custom notification toast children inherit dark text */
+  .notification-toast * {
+    color: var(--text-main) !important;
+  }
+
+  /* Dropdowns / listbox redesign for light theme */
+  .cds--list-box__menu,
+  .cds--list-box__menu-item,
+  .cds--list-box__menu-item a {
+    background-color: var(--surface-alt) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  .cds--list-box__menu-item {
+    border-radius: 6px !important;
+    margin: 2px 0 !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .cds--list-box__menu-item:hover,
+  .cds--list-box__menu-item--active,
+  .cds--list-box__menu-item[aria-selected="true"] {
+    background-color: rgba(11,116,255,0.08) !important; /* subtle primary tint */
+    color: var(--text-main) !important;
+  }
+
+  /* Selected item stronger contrast */
+  .cds--list-box__menu-item--selected,
+  .cds--list-box__menu-item[aria-checked="true"] {
+    background-color: rgba(11,116,255,0.12) !important;
+    color: var(--text-main) !important;
+    font-weight: 600;
+  }
+
+  /* Native select fallback styling */
+  select {
+    background-color: var(--surface-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Notification visuals: neutral light background, dark text, and clear title hierarchy */
+  .notification-toast {
+    background-color: rgba(255,255,255,0.96) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 6px 18px rgba(15,23,42,0.06) !important;
+  }
+
+  .notification-toast.success {
+    background-color: #f0fbf3 !important;
+  }
+  .notification-toast.error {
+    background-color: #fff5f5 !important;
+  }
+  .notification-toast.info {
+    background-color: #f3f7ff !important;
+  }
+
+  .notification-toast .title,
+  .cds--inline-notification__title,
+  .cds--notification__title {
+    color: var(--text-main) !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+  }
+
+  .notification-toast .message,
+  .cds--inline-notification__subtitle,
+  .cds--notification__subtitle {
+    color: var(--text-secondary) !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Modal title / heading adjustments for light theme */
+  .cds--modal-heading {
+    color: var(--text-main) !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    text-shadow: none !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  .cds--modal-container .cds--modal-content,
+  .cds--modal-container .cds--modal-header {
+    color: var(--text-main) !important;
+  }
+
+  /* Ensure any icons inside notifications/modals use muted color to not distract */
+  .notification-toast svg, .cds--inline-notification svg, .cds--modal-header svg {
+    color: var(--text-secondary) !important;
+    opacity: 0.95 !important;
+  }
+}
 body {
   margin: 0;
   padding: 0;

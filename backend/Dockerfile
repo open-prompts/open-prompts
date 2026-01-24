@@ -5,6 +5,9 @@ COPY go.mod go.sum ./
 RUN go env -w GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
+# Switch to a faster domestic mirror for apk
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 # Install protoc and plugins
 RUN apk add protobuf protobuf-dev
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest

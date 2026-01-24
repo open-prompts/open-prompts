@@ -19,7 +19,7 @@ import './CreateTemplateModal.scss';
  * @param {Function} props.onSuccess - Function to call when creation is successful
  */
 const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -106,16 +106,20 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
 
     try {
       // Prepare payload
+      const lang = (i18n && (i18n.language === 'zh' || i18n.language.startsWith('zh'))) ? 'zh' : 'en';
+
       const payload = {
         ...formData,
         category: formData.category === 'create_new' ? customCategory.trim() : formData.category,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         type: 'user', // Default to user type
-        language: navigator.language.split('-')[0],
+        language: lang,
       };
 
       await createTemplate(payload);
       setLoading(false);
+      // Notify user of success (localized)
+      addNotification({ kind: 'success', title: t('common.success'), subtitle: t('create_template.success_created'), timeout: 4000 });
       onRequestClose();
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -168,7 +172,11 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
           items={categoryItems}
           itemToString={(item) => (item ? item.text : '')}
           selectedItem={categoryItems.find(c => c.id === formData.category) || null}
-          onChange={({ selectedItem }) => setFormData(prev => ({ ...prev, category: selectedItem.id }))}
+          onChange={({ selectedItem }) => {
+            setFormData(prev => ({ ...prev, category: selectedItem.id }));
+            // Clear category-related validation errors when user selects a value
+            setFormErrors(prev => ({ ...prev, category: '', customCategory: '' }));
+          }}
           className="form-field"
           invalid={!!formErrors.category}
           invalidText={formErrors.category}
@@ -180,7 +188,10 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
             labelText={t('create_template.label_new_category')}
             placeholder={t('create_template.ph_new_category')}
             value={customCategory}
-            onChange={(e) => setCustomCategory(e.target.value)}
+            onChange={(e) => {
+              setCustomCategory(e.target.value);
+              if (formErrors.customCategory) setFormErrors(prev => ({ ...prev, customCategory: '' }));
+            }}
             className="form-field"
             style={{ marginTop: '0.5rem' }}
             invalid={!!formErrors.customCategory}
@@ -194,7 +205,10 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
           items={visibilityItems}
           itemToString={(item) => (item ? item.text : '')}
           selectedItem={visibilityItems.find(v => v.id === formData.visibility)}
-          onChange={({ selectedItem }) => setFormData(prev => ({ ...prev, visibility: selectedItem.id }))}
+          onChange={({ selectedItem }) => {
+            setFormData(prev => ({ ...prev, visibility: selectedItem.id }));
+            if (formErrors.visibility) setFormErrors(prev => ({ ...prev, visibility: '' }));
+          }}
           className="form-field"
         />
 

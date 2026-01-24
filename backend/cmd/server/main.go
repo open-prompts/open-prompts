@@ -292,6 +292,15 @@ func main() {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			// If client did not provide language, try to derive from Accept-Language header
+			if req.Language == "" {
+				if al := r.Header.Get("Accept-Language"); al != "" {
+					// Take first language tag, then primary subtag
+					first := strings.Split(al, ",")[0]
+					lang := strings.Split(strings.TrimSpace(first), "-")[0]
+					req.Language = strings.ToLower(lang)
+				}
+			}
 			resp, err := svc.CreateTemplate(ctx, &req)
 			if err != nil {
 				writeError(w, err)
@@ -483,6 +492,14 @@ func main() {
 			if err := unmarshaler.Unmarshal(body, &req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
+			}
+			// If client did not provide language on update, derive from Accept-Language header
+			if req.Language == "" {
+				if al := r.Header.Get("Accept-Language"); al != "" {
+					first := strings.Split(al, ",")[0]
+					lang := strings.Split(strings.TrimSpace(first), "-")[0]
+					req.Language = strings.ToLower(lang)
+				}
 			}
 			req.TemplateId = id
 			resp, err := svc.UpdateTemplate(ctx, &req)

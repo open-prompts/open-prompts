@@ -19,6 +19,7 @@ import { Modal } from '@carbon/react';
 import { useNotification } from '../context/NotificationContext';
 import Layout from '../components/Layout';
 import './TemplateDetails.scss';
+import VersionSelect from '../components/VersionSelect';
 
 const TemplateDetails = () => {
   const { t, i18n } = useTranslation();
@@ -226,6 +227,10 @@ const TemplateDetails = () => {
               tags: finalTags,
               content: contentToSend
           };
+            // Preserve language field when updating metadata
+            if (template && template.language) {
+              updateData.language = template.language;
+            }
 
           const res = await updateTemplate(template.id, updateData);
           setTemplate(res.data.template);
@@ -266,6 +271,10 @@ const TemplateDetails = () => {
         tags: template.tags,
         content: editContent
       };
+      // Ensure language is preserved when saving content
+      if (template && template.language) {
+        updateData.language = template.language;
+      }
 
       const res = await updateTemplate(template.id, updateData);
 
@@ -282,6 +291,11 @@ const TemplateDetails = () => {
       setIsSaving(false);
     }
   };
+
+  // Whether the save button should be disabled: saving in progress,
+  // no selected version, or edited content equals the selected version content
+  const currentVersionContent = versions.find(v => v.id === selectedVersionId)?.content || '';
+  const isSaveNewVersionDisabled = isSaving || !selectedVersionId || (editContent === currentVersionContent);
 
   const handleLike = async () => {
     if (!user) {
@@ -418,6 +432,10 @@ const TemplateDetails = () => {
          visibility: "VISIBILITY_PUBLIC", // Change to public
          content: editContent // Keep current content
       };
+        // Preserve language when changing visibility
+        if (template && template.language) {
+          updateData.language = template.language;
+        }
       const res = await updateTemplate(template.id, updateData);
       setTemplate(res.data.template); // Update local state
       addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_details.success_share') });
@@ -442,6 +460,10 @@ const TemplateDetails = () => {
          visibility: "VISIBILITY_PRIVATE", // Change to private
          content: editContent
       };
+        // Preserve language when changing visibility
+        if (template && template.language) {
+          updateData.language = template.language;
+        }
       const res = await updateTemplate(template.id, updateData);
       setTemplate(res.data.template);
       addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_details.success_unshare') });
@@ -688,17 +710,16 @@ const TemplateDetails = () => {
 
               <div className="version-selector">
                 <label>{t('template_details.version_label')}</label>
-                <select
-                    value={selectedVersionId || ''}
-                    onChange={handleVersionChange}
-                    disabled={isEditing}
-                >
-                    {versions.map(v => (
-                        <option key={v.id} value={v.id}>
-                            v{v.version} ({new Date(v.created_at).toLocaleDateString()})
-                        </option>
-                    ))}
-                </select>
+                <VersionSelect
+                  options={versions}
+                  value={selectedVersionId}
+                  onChange={(vId) => {
+                    setSelectedVersionId(vId);
+                    const version = versions.find(v => v.id === vId);
+                    if (version) setEditContent(version.content);
+                  }}
+                  disabled={isEditing}
+                />
               </div>
 
               {isEditing ? (
@@ -716,9 +737,9 @@ const TemplateDetails = () => {
                 {isEditing ? (
                     <>
                         <button className="cancel-btn" onClick={() => setIsEditing(false)} disabled={isSaving}>{t('common.cancel')}</button>
-                        <button className="save-btn" onClick={handleSaveContent} disabled={isSaving}>
-                            {isSaving ? t('common.saving') : t('template_details.save_new_version')}
-                        </button>
+                    <button className="save-btn" onClick={handleSaveContent} disabled={isSaveNewVersionDisabled}>
+                      {isSaving ? t('common.saving') : t('template_details.save_new_version')}
+                    </button>
                     </>
                 ) : (
                     user && user.id === template.owner_id && (
@@ -831,6 +852,7 @@ const TemplateDetails = () => {
 
       <Modal
         open={isTemplateDeleteModalOpen}
+        className="fork-modal"
         modalHeading={t('template_details.delete_template_title')}
         modalLabel={t('common.confirmation')}
         primaryButtonText={isDeletingTemplate ? t('common.deleting') : t('common.delete')}
@@ -845,6 +867,7 @@ const TemplateDetails = () => {
 
       <Modal
         open={isForkModalOpen}
+        className="fork-modal"
         modalHeading={t('template_details.fork_template_title')}
         modalLabel={t('common.confirmation')}
         primaryButtonText={isForking ? t('common.saving') : t('template_details.fork')}

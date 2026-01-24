@@ -137,6 +137,13 @@ func (s *PromptService) ForkTemplate(ctx context.Context, templateID string) (*p
 		UpdatedAt:   time.Now(),
 	}
 
+	// Preserve language from source template; default to 'en' if missing
+	if sourceTpl.Language != "" {
+		newTpl.Language = sourceTpl.Language
+	} else {
+		newTpl.Language = "en"
+	}
+
 	if err := s.TemplateRepo.Create(ctx, newTpl); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create forked template: %v", err)
 	}
@@ -279,10 +286,13 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		if userID != "" {
 			filters["current_user_id"] = userID
 		}
+		zap.S().Infof("ListTemplates.fetch: limit=%d offset=%d filters=%v", limit, offset, filters)
 		templates, err := s.TemplateRepo.List(ctx, limit, offset, filters)
 		if err != nil {
+			zap.S().Errorf("ListTemplates.fetch: error listing templates: %v", err)
 			return nil, "", err
 		}
+		zap.S().Infof("ListTemplates.fetch: templates returned=%d", len(templates))
 		var pbTemplates []*pb.Template
 		for _, t := range templates {
 			pbT := s.templateModelToProto(t)

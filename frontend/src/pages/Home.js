@@ -17,10 +17,14 @@ const Home = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const [templates, setTemplates] = useState([]);
   const [privateTemplates, setPrivateTemplates] = useState([]);
-  const [filters, setFilters] = useState({
-    visibility: 'VISIBILITY_PUBLIC', // Default to public
-    category: '',
-    tags: [],
+  const STORAGE_KEY = 'home.selectedVisibility';
+  const [filters, setFilters] = useState(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+    return {
+      visibility: saved !== null ? saved : 'VISIBILITY_PUBLIC', // Default to public unless user had a saved choice
+      category: '',
+      tags: [],
+    };
   });
   const [nextPageToken, setNextPageToken] = useState('');
   const [hasMore, setHasMore] = useState(true);
@@ -30,10 +34,12 @@ const Home = () => {
   // Update default filters on auth change
   useEffect(() => {
     if (isAuthenticated) {
-      // If logged in, default to mixed view (no visibility filter)
-      // Only do this if the user hasn't manually selected a filter yet?
-      // For simplicity, we reset to default mixed view on login.
-      setFilters(prev => ({ ...prev, visibility: '' }));
+      // If logged in, default to mixed view (no visibility filter) only when
+      // user has not previously chosen a visibility tab (persisted in localStorage).
+      const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+      if (saved === null) {
+        setFilters(prev => ({ ...prev, visibility: '' }));
+      }
     } else {
       setFilters(prev => ({ ...prev, visibility: 'VISIBILITY_PUBLIC' }));
     }
@@ -55,7 +61,13 @@ const Home = () => {
         ...filters,
       };
 
+      // Debug: log outgoing params to help diagnose "My templates" filter issues
+      // eslint-disable-next-line no-console
+      console.debug('Fetching templates with params:', params);
       const response = await getTemplates(params);
+      // Debug: log server response
+      // eslint-disable-next-line no-console
+      console.debug('Templates response:', response && response.data ? response.data : response);
 
       // Handle Public Templates (legacy field 'templates')
       const newTemplates = response.data.templates || [];
@@ -134,7 +146,17 @@ const Home = () => {
 
   // Handle filter changes from Sidebar
   const handleFilterChange = (newFilters) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setFilters((prev) => {
+      const merged = { ...prev, ...newFilters };
+      try {
+        if (typeof window !== 'undefined' && merged.visibility !== undefined) {
+          window.localStorage.setItem(STORAGE_KEY, merged.visibility);
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+      return merged;
+    });
   };
 
   // Refresh list trigger (can be passed to children if needed)

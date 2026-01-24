@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { UserAvatar, Translate, Menu } from '@carbon/icons-react';
+import { UserAvatar, Translate, Menu, Moon, Sun } from '@carbon/icons-react';
 import { logout } from '../store/authSlice';
 import './Header.scss';
 
@@ -13,6 +13,13 @@ import './Header.scss';
  */
 const Header = ({ onMenuClick }) => {
   const { t, i18n } = useTranslation();
+  const [theme, setTheme] = useState(() => {
+    try {
+      const s = localStorage.getItem('theme');
+      if (s) return s;
+    } catch (e) {}
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  });
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
@@ -50,6 +57,22 @@ const Header = ({ onMenuClick }) => {
     };
   }, []);
 
+  // Sync theme to document and localStorage
+  useEffect(() => {
+    try {
+      if (theme === 'light') {
+        document.documentElement.classList.add('light-theme');
+      } else {
+        document.documentElement.classList.remove('light-theme');
+      }
+      localStorage.setItem('theme', theme);
+    } catch (e) {
+      // ignore
+    }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((s) => (s === 'dark' ? 'light' : 'dark'));
+
   return (
     <header className="app-header">
       <div className="header-left">
@@ -66,6 +89,15 @@ const Header = ({ onMenuClick }) => {
         </Link>
       </div>
       <div className="header-right">
+        <button
+          className="theme-toggle-btn"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', marginRight: '14px', display: 'flex', alignItems: 'center' }}
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
         <button
           className="lang-switch-btn"
           onClick={toggleLanguage}

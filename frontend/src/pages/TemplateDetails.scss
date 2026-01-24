@@ -129,8 +129,9 @@
           color: var(--primary-color);
           background: rgba(0, 255, 255, 0.1);
           padding: 2px 8px;
-          border-radius: 4px;
-          border: 1px solid rgba(0, 255, 255, 0.2);
+          border-radius: 8px;
+          border: 1px solid var(--border-color);
+          background: var(--surface-solid);
         }
       }
 
@@ -296,16 +297,65 @@
         color: var(--text-secondary);
       }
 
-      select {
-        padding: 8px;
-        border-radius: 4px;
-        border: 1px solid var(--border-color);
-        background-color: rgba(0,0,0,0.5);
-        color: var(--text-main);
+      .custom-select {
+        position: relative;
+        min-width: 220px;
 
-        &:focus {
+        &.disabled { opacity: 0.6; pointer-events: none; }
+
+        .custom-select__toggle {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          padding-right: 36px;
+          border-radius: 8px;
+          border: 1px solid var(--border-color);
+          background: var(--surface-color);
+          color: var(--text-main);
+          cursor: pointer;
+          transition: box-shadow var(--transition-speed), border-color var(--transition-speed);
+
+          &:focus {
             outline: none;
             border-color: var(--primary-color);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+          }
+
+          .custom-select__label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .custom-select__caret { margin-left: 8px; color: var(--text-secondary); }
+        }
+
+        .custom-select__menu {
+          position: absolute;
+          z-index: 50;
+          left: 0;
+          right: 0;
+          margin-top: 8px;
+          border-radius: 8px;
+          padding: 6px;
+          background: var(--surface-solid);
+          border: 1px solid var(--border-color);
+          box-shadow: var(--shadow-card);
+          max-height: 280px;
+          overflow: auto;
+
+          li.custom-select__option {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-main);
+
+            .option-main { font-weight: 600; color: var(--text-main); }
+            .option-sub { font-size: 0.8rem; color: var(--text-secondary); }
+
+            &.highlighted { background: rgba(0,0,0,0.12); }
+            &.selected { box-shadow: inset 0 0 0 2px var(--primary-color); }
+          }
         }
       }
     }
@@ -369,6 +419,17 @@
           &:hover {
             background-color: var(--primary-hover);
             box-shadow: 0 0 10px var(--primary-color);
+          }
+
+          /* Disabled state for "Save New Version" */
+          &:disabled,
+          &[disabled] {
+            background-color: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 1; /* keep readable but clearly disabled */
+            transform: none;
           }
         }
 

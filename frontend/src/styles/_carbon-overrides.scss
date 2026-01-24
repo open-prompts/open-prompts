@@ -101,7 +101,8 @@ input.cds--text-input {
         border-color: var(--primary-color);
       }
       .cds--modal-close__icon {
-        fill: #ffffff !important;
+        /* use CSS variable so light theme can override icon color */
+        fill: var(--modal-close-icon, #ffffff) !important;
       }
     }
   }
@@ -169,6 +170,7 @@ button.cds--list-box__field .cds--list-box__label {
     color: #f4f4f4 !important; // Light text
 
     .cds--list-box__menu-item__option {
+       border: none !important;
        color: inherit !important;
     }
 
@@ -178,6 +180,7 @@ button.cds--list-box__field .cds--list-box__label {
       color: #ffffff !important;
 
       .cds--list-box__menu-item__option {
+        border: none !important;
         color: #ffffff !important;
       }
     }
@@ -186,6 +189,7 @@ button.cds--list-box__field .cds--list-box__label {
       color: var(--primary-color) !important;
       background-color: rgba(0, 255, 255, 0.1) !important;
       .cds--list-box__menu-item__option {
+        border: none !important;
         color: var(--primary-color) !important;
       }
     }

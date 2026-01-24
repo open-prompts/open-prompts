@@ -91,7 +91,8 @@
     "error_required_title": "标题必填",
     "error_required_category_select": "分类必填",
     "error_required_content": "提示词内容必填",
-    "error_load_categories": "加载分类失败，使用默认值。"
+    "error_load_categories": "加载分类失败，使用默认值。",
+    "success_created": "模板创建成功！"
   },
   "template": {
     "language": "语言",

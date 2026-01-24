@@ -47,6 +47,7 @@ export const NotificationProvider = ({ children }) => {
                         caption={notification.caption}
                         onClose={() => removeNotification(notification.id)}
                         lowContrast={true}
+                        className={`notification-toast ${notification.kind || 'info'}`}
                         style={{ marginBottom: '0' }}
                     />
                 ))}

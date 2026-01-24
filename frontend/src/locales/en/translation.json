@@ -90,7 +90,8 @@
     "error_required_title": "Title is required",
     "error_required_category_select": "Category is required",
     "error_required_content": "Prompt Content is required",
-    "error_load_categories": "Failed to load categories. Using defaults."
+    "error_load_categories": "Failed to load categories. Using defaults.",
+    "success_created": "Template created successfully"
   },
   "template": {
     "language": "Language",

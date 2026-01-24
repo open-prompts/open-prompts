@@ -96,6 +96,18 @@
       }
     }
 
+    .theme-toggle-btn {
+      transition: all var(--transition-speed);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+
+      &:hover {
+        color: var(--primary-color) !important;
+        transform: scale(1.05);
+      }
+    }
+
     .auth-buttons {
       display: flex;
       gap: 10px;
