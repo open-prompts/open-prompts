@@ -1,3 +1,15 @@
+# [1.8.0](https://github.com/open-prompts/awsome-prompt/compare/v1.7.0...v1.8.0) (2026-01-25)
+
+
+### Bug Fixes
+
+* should use variable name instead position placeholder ([6fe2d78](https://github.com/open-prompts/awsome-prompt/commit/6fe2d7877180f12fd958de5848cca941a9306780))
+
+
+### Features
+
+* support light theme and switcher ([5d54a1a](https://github.com/open-prompts/awsome-prompt/commit/5d54a1ab52e97767185a0fcbceb96380bd525c9c))
+
 # [1.7.0](https://github.com/open-prompts/awsome-prompt/compare/v1.6.0...v1.7.0) (2026-01-13)
 
 
