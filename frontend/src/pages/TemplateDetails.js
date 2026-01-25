@@ -52,7 +52,7 @@ const TemplateDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   // Generator state
-  const [variableValues, setVariableValues] = useState([]);
+  const [variableValues, setVariableValues] = useState({});
 
   // Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -335,38 +335,61 @@ const TemplateDetails = () => {
     }
   };
 
-  // Parse Contnet for Placeholders ($$)
-  // Returns array of static strings. Variables are between them.
-  // e.g. "Hello $$, how are $$" -> ["Hello ", ", how are ", ""]
-  const contentParts = useMemo(() => {
+  // Parse Content for Placeholders like ${name}
+  // We produce: parts (static strings) and placeholders (names in order)
+  const { parts: contentParts, placeholders } = useMemo(() => {
     const currentContent = isEditing ? editContent : (versions.find(v => v.id === selectedVersionId)?.content || '');
-    return currentContent.split('$$');
+    const parts = [];
+    const names = [];
+    let lastIndex = 0;
+    const re = /\$\{([^}]+)\}/g;
+    let m;
+    while ((m = re.exec(currentContent)) !== null) {
+      parts.push(currentContent.slice(lastIndex, m.index));
+      names.push(m[1]);
+      lastIndex = m.index + m[0].length;
+    }
+    parts.push(currentContent.slice(lastIndex));
+    return { parts, placeholders: names };
   }, [editContent, isEditing, versions, selectedVersionId]);
 
-  const variableCount = contentParts.length - 1;
+  // Unique variable names (preserve first-seen order)
+  const uniqueNames = useMemo(() => {
+    const seen = new Set();
+    const uniq = [];
+    placeholders.forEach((n) => {
+      if (!seen.has(n)) {
+        seen.add(n);
+        uniq.push(n);
+      }
+    });
+    return uniq;
+  }, [placeholders]);
 
-  // Initialize variable inputs when content changes
+  // Initialize variable inputs as a map { name: value }
   useEffect(() => {
-    setVariableValues(new Array(variableCount).fill(''));
-  }, [variableCount]);
+    const init = {};
+    uniqueNames.forEach(n => { init[n] = ''; });
+    setVariableValues(init);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniqueNames.join('|')]);
 
-  const handleVariableChange = (index, value) => {
-    const newValues = [...variableValues];
-    newValues[index] = value;
-    setVariableValues(newValues);
+  const handleVariableChange = (name, value) => {
+    setVariableValues(prev => ({ ...prev, [name]: value }));
   };
 
   // Generate Prompt Result
   const generatedContent = useMemo(() => {
     let result = '';
-    contentParts.forEach((part, index) => {
+    contentParts.forEach((part, idx) => {
       result += part;
-      if (index < variableValues.length) {
-        result += variableValues[index] || '';
+      if (idx < placeholders.length) {
+        const name = placeholders[idx];
+        result += variableValues[name] || '';
       }
     });
     return result;
-  }, [contentParts, variableValues]);
+  }, [contentParts, placeholders, variableValues]);
 
   // Handle Create Prompt
   const handleCreatePrompt = async () => {
@@ -376,11 +399,12 @@ const TemplateDetails = () => {
     }
     setIsGenerating(true);
     try {
+      const variablesPayload = uniqueNames.map(name => ({ [name]: variableValues[name] || '' }));
       const promptData = {
         template_id: template.id,
         version_id: selectedVersionId,
         owner_id: user.id,
-        variables: variableValues
+        variables: variablesPayload
       };
       const res = await createPrompt(promptData);
       setPrompts([res.data.prompt, ...prompts]);
@@ -524,10 +548,25 @@ const TemplateDetails = () => {
   // Handle Load Prompt
   const handleLoadPrompt = (prompt) => {
       if (prompt.variables && prompt.variables.length > 0) {
-          // Note: If the version doesn't match the current selected version, variables mapping might be wrong.
-          // Ideally we should switch to the prompt's version too, but keeping it simple for now.
-          // Or at least warn if versions differ.
-          setVariableValues(prompt.variables);
+        // Note: Variables may be returned as strings like "key:value" or as objects.
+        const map = {};
+        prompt.variables.forEach(v => {
+          if (typeof v === 'string') {
+            const idx = v.indexOf(':');
+            if (idx > -1) {
+              const key = v.slice(0, idx).trim();
+              const val = v.slice(idx + 1).trim();
+              map[key] = val;
+            }
+          } else if (v && typeof v === 'object') {
+            // assume single-key object
+            const keys = Object.keys(v);
+            if (keys.length > 0) {
+              map[keys[0]] = v[keys[0]];
+            }
+          }
+        });
+        setVariableValues(map);
       }
   };
 
@@ -753,22 +792,22 @@ const TemplateDetails = () => {
             <div className="section prompt-generator">
                 <h3>{t('template_details.generate_prompt')}</h3>
 
-                {variableCount > 0 ? (
-                    <div className="variables-form">
-                        {Array.from({ length: variableCount }).map((_, idx) => (
-                            <div key={idx} className="form-group">
-                                <label>{t('template_details.variable')} {idx + 1}</label>
-                                <input
-                                    type="text"
-                                    value={variableValues[idx] || ''}
-                                    onChange={(e) => handleVariableChange(idx, e.target.value)}
-                                    placeholder={t('template_details.enter_value')}
-                                />
-                            </div>
-                        ))}
-                    </div>
+                {uniqueNames.length > 0 ? (
+                  <div className="variables-form">
+                    {uniqueNames.map((name) => (
+                      <div key={name} className="form-group">
+                        <label>{name}</label>
+                        <input
+                          type="text"
+                          value={variableValues[name] || ''}
+                          onChange={(e) => handleVariableChange(name, e.target.value)}
+                          placeholder={t('template_details.enter_value')}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                    <p className="no-vars">{t('template_details.no_vars')}</p>
+                  <p className="no-vars">{t('template_details.no_vars')}</p>
                 )}
 
                 <label className="result-label">{t('template_details.result_preview')}</label>
@@ -778,8 +817,8 @@ const TemplateDetails = () => {
 
                 <div className="generator-actions">
                     <button className="secondary" onClick={handleCopy}>{t('card.copy')}</button>
-                    <button className="primary" onClick={handleCreatePrompt} disabled={isGenerating}>
-                        {isGenerating ? t('common.saving') : t('template_details.save_prompt')}
+                    <button className="primary" onClick={handleCreatePrompt} disabled={isGenerating || isEditing}>
+                      {isGenerating ? t('common.saving') : t('template_details.save_prompt')}
                     </button>
                 </div>
             </div>
@@ -796,40 +835,77 @@ const TemplateDetails = () => {
             <div className="prompt-history">
                 <h3>{t('template_details.saved_prompts')}</h3>
                 <div className="prompt-list">
-                    {prompts.length === 0 ? (
-                        <div className="no-prompts">{t('template_details.no_saved_prompts')}</div>
-                    ) : (
-                        prompts.map(p => {
-                            // Reconstruct content for display
-                            // Note: This matches the *current* template version logic, but saved prompts
-                            // refer to specific versions. Complex to reconstruct perfectly without fetching that specific version content
-                            // For MVP, we just list them.
-                            return (
-                                <div key={p.id} className="prompt-item">
-                                    <div className="prompt-meta">
-                                        {new Date(p.created_at).toLocaleDateString()}
-                                    </div>
-                                    <div className="prompt-content">
-                                        {t('template_details.variables_label')}: {p.variables ? p.variables.join(', ') : t('common.none')}
-                                    </div>
-                                    <div className="prompt-actions">
-                                        <button
-                                            className="load-btn"
-                                            onClick={() => handleLoadPrompt(p)}
-                                        >
-                                            {t('template_details.load')}
-                                        </button>
-                                        <button
-                                            className="delete-btn"
-                                            onClick={() => handleDeletePrompt(p.id)}
-                                        >
-                                            {t('common.delete')}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
+                    {(() => {
+                      const filtered = prompts.filter(p => p.version_id === selectedVersionId);
+                      if (filtered.length === 0) {
+                        return <div className="no-prompts">{t('template_details.no_saved_prompts')}</div>;
+                      }
+                      return filtered.map(p => {
+                        // Parse variables into {key, value} pairs for separate display
+                        const parseVars = (vars) => {
+                          if (!vars) return [];
+                          const pairs = [];
+                          try {
+                            // vars may already be array of strings
+                            if (Array.isArray(vars)) {
+                              vars.forEach((v) => {
+                                if (typeof v === 'string') {
+                                  const idx = v.indexOf(':');
+                                  if (idx > -1) {
+                                    pairs.push({ key: v.slice(0, idx).trim(), value: v.slice(idx + 1).trim() });
+                                  } else {
+                                    pairs.push({ key: v, value: '' });
+                                  }
+                                } else if (v && typeof v === 'object') {
+                                  const k = Object.keys(v)[0];
+                                  pairs.push({ key: k, value: v[k] });
+                                }
+                              });
+                            }
+                          } catch (e) {
+                            // fallback: empty
+                          }
+                          return pairs;
+                        };
+
+                        const varPairs = parseVars(p.variables);
+
+                        return (
+                          <div key={p.id} className="prompt-item">
+                            <div className="prompt-meta">
+                              {new Date(p.created_at).toLocaleDateString()}
+                            </div>
+                            <div className="prompt-vars">
+                              {varPairs.length === 0 ? (
+                                <div className="no-vars-small">{t('common.none')}</div>
+                              ) : (
+                                varPairs.map((pair, i) => (
+                                  <div key={i} className="var-chip" title={`${pair.key}: ${pair.value}`}>
+                                    <div className="var-key">{pair.key}</div>
+                                    <div className="var-sep">:</div>
+                                    <div className="var-value">{pair.value}</div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                            <div className="prompt-actions">
+                              <button
+                                className="load-btn"
+                                onClick={() => handleLoadPrompt(p)}
+                              >
+                                {t('template_details.load')}
+                              </button>
+                              <button
+                                className="delete-btn"
+                                onClick={() => handleDeletePrompt(p.id)}
+                              >
+                                {t('common.delete')}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                 </div>
             </div>
           </div>
@@ -838,6 +914,7 @@ const TemplateDetails = () => {
 
       <Modal
         open={isDeleteModalOpen}
+        className="fork-modal"
         modalHeading={t('template_details.delete_prompt_title')}
         modalLabel={t('common.confirmation')}
         primaryButtonText={isDeletingPrompt ? t('common.deleting') : t('common.delete')}

@@ -85,7 +85,7 @@ const Header = ({ onMenuClick }) => {
         </button>
         <Link to="/" className="logo">
           <img src="/images/logo.jpg" alt="Logo" style={{ height: '32px', marginRight: '10px', borderRadius: '50%' }} />
-          Awsome Prompt
+          Awsome Prompts
         </Link>
       </div>
       <div className="header-right">

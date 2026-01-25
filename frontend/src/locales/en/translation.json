@@ -1,5 +1,5 @@
 {
-  "welcome": "Welcome to Awsome Prompt Manager",
+  "welcome": "Welcome to Awsome Prompts Manager",
   "hello_carbon": "Hello Carbon",
   "login": {
     "title": "Login",
@@ -132,12 +132,12 @@
       "generate_prompt": "Generate Prompt",
       "variable": "Variable",
       "enter_value": "Enter value...",
-      "no_vars": "No variables ($$) found in this template.",
+      "no_vars": "No variables (${varName}) found in this template.",
       "result_preview": "Result Preview:",
       "save_prompt": "Save Prompt",
       "how_to_use": "How to use",
-      "instruction_1": "Use <code>$$</code> as a placeholder in your template.",
-      "instruction_2": "Example: <code>Translate $$ to Spanish.</code>",
+      "instruction_1": "Use <code>${varName}</code> as a placeholder in your template.",
+      "instruction_2": "Example: <code>Translate ${text} to Spanish.</code>",
       "instruction_3": "When generating, inputs will appear for each placeholder.",
       "saved_prompts": "Your Saved Prompts",
       "no_saved_prompts": "No prompts saved yet.",

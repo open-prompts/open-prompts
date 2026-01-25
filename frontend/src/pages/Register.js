@@ -7,6 +7,7 @@ import { register, sendVerificationCode } from '../services/api';
 import { loginSuccess } from '../store/authSlice';
 import { useNotification } from '../context/NotificationContext';
 import './Register.scss';
+import AuthBackground from '../components/AuthBackground';
 
 /**
  * Register Page Component
@@ -164,6 +165,7 @@ const Register = () => {
 
   return (
     <div className="register-page">
+      <AuthBackground />
       <div className="register-form-container">
         <h2>{t('register.title')}</h2>
         <Form onSubmit={handleSubmit} noValidate>

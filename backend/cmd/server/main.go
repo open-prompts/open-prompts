@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 
 	pb "awsome-prompt/backend/api/proto/v1"
 	"awsome-prompt/backend/internal/data"
+	"awsome-prompt/backend/internal/models"
 	"awsome-prompt/backend/internal/repository"
 	"awsome-prompt/backend/internal/service"
 
@@ -20,6 +23,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func writeError(w http.ResponseWriter, err error) {
@@ -746,16 +750,80 @@ func main() {
 				http.Error(w, "Failed to read body", http.StatusBadRequest)
 				return
 			}
-			var req pb.CreatePromptRequest
-			if err := unmarshaler.Unmarshal(body, &req); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+
+			// Accept variables as array of objects [{name: value}...] from frontend.
+			var payload map[string]interface{}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 				return
 			}
-			resp, err := svc.CreatePrompt(context.Background(), &req)
-			if err != nil {
-				writeError(w, err)
+
+			templateID, _ := payload["template_id"].(string)
+			ownerID, _ := payload["owner_id"].(string)
+
+			var versionID int32
+			if v, ok := payload["version_id"]; ok {
+				switch vt := v.(type) {
+				case float64:
+					versionID = int32(vt)
+				case int:
+					versionID = int32(vt)
+				}
+			}
+
+			// variables can be any JSON array (objects or strings). We'll store raw JSON as-is.
+			var variablesRaw json.RawMessage
+			if v, ok := payload["variables"]; ok {
+				if b, err := json.Marshal(v); err == nil {
+					variablesRaw = json.RawMessage(b)
+				} else {
+					variablesRaw = json.RawMessage("[]")
+				}
+			} else {
+				variablesRaw = json.RawMessage("[]")
+			}
+
+			zap.S().Infof("CreatePrompt: incoming variables JSON: %s", string(variablesRaw))
+
+			// Build prompt model and persist directly (store variables JSON as provided)
+			prompt := &models.Prompt{
+				TemplateID: templateID,
+				VersionID:  versionID,
+				OwnerID:    ownerID,
+				Variables:  variablesRaw,
+			}
+
+			if err := promptRepo.Create(context.Background(), prompt); err != nil {
+				writeError(w, status.Errorf(codes.Internal, "failed to create prompt: %v", err))
 				return
 			}
+
+			zap.S().Infof("CreatePrompt: stored variables JSON: %s", string(prompt.Variables))
+
+			// Build response manually for backward compatibility
+			var vars []string
+			// Prefer parsing as array of objects (new format), fallback to array of strings (legacy)
+			var objs []map[string]interface{}
+			if err2 := json.Unmarshal(prompt.Variables, &objs); err2 == nil {
+				for _, obj := range objs {
+					for k, v := range obj {
+						vars = append(vars, fmt.Sprintf("%s:%v", k, v))
+						break
+					}
+				}
+			} else {
+				_ = json.Unmarshal(prompt.Variables, &vars)
+			}
+
+			pbPrompt := &pb.Prompt{
+				Id:         prompt.ID,
+				TemplateId: prompt.TemplateID,
+				VersionId:  prompt.VersionID,
+				OwnerId:    prompt.OwnerID,
+				Variables:  vars,
+				CreatedAt:  timestamppb.New(prompt.CreatedAt),
+			}
+			resp := &pb.CreatePromptResponse{Prompt: pbPrompt}
 			w.Header().Set("Content-Type", "application/json")
 			b, _ := marshaler.Marshal(resp)
 			_, _ = w.Write(b)

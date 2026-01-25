@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -792,7 +793,18 @@ func (s *PromptService) promptModelToProto(m *models.Prompt) *pb.Prompt {
 		return nil
 	}
 	var variables []string
-	_ = json.Unmarshal(m.Variables, &variables)
+	// Prefer parsing as array of objects (new format), fallback to array of strings (legacy)
+	var objs []map[string]interface{}
+	if err := json.Unmarshal(m.Variables, &objs); err == nil {
+		for _, obj := range objs {
+			for k, v := range obj {
+				variables = append(variables, fmt.Sprintf("%s:%v", k, v))
+				break
+			}
+		}
+	} else {
+		_ = json.Unmarshal(m.Variables, &variables)
+	}
 
 	return &pb.Prompt{
 		Id:         m.ID,

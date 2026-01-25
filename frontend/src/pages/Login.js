@@ -7,6 +7,7 @@ import { login } from '../services/api';
 import { loginSuccess } from '../store/authSlice';
 import { useNotification } from '../context/NotificationContext';
 import './Login.scss';
+import AuthBackground from '../components/AuthBackground';
 
 /**
  * Login Page Component
@@ -69,6 +70,7 @@ const Login = () => {
 
   return (
     <div className="login-page">
+      <AuthBackground />
       <div className="login-form-container">
         <h2>{t('login.title')}</h2>
         <Form onSubmit={handleSubmit} noValidate>

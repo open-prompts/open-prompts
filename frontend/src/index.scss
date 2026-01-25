@@ -20,6 +20,11 @@
   --primary-color: #00FFFF;
   --primary-hover: #00CCCC;
   --secondary-color: #7B61FF;
+  --neon-cyan: #00F0FF;
+  --neon-pink: #FF3EC7;
+  --neon-purple: #8A4CFF;
+  --neon-accent: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-purple));
+  --neon-anim-speed: 8s;
   --text-main: #E0E0FF;
   --text-primary: #E0E0FF; /* Alias for Carbon if needed or general usage */
   --text-secondary: #A0A0B0;

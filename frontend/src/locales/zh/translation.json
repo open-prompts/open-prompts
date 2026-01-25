@@ -1,5 +1,5 @@
 {
-  "welcome": "欢迎使用 Awsome Prompt Manager",
+  "welcome": "欢迎使用 Awsome Prompts Manager",
   "login": {
     "title": "登录",
     "email": "邮箱",
@@ -133,12 +133,12 @@
       "generate_prompt": "生成提示词",
       "variable": "变量",
       "enter_value": "输入值...",
-      "no_vars": "模板中未找到变量 $$ ",
+      "no_vars": "模板中未找到变量 ${varName} ",
       "result_preview": "结果预览：",
       "save_prompt": "保存提示词",
       "how_to_use": "如何使用",
-      "instruction_1": "在模板中使用 <code>$$</code> 作为占位符。",
-      "instruction_2": "例如：<code>将$$翻译成中文。</code>",
+      "instruction_1": "在模板中使用 <code>${varName}</code> 作为占位符。",
+      "instruction_2": "例如：<code>将${text}翻译成中文。</code>",
       "instruction_3": "生成时，每个占位符都会出现输入框。",
       "saved_prompts": "您保存的提示词",
       "no_saved_prompts": "暂无保存的提示词。",

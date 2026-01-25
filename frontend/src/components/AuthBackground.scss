@@ -1,0 +1,74 @@
+/* Neon animated background for auth pages */
+.auth-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  mix-blend-mode: screen;
+}
+
+.auth-background .bg-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+/* CSS blobs layered for fast GPU-accelerated animation */
+.neon-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.85;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+  animation: neonFloat var(--neon-anim-speed) ease-in-out infinite;
+}
+.neon-blob--1 { width: 520px; height: 520px; left: -12%; top: -8%; background: radial-gradient(circle at 30% 30%, var(--neon-cyan), transparent 40%); }
+.neon-blob--2 { width: 420px; height: 420px; right: -6%; top: 6%; background: radial-gradient(circle at 70% 30%, var(--neon-pink), transparent 45%); animation-duration: calc(var(--neon-anim-speed) * 1.2); }
+.neon-blob--3 { width: 360px; height: 360px; left: 18%; bottom: -6%; background: radial-gradient(circle at 40% 60%, var(--neon-purple), transparent 42%); animation-duration: calc(var(--neon-anim-speed) * 0.9); }
+
+@keyframes neonFloat {
+  0% { transform: translateY(0) scale(1); opacity: 0.9 }
+  50% { transform: translateY(-18px) scale(1.03); opacity: 1 }
+  100% { transform: translateY(0) scale(1); opacity: 0.9 }
+}
+
+/* Subtle neon grid overlay */
+.neon-grid {
+  position: absolute;
+  inset: -10% -10% -10% -10%;
+  background-image: linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px;
+  mix-blend-mode: overlay;
+  opacity: 0.35;
+  transform: translateZ(0);
+  animation: gridShift 30s linear infinite;
+}
+
+@keyframes gridShift {
+  0% { background-position: 0 0, 0 0 }
+  100% { background-position: 120px 120px, -120px -120px }
+}
+
+/* sparkles inside SVG get a shimmer animation */
+.auth-background .sparkles circle {
+  animation: twinkle 4s linear infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+/* Ensure forms sit above background */
+.login-page, .register-page {
+  position: relative;
+  z-index: 1;
+}
+
+/* Light theme tweaks */
+.light-theme .auth-background { mix-blend-mode: normal; }
+
