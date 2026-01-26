@@ -1,74 +1,140 @@
-/* Neon animated background for auth pages */
+/* New tech background for auth pages (light & dark) */
 .auth-background {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  mix-blend-mode: screen;
+  display: block;
+  font-family: Inter, Arial, sans-serif;
 }
 
-.auth-background .bg-svg {
+.auth-geo {
   width: 100%;
   height: 100%;
   display: block;
-  opacity: 1;
-  transition: opacity 0.4s ease;
 }
 
-/* CSS blobs layered for fast GPU-accelerated animation */
-.neon-blob {
+/* overlay to slightly darken/lighten and add grain */
+.auth-bg-overlay {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.85;
-  will-change: transform, opacity;
-  mix-blend-mode: screen;
-  animation: neonFloat var(--neon-anim-speed) ease-in-out infinite;
-}
-.neon-blob--1 { width: 520px; height: 520px; left: -12%; top: -8%; background: radial-gradient(circle at 30% 30%, var(--neon-cyan), transparent 40%); }
-.neon-blob--2 { width: 420px; height: 420px; right: -6%; top: 6%; background: radial-gradient(circle at 70% 30%, var(--neon-pink), transparent 45%); animation-duration: calc(var(--neon-anim-speed) * 1.2); }
-.neon-blob--3 { width: 360px; height: 360px; left: 18%; bottom: -6%; background: radial-gradient(circle at 40% 60%, var(--neon-purple), transparent 42%); animation-duration: calc(var(--neon-anim-speed) * 0.9); }
-
-@keyframes neonFloat {
-  0% { transform: translateY(0) scale(1); opacity: 0.9 }
-  50% { transform: translateY(-18px) scale(1.03); opacity: 1 }
-  100% { transform: translateY(0) scale(1); opacity: 0.9 }
-}
-
-/* Subtle neon grid overlay */
-.neon-grid {
-  position: absolute;
-  inset: -10% -10% -10% -10%;
-  background-image: linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.02), rgba(0,0,0,0.02) 60%);
   mix-blend-mode: overlay;
-  opacity: 0.35;
-  transform: translateZ(0);
-  animation: gridShift 30s linear infinite;
 }
 
-@keyframes gridShift {
-  0% { background-position: 0 0, 0 0 }
-  100% { background-position: 120px 120px, -120px -120px }
+/* Theme variables (light and dark flavors) */
+.light-theme {
+  --bg-grad-start: #f7fbff;
+  --bg-grad-end: #e6f7ff;
+  --link-start: #0ea5b6; /* teal */
+  --link-end: #60a5fa;   /* blue */
+  --node: #0ea5b6;
+  --node-outer: rgba(14,165,182,0.16);
+  --brand: #0b1220;
+  --grid-color: rgba(11,17,32,0.06);
 }
 
-/* sparkles inside SVG get a shimmer animation */
-.auth-background .sparkles circle {
-  animation: twinkle 4s linear infinite;
+.dark-theme {
+  --bg-grad-start: #02111a;
+  --bg-grad-end: #061428;
+  --link-start: #00e6ff; /* cyan */
+  --link-end: #7b61ff;   /* purple */
+  --node: #7b61ff;
+  --node-outer: rgba(123,97,255,0.12);
+  --brand: #e6eefb;
+  --grid-color: rgba(255,255,255,0.04);
 }
 
-@keyframes twinkle {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.25); }
+/* Moving scan band */
+.moving-band {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: slideBand 14s linear infinite;
 }
 
-/* Ensure forms sit above background */
-.login-page, .register-page {
-  position: relative;
-  z-index: 1;
+@keyframes slideBand {
+  0% { transform: translateX(-35%); }
+  100% { transform: translateX(135%); }
 }
 
-/* Light theme tweaks */
-.light-theme .auth-background { mix-blend-mode: normal; }
+/* Links subtle pulsing */
+.link {
+  opacity: 0.95;
+  mix-blend-mode: screen;
+  transition: opacity 300ms ease;
+  animation: linkPulse 4.5s ease-in-out infinite;
+}
+
+@keyframes linkPulse {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+/* Node pulse */
+.node { animation: nodePulse 3.8s ease-in-out infinite; }
+.node-outer { transition: opacity 300ms ease; animation: outerPulse 3.8s ease-in-out infinite; }
+
+@keyframes nodePulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes outerPulse {
+  0% { opacity: 0.12; transform: scale(1); }
+  50% { opacity: 0.22; transform: scale(1.12); }
+  100% { opacity: 0.12; transform: scale(1); }
+}
+
+/* stagger different node groups for organic movement */
+.nodes .node-group:nth-child(1) .node, .nodes .node-group:nth-child(1) .node-outer { animation-delay: 0s }
+.nodes .node-group:nth-child(2) .node, .nodes .node-group:nth-child(2) .node-outer { animation-delay: 0.3s }
+.nodes .node-group:nth-child(3) .node, .nodes .node-group:nth-child(3) .node-outer { animation-delay: 0.6s }
+.nodes .node-group:nth-child(4) .node, .nodes .node-group:nth-child(4) .node-outer { animation-delay: 0.9s }
+.nodes .node-group:nth-child(5) .node, .nodes .node-group:nth-child(5) .node-outer { animation-delay: 1.2s }
+.nodes .node-group:nth-child(6) .node, .nodes .node-group:nth-child(6) .node-outer { animation-delay: 1.5s }
+.nodes .node-group:nth-child(7) .node, .nodes .node-group:nth-child(7) .node-outer { animation-delay: 1.8s }
+.nodes .node-group:nth-child(8) .node, .nodes .node-group:nth-child(8) .node-outer { animation-delay: 2.1s }
+.nodes .node-group:nth-child(9) .node, .nodes .node-group:nth-child(9) .node-outer { animation-delay: 2.4s }
+.nodes .node-group:nth-child(10) .node, .nodes .node-group:nth-child(10) .node-outer { animation-delay: 2.7s }
+
+/* subtle grid for structure */
+.grid { opacity: 0.06; mix-blend-mode: overlay; }
+
+/* brand watermark: animated + parallax */
+.brand {
+  transform: translate(var(--brand-x, 0px), var(--brand-y, 0px));
+  animation: brandDrift 18s ease-in-out infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+  transform-origin: left top;
+}
+.brand text { font-weight: 700; letter-spacing: 0.6px; fill: var(--brand); }
+
+@keyframes brandDrift {
+  0% { transform: translate(var(--brand-x, 0px), var(--brand-y, 0px)) translate(0px, 0px) rotate(0deg); }
+  25% { transform: translate(var(--brand-x, 0px), var(--brand-y, 0px)) translate(-6px, -2px) rotate(-0.4deg); }
+  50% { transform: translate(var(--brand-x, 0px), var(--brand-y, 0px)) translate(4px, 3px) rotate(0.6deg); }
+  75% { transform: translate(var(--brand-x, 0px), var(--brand-y, 0px)) translate(-3px, 4px) rotate(-0.2deg); }
+  100% { transform: translate(var(--brand-x, 0px), var(--brand-y, 0px)) translate(0px, 0px) rotate(0deg); }
+}
+
+/* respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .moving-band, .link, .node, .node-outer { animation: none !important; }
+}
+
+/* ensure forms sit above background */
+.login-page, .register-page { position: relative; z-index: 1; }
+
+/* small screens: hide grid & reduce details */
+@media (max-width: 640px) {
+  .grid { display: none; }
+  .auth-bg-overlay { opacity: 0.95; }
+}
+
+
 
