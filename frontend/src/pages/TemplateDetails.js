@@ -135,7 +135,7 @@ const TemplateDetails = () => {
                      cats = data;
                  }
                  // Ensure current template category is in the list if it has one
-                 // But wait, user might want to switch. 
+                 // But wait, user might want to switch.
                  // If we purely use fetched list, and current category is not in it (e.g. cross-language mismatch),
                  // it will show empty in select if we don't have it as an option.
                  // We should probably just render what we get. The user can choose to keep it (if we add it to options) or change it.
@@ -197,7 +197,7 @@ const TemplateDetails = () => {
           // When saving metadata only, always use the latest version's content to avoid creating a new version
           // unless content actually changed on backend check.
           const contentToSend = versions.length > 0 ? versions[0].content : '';
-          
+
           let finalCategory = editCategory;
           if (editCategory === 'create_new') {
               finalCategory = customCategory.trim();
@@ -234,13 +234,13 @@ const TemplateDetails = () => {
 
           const res = await updateTemplate(template.id, updateData);
           setTemplate(res.data.template);
-          
+
           // If a new version is created (depends on backend logic when content is same), add it
           if (res.data.new_version) {
                const nv = res.data.new_version;
                if (!versions.some(v => v.id === nv.id)) {
                    setVersions([nv, ...versions]);
-                   // Optional: switch to new version? 
+                   // Optional: switch to new version?
                    // If content didn't change, we might not want to switch version context abruptly?
                    // But if backend created a version, it's the latest.
                }
@@ -622,9 +622,9 @@ const TemplateDetails = () => {
                     </div>
                     <div className="editor-row">
                         <label className="editor-label">{t('template_details.edit_metadata') || "Category & Tags"}</label>
-                        <select 
-                            value={editCategory} 
-                            onChange={e => setEditCategory(e.target.value)} 
+                        <select
+                            value={editCategory}
+                            onChange={e => setEditCategory(e.target.value)}
                             className="meta-select"
                         >
                             <option value="" disabled>{t('create_template.category_placeholder') || 'Select Category'}</option>
@@ -638,8 +638,8 @@ const TemplateDetails = () => {
                             ))}
                         </select>
                         {editCategory === 'create_new' && (
-                             <input 
-                                 type="text" 
+                             <input
+                                 type="text"
                                  value={customCategory}
                                  onChange={e => setCustomCategory(e.target.value)}
                                  placeholder={t('create_template.ph_new_category')}
@@ -703,7 +703,7 @@ const TemplateDetails = () => {
                     {template.tags && template.tags.map(tag => (
                         <span key={tag} className="tag">#{tag}</span>
                     ))}
-                    
+
                     {user && user.id === template.owner_id && (
                        <button onClick={handleEditMetadata} className="icon-btn edit-meta-btn" title={t('template_details.edit_metadata') || "Edit Metadata"}>
                            <span className="icon">

@@ -61,7 +61,7 @@ func (r *templateAliasRepository) Upsert(ctx context.Context, t *models.Template
 query := `
 INSERT INTO template_aliases (template_id, alias_name, version_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (template_id, alias_name) DO UPDATE 
+ON CONFLICT (template_id, alias_name) DO UPDATE
 SET version_id = EXCLUDED.version_id, updated_at = EXCLUDED.updated_at
 RETURNING id
 `

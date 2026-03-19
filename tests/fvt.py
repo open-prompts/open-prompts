@@ -291,7 +291,7 @@ def test_auth():
     print("3. Testing Duplicate Register...")
     # Send verification code again because the previous one was consumed
     requests.post("http://localhost:8080/api/v1/verification-code", json={"email": email})
-    
+
     resp = requests.post(REGISTER_URL, json=register_payload)
     if resp.status_code != 409:
         print(f"Duplicate register should fail with 409, but got {resp.status_code}")
@@ -970,7 +970,7 @@ def test_template_alias_flow():
     token = get_auth_token(owner_id)
     headers = {"Authorization": f"Bearer {token}"}
     """Test the complete flow of aliases: Create template -> Generate versions -> Create alias -> Retrieve by alias"""
-    
+
     # 1. Create a template (Version 1)
     template_payload = {
         "owner_id": owner_id,
@@ -1003,26 +1003,26 @@ def test_template_alias_flow():
     r = requests.put(f"{app_url}/api/v1/templates/{template_id}", json=update_payload, headers=headers)
     assert r.status_code == 200, r.text
     v2_id = r.json().get("new_version", {}).get("id")
-    
+
     # Check automatically created 'latest' alias
     r = requests.get(f"{app_url}/api/v1/templates/{template_id}/aliases/latest", headers=headers)
     assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
     assert r.json().get("id") == v2_id
-    
+
     # 3. Create a new alias point to version 1
     # First, list versions to find version 1 id
     r = requests.get(f"{app_url}/api/v1/templates/{template_id}/versions", headers=headers)
     versions = r.json().get("versions", [])
     print("VERSIONS ARE:", versions)
     v1_id = next((v["id"] for v in versions if v.get("version") == 1), None)
-    
+
     alias_payload = {
         "alias_name": "prod",
         "version_id": v1_id
     }
     r = requests.post(f"{app_url}/api/v1/templates/{template_id}/aliases", json=alias_payload, headers=headers)
     assert r.status_code == 200, r.text
-    
+
     # 4. Agent retrieves prompt by alias
     r = requests.get(f"{app_url}/api/v1/templates/{template_id}/aliases/prod", headers=headers)
     assert r.status_code == 200, r.text

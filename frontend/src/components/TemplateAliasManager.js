@@ -35,11 +35,11 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
 
   const handleCreateOrUpdate = async () => {
     if (!newAliasName || !newAliasVersionId) return;
-    
+
     try {
       setIsSubmitting(true);
       const existing = aliases.find(a => a.alias_name === newAliasName);
-      
+
       if (existing) {
         await updateTemplateAlias(templateId, newAliasName, { version_id: parseInt(newAliasVersionId) });
         addNotification({ kind: 'success', title: t('common.success'), subtitle: 'Alias updated' });
@@ -47,7 +47,7 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
         await createTemplateAlias(templateId, { alias_name: newAliasName, version_id: parseInt(newAliasVersionId) });
         addNotification({ kind: 'success', title: t('common.success'), subtitle: 'Alias created' });
       }
-      
+
       setNewAliasName('');
       setNewAliasVersionId('');
       fetchAliases();
@@ -64,7 +64,7 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
 
   const handleDelete = async (aliasName) => {
     if (!window.confirm('Are you sure you want to delete this alias?')) return;
-    
+
     try {
       await deleteTemplateAlias(templateId, aliasName);
       addNotification({ kind: 'success', title: t('common.success'), subtitle: 'Alias deleted' });
@@ -130,14 +130,14 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
             <SelectItem key={v.id} value={v.id} text={`v${v.version}`} />
           ))}
         </Select>
-        <Button 
-          size="md" 
+        <Button
+          size="md"
           onClick={handleCreateOrUpdate}
           disabled={!newAliasName || !newAliasVersionId || isSubmitting}
           className="alias-btn"
         >
-          {aliases.some(a => a.alias_name === newAliasName) 
-            ? 'Update Alias' 
+          {aliases.some(a => a.alias_name === newAliasName)
+            ? 'Update Alias'
             : 'Create Alias'}
         </Button>
       </div>

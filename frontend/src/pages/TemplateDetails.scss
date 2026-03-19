@@ -143,7 +143,7 @@
           max-width: 65ch; /* Optimal reading width */
           white-space: pre-wrap; /* Preserve formatting */
           font-weight: 400;
-          letter-spacing: 0.01em; 
+          letter-spacing: 0.01em;
 
           @media (max-width: 768px) {
               font-size: 0.95rem;
@@ -823,7 +823,7 @@
        outline: none;
        width: 100%;
        transition: border-color 0.2s;
-       
+
        &:focus {
            border-color: var(--primary-color);
        }
@@ -855,7 +855,7 @@
 
     .tags-editor {
        align-items: center;
-       
+
        .tags-list {
          display: flex;
          gap: 5px;
@@ -863,7 +863,7 @@
        }
 
        .tag-edit-chip {
-         background: rgba(0, 255, 255, 0.1); 
+         background: rgba(0, 255, 255, 0.1);
          color: var(--primary-color, #0ff);
          border: 1px solid var(--primary-color, #0ff);
          padding: 2px 8px;
@@ -917,7 +917,7 @@
 
     .editor-actions {
        margin-top: 5px;
-       
+
        button {
          padding: 5px 15px;
          border-radius: 4px;
@@ -962,7 +962,7 @@
         color: var(--text-muted);
         transition: color 0.2s;
         margin-left: 10px;
-        
+
         &:hover {
             color: var(--primary-color);
         }
