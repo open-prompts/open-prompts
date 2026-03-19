@@ -163,3 +163,17 @@ COMMENT ON COLUMN prompts.owner_id IS 'ID of the user who saved this prompt';
 -- Indexes for prompts
 CREATE INDEX IF NOT EXISTS idx_prompts_owner_id ON prompts(owner_id);
 CREATE INDEX IF NOT EXISTS idx_prompts_template_id ON prompts(template_id);
+
+-- -----------------------------------------------------------------------------
+-- Table: template_aliases
+-- Description: Stores aliases for template versions.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_aliases (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    alias_name VARCHAR(50) NOT NULL,
+    version_id INT NOT NULL REFERENCES template_versions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(template_id, alias_name)
+);

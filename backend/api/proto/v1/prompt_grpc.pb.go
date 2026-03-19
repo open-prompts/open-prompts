@@ -25,6 +25,11 @@ const (
 	UserService_SendVerificationCode_FullMethodName = "/v1.UserService/SendVerificationCode"
 	UserService_UpdateProfile_FullMethodName        = "/v1.UserService/UpdateProfile"
 	UserService_GetProfile_FullMethodName           = "/v1.UserService/GetProfile"
+	UserService_CreateAlias_FullMethodName          = "/v1.UserService/CreateAlias"
+	UserService_ListAliases_FullMethodName          = "/v1.UserService/ListAliases"
+	UserService_UpdateAlias_FullMethodName          = "/v1.UserService/UpdateAlias"
+	UserService_DeleteAlias_FullMethodName          = "/v1.UserService/DeleteAlias"
+	UserService_GetPromptByAlias_FullMethodName     = "/v1.UserService/GetPromptByAlias"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -45,6 +50,12 @@ type UserServiceClient interface {
 	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error)
 	// GetProfile retrieves the profile of the logged-in user.
 	GetProfile(ctx context.Context, in *GetProfileRequest, opts ...grpc.CallOption) (*GetProfileResponse, error)
+	// Alias RPCs
+	CreateAlias(ctx context.Context, in *CreateAliasRequest, opts ...grpc.CallOption) (*Alias, error)
+	ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error)
+	UpdateAlias(ctx context.Context, in *UpdateAliasRequest, opts ...grpc.CallOption) (*Alias, error)
+	DeleteAlias(ctx context.Context, in *DeleteAliasRequest, opts ...grpc.CallOption) (*DeleteTemplateResponse, error)
+	GetPromptByAlias(ctx context.Context, in *GetPromptByAliasRequest, opts ...grpc.CallOption) (*TemplateVersion, error)
 }
 
 type userServiceClient struct {
@@ -115,6 +126,56 @@ func (c *userServiceClient) GetProfile(ctx context.Context, in *GetProfileReques
 	return out, nil
 }
 
+func (c *userServiceClient) CreateAlias(ctx context.Context, in *CreateAliasRequest, opts ...grpc.CallOption) (*Alias, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Alias)
+	err := c.cc.Invoke(ctx, UserService_CreateAlias_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAliasesResponse)
+	err := c.cc.Invoke(ctx, UserService_ListAliases_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) UpdateAlias(ctx context.Context, in *UpdateAliasRequest, opts ...grpc.CallOption) (*Alias, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Alias)
+	err := c.cc.Invoke(ctx, UserService_UpdateAlias_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) DeleteAlias(ctx context.Context, in *DeleteAliasRequest, opts ...grpc.CallOption) (*DeleteTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteTemplateResponse)
+	err := c.cc.Invoke(ctx, UserService_DeleteAlias_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetPromptByAlias(ctx context.Context, in *GetPromptByAliasRequest, opts ...grpc.CallOption) (*TemplateVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TemplateVersion)
+	err := c.cc.Invoke(ctx, UserService_GetPromptByAlias_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -133,6 +194,12 @@ type UserServiceServer interface {
 	UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error)
 	// GetProfile retrieves the profile of the logged-in user.
 	GetProfile(context.Context, *GetProfileRequest) (*GetProfileResponse, error)
+	// Alias RPCs
+	CreateAlias(context.Context, *CreateAliasRequest) (*Alias, error)
+	ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error)
+	UpdateAlias(context.Context, *UpdateAliasRequest) (*Alias, error)
+	DeleteAlias(context.Context, *DeleteAliasRequest) (*DeleteTemplateResponse, error)
+	GetPromptByAlias(context.Context, *GetPromptByAliasRequest) (*TemplateVersion, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -160,6 +227,21 @@ func (UnimplementedUserServiceServer) UpdateProfile(context.Context, *UpdateProf
 }
 func (UnimplementedUserServiceServer) GetProfile(context.Context, *GetProfileRequest) (*GetProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProfile not implemented")
+}
+func (UnimplementedUserServiceServer) CreateAlias(context.Context, *CreateAliasRequest) (*Alias, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAlias not implemented")
+}
+func (UnimplementedUserServiceServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAliases not implemented")
+}
+func (UnimplementedUserServiceServer) UpdateAlias(context.Context, *UpdateAliasRequest) (*Alias, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAlias not implemented")
+}
+func (UnimplementedUserServiceServer) DeleteAlias(context.Context, *DeleteAliasRequest) (*DeleteTemplateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAlias not implemented")
+}
+func (UnimplementedUserServiceServer) GetPromptByAlias(context.Context, *GetPromptByAliasRequest) (*TemplateVersion, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPromptByAlias not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -290,6 +372,96 @@ func _UserService_GetProfile_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_CreateAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAliasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).CreateAlias(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_CreateAlias_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).CreateAlias(ctx, req.(*CreateAliasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAliasesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListAliases(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListAliases_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListAliases(ctx, req.(*ListAliasesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_UpdateAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAliasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UpdateAlias(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UpdateAlias_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UpdateAlias(ctx, req.(*UpdateAliasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_DeleteAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAliasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DeleteAlias(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DeleteAlias_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DeleteAlias(ctx, req.(*DeleteAliasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetPromptByAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPromptByAliasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetPromptByAlias(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetPromptByAlias_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetPromptByAlias(ctx, req.(*GetPromptByAliasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -320,6 +492,26 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetProfile",
 			Handler:    _UserService_GetProfile_Handler,
+		},
+		{
+			MethodName: "CreateAlias",
+			Handler:    _UserService_CreateAlias_Handler,
+		},
+		{
+			MethodName: "ListAliases",
+			Handler:    _UserService_ListAliases_Handler,
+		},
+		{
+			MethodName: "UpdateAlias",
+			Handler:    _UserService_UpdateAlias_Handler,
+		},
+		{
+			MethodName: "DeleteAlias",
+			Handler:    _UserService_DeleteAlias_Handler,
+		},
+		{
+			MethodName: "GetPromptByAlias",
+			Handler:    _UserService_GetPromptByAlias_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

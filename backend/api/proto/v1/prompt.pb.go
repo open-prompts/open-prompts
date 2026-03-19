@@ -2869,6 +2869,387 @@ func (x *GetProfileResponse) GetAvatar() string {
 	return ""
 }
 
+// Alias messages
+type Alias struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TemplateId    string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	AliasName     string                 `protobuf:"bytes,3,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`
+	VersionId     int32                  `protobuf:"varint,4,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Alias) Reset() {
+	*x = Alias{}
+	mi := &file_prompt_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Alias) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Alias) ProtoMessage() {}
+
+func (x *Alias) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Alias.ProtoReflect.Descriptor instead.
+func (*Alias) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *Alias) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Alias) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *Alias) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+func (x *Alias) GetVersionId() int32 {
+	if x != nil {
+		return x.VersionId
+	}
+	return 0
+}
+
+type CreateAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`
+	VersionId     int32                  `protobuf:"varint,3,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateAliasRequest) Reset() {
+	*x = CreateAliasRequest{}
+	mi := &file_prompt_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateAliasRequest) ProtoMessage() {}
+
+func (x *CreateAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateAliasRequest.ProtoReflect.Descriptor instead.
+func (*CreateAliasRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *CreateAliasRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *CreateAliasRequest) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+func (x *CreateAliasRequest) GetVersionId() int32 {
+	if x != nil {
+		return x.VersionId
+	}
+	return 0
+}
+
+type ListAliasesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAliasesRequest) Reset() {
+	*x = ListAliasesRequest{}
+	mi := &file_prompt_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAliasesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAliasesRequest) ProtoMessage() {}
+
+func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAliasesRequest.ProtoReflect.Descriptor instead.
+func (*ListAliasesRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *ListAliasesRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+type ListAliasesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Aliases       []*Alias               `protobuf:"bytes,1,rep,name=aliases,proto3" json:"aliases,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAliasesResponse) Reset() {
+	*x = ListAliasesResponse{}
+	mi := &file_prompt_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAliasesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAliasesResponse) ProtoMessage() {}
+
+func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAliasesResponse.ProtoReflect.Descriptor instead.
+func (*ListAliasesResponse) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *ListAliasesResponse) GetAliases() []*Alias {
+	if x != nil {
+		return x.Aliases
+	}
+	return nil
+}
+
+type UpdateAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`
+	VersionId     int32                  `protobuf:"varint,3,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAliasRequest) Reset() {
+	*x = UpdateAliasRequest{}
+	mi := &file_prompt_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAliasRequest) ProtoMessage() {}
+
+func (x *UpdateAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAliasRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAliasRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *UpdateAliasRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *UpdateAliasRequest) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+func (x *UpdateAliasRequest) GetVersionId() int32 {
+	if x != nil {
+		return x.VersionId
+	}
+	return 0
+}
+
+type DeleteAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAliasRequest) Reset() {
+	*x = DeleteAliasRequest{}
+	mi := &file_prompt_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAliasRequest) ProtoMessage() {}
+
+func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAliasRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAliasRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *DeleteAliasRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *DeleteAliasRequest) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+type GetPromptByAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPromptByAliasRequest) Reset() {
+	*x = GetPromptByAliasRequest{}
+	mi := &file_prompt_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPromptByAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPromptByAliasRequest) ProtoMessage() {}
+
+func (x *GetPromptByAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPromptByAliasRequest.ProtoReflect.Descriptor instead.
+func (*GetPromptByAliasRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *GetPromptByAliasRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *GetPromptByAliasRequest) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
 var File_prompt_proto protoreflect.FileDescriptor
 
 const file_prompt_proto_rawDesc = "" +
@@ -3086,7 +3467,44 @@ const file_prompt_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x16\n" +
-	"\x06avatar\x18\x04 \x01(\tR\x06avatar*W\n" +
+	"\x06avatar\x18\x04 \x01(\tR\x06avatar\"v\n" +
+	"\x05Alias\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x03 \x01(\tR\taliasName\x12\x1d\n" +
+	"\n" +
+	"version_id\x18\x04 \x01(\x05R\tversionId\"s\n" +
+	"\x12CreateAliasRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x02 \x01(\tR\taliasName\x12\x1d\n" +
+	"\n" +
+	"version_id\x18\x03 \x01(\x05R\tversionId\"5\n" +
+	"\x12ListAliasesRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\":\n" +
+	"\x13ListAliasesResponse\x12#\n" +
+	"\aaliases\x18\x01 \x03(\v2\t.v1.AliasR\aaliases\"s\n" +
+	"\x12UpdateAliasRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x02 \x01(\tR\taliasName\x12\x1d\n" +
+	"\n" +
+	"version_id\x18\x03 \x01(\x05R\tversionId\"T\n" +
+	"\x12DeleteAliasRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x02 \x01(\tR\taliasName\"Y\n" +
+	"\x17GetPromptByAliasRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x02 \x01(\tR\taliasName*W\n" +
 	"\n" +
 	"Visibility\x12\x1a\n" +
 	"\x16VISIBILITY_UNSPECIFIED\x10\x00\x12\x16\n" +
@@ -3095,7 +3513,7 @@ const file_prompt_proto_rawDesc = "" +
 	"\fTemplateType\x12\x1d\n" +
 	"\x19TEMPLATE_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14TEMPLATE_TYPE_SYSTEM\x10\x01\x12\x16\n" +
-	"\x12TEMPLATE_TYPE_USER\x10\x022\x90\x03\n" +
+	"\x12TEMPLATE_TYPE_USER\x10\x022\xbd\x05\n" +
 	"\vUserService\x125\n" +
 	"\bRegister\x12\x13.v1.RegisterRequest\x1a\x14.v1.RegisterResponse\x12,\n" +
 	"\x05Login\x12\x10.v1.LoginRequest\x1a\x11.v1.LoginResponse\x12>\n" +
@@ -3103,7 +3521,12 @@ const file_prompt_proto_rawDesc = "" +
 	"\x14SendVerificationCode\x12\x1f.v1.SendVerificationCodeRequest\x1a .v1.SendVerificationCodeResponse\x12D\n" +
 	"\rUpdateProfile\x12\x18.v1.UpdateProfileRequest\x1a\x19.v1.UpdateProfileResponse\x12;\n" +
 	"\n" +
-	"GetProfile\x12\x15.v1.GetProfileRequest\x1a\x16.v1.GetProfileResponse2\xa1\a\n" +
+	"GetProfile\x12\x15.v1.GetProfileRequest\x1a\x16.v1.GetProfileResponse\x120\n" +
+	"\vCreateAlias\x12\x16.v1.CreateAliasRequest\x1a\t.v1.Alias\x12>\n" +
+	"\vListAliases\x12\x16.v1.ListAliasesRequest\x1a\x17.v1.ListAliasesResponse\x120\n" +
+	"\vUpdateAlias\x12\x16.v1.UpdateAliasRequest\x1a\t.v1.Alias\x12A\n" +
+	"\vDeleteAlias\x12\x16.v1.DeleteAliasRequest\x1a\x1a.v1.DeleteTemplateResponse\x12D\n" +
+	"\x10GetPromptByAlias\x12\x1b.v1.GetPromptByAliasRequest\x1a\x13.v1.TemplateVersion2\xa1\a\n" +
 	"\rPromptService\x12G\n" +
 	"\x0eCreateTemplate\x12\x19.v1.CreateTemplateRequest\x1a\x1a.v1.CreateTemplateResponse\x12G\n" +
 	"\x0eUpdateTemplate\x12\x19.v1.UpdateTemplateRequest\x1a\x1a.v1.UpdateTemplateResponse\x12>\n" +
@@ -3132,7 +3555,7 @@ func file_prompt_proto_rawDescGZIP() []byte {
 }
 
 var file_prompt_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
+var file_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_prompt_proto_goTypes = []any{
 	(Visibility)(0),                      // 0: v1.Visibility
 	(TemplateType)(0),                    // 1: v1.TemplateType
@@ -3180,17 +3603,24 @@ var file_prompt_proto_goTypes = []any{
 	(*UpdateProfileResponse)(nil),        // 43: v1.UpdateProfileResponse
 	(*GetProfileRequest)(nil),            // 44: v1.GetProfileRequest
 	(*GetProfileResponse)(nil),           // 45: v1.GetProfileResponse
-	(*timestamppb.Timestamp)(nil),        // 46: google.protobuf.Timestamp
+	(*Alias)(nil),                        // 46: v1.Alias
+	(*CreateAliasRequest)(nil),           // 47: v1.CreateAliasRequest
+	(*ListAliasesRequest)(nil),           // 48: v1.ListAliasesRequest
+	(*ListAliasesResponse)(nil),          // 49: v1.ListAliasesResponse
+	(*UpdateAliasRequest)(nil),           // 50: v1.UpdateAliasRequest
+	(*DeleteAliasRequest)(nil),           // 51: v1.DeleteAliasRequest
+	(*GetPromptByAliasRequest)(nil),      // 52: v1.GetPromptByAliasRequest
+	(*timestamppb.Timestamp)(nil),        // 53: google.protobuf.Timestamp
 }
 var file_prompt_proto_depIdxs = []int32{
 	0,  // 0: v1.Template.visibility:type_name -> v1.Visibility
 	1,  // 1: v1.Template.type:type_name -> v1.TemplateType
-	46, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
-	46, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
+	53, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
+	53, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 4: v1.Template.latest_version:type_name -> v1.TemplateVersion
-	46, // 5: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	53, // 5: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
 	3,  // 6: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
-	46, // 7: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
+	53, // 7: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 8: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
 	1,  // 9: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
 	2,  // 10: v1.CreateTemplateResponse.template:type_name -> v1.Template
@@ -3208,49 +3638,60 @@ var file_prompt_proto_depIdxs = []int32{
 	6,  // 22: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
 	37, // 23: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
 	40, // 24: v1.ListTagsResponse.tags:type_name -> v1.TagStats
-	29, // 25: v1.UserService.Register:input_type -> v1.RegisterRequest
-	31, // 26: v1.UserService.Login:input_type -> v1.LoginRequest
-	33, // 27: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
-	34, // 28: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
-	42, // 29: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
-	44, // 30: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
-	7,  // 31: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
-	9,  // 32: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
-	11, // 33: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
-	13, // 34: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
-	15, // 35: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
-	17, // 36: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
-	19, // 37: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
-	21, // 38: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
-	23, // 39: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
-	27, // 40: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
-	36, // 41: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
-	39, // 42: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
-	4,  // 43: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
-	30, // 44: v1.UserService.Register:output_type -> v1.RegisterResponse
-	32, // 45: v1.UserService.Login:output_type -> v1.LoginResponse
-	32, // 46: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
-	35, // 47: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
-	43, // 48: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
-	45, // 49: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
-	8,  // 50: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
-	10, // 51: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
-	12, // 52: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
-	14, // 53: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
-	16, // 54: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
-	18, // 55: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
-	20, // 56: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
-	22, // 57: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
-	24, // 58: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
-	28, // 59: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
-	38, // 60: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
-	41, // 61: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
-	5,  // 62: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
-	44, // [44:63] is the sub-list for method output_type
-	25, // [25:44] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	46, // 25: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
+	29, // 26: v1.UserService.Register:input_type -> v1.RegisterRequest
+	31, // 27: v1.UserService.Login:input_type -> v1.LoginRequest
+	33, // 28: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
+	34, // 29: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
+	42, // 30: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
+	44, // 31: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
+	47, // 32: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
+	48, // 33: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
+	50, // 34: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
+	51, // 35: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
+	52, // 36: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
+	7,  // 37: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
+	9,  // 38: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
+	11, // 39: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
+	13, // 40: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
+	15, // 41: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
+	17, // 42: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
+	19, // 43: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
+	21, // 44: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
+	23, // 45: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
+	27, // 46: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
+	36, // 47: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
+	39, // 48: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
+	4,  // 49: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
+	30, // 50: v1.UserService.Register:output_type -> v1.RegisterResponse
+	32, // 51: v1.UserService.Login:output_type -> v1.LoginResponse
+	32, // 52: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
+	35, // 53: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
+	43, // 54: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
+	45, // 55: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
+	46, // 56: v1.UserService.CreateAlias:output_type -> v1.Alias
+	49, // 57: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
+	46, // 58: v1.UserService.UpdateAlias:output_type -> v1.Alias
+	16, // 59: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
+	3,  // 60: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
+	8,  // 61: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
+	10, // 62: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
+	12, // 63: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
+	14, // 64: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
+	16, // 65: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
+	18, // 66: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
+	20, // 67: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
+	22, // 68: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
+	24, // 69: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
+	28, // 70: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
+	38, // 71: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
+	41, // 72: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
+	5,  // 73: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
+	50, // [50:74] is the sub-list for method output_type
+	26, // [26:50] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_prompt_proto_init() }
@@ -3264,7 +3705,7 @@ func file_prompt_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_prompt_proto_rawDesc), len(file_prompt_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   44,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

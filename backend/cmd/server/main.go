@@ -79,8 +79,9 @@ func main() {
 	templateRepo := repository.NewTemplateRepository(pgConn.DB)
 	promptRepo := repository.NewPromptRepository(pgConn.DB)
 	templateVersionRepo := repository.NewTemplateVersionRepository(pgConn.DB)
+	templateAliasRepo := repository.NewTemplateAliasRepository(pgConn.DB)
 
-	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo)
+	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo, templateAliasRepo)
 
 	// Redis
 	redisAddr := os.Getenv("REDIS_ADDR")
@@ -333,6 +334,149 @@ func main() {
 		if id == "" {
 			http.Error(w, "ID required", http.StatusBadRequest)
 			return
+		}
+
+		parts := strings.Split(id, "/")
+                zap.S().Infof("DEBUG HTTP ROUTER id='%s' len(parts)=%d", id, len(parts))
+		if len(parts) >= 2 && parts[1] == "aliases" {
+			templateID := parts[0]
+			if len(parts) == 2 {
+				// /api/v1/templates/{template_id}/aliases
+				switch r.Method {
+				case http.MethodGet:
+					req := &pb.ListAliasesRequest{TemplateId: templateID}
+					resp, err := svc.ListAliases(context.Background(), req)
+					if err != nil {
+						writeError(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					b, _ := marshaler.Marshal(resp)
+					_, _ = w.Write(b)
+					return
+				case http.MethodPost:
+					authHeader := r.Header.Get("Authorization")
+					if authHeader == "" {
+						http.Error(w, "Authorization header required", http.StatusUnauthorized)
+						return
+					}
+					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+					userID, err := authInterceptor.VerifyToken(tokenStr)
+					if err != nil {
+						http.Error(w, "Invalid token", http.StatusUnauthorized)
+						return
+					}
+					ctx := service.ContextWithUserID(context.Background(), userID)
+
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						http.Error(w, "Failed to read body", http.StatusBadRequest)
+						return
+					}
+					var req pb.CreateAliasRequest
+					if err := unmarshaler.Unmarshal(body, &req); err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					req.TemplateId = templateID
+					resp, err := svc.CreateAlias(ctx, &req)
+					if err != nil {
+						writeError(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					b, _ := marshaler.Marshal(resp)
+					_, _ = w.Write(b)
+					return
+				default:
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+					return
+				}
+			} else if len(parts) == 3 {
+				// /api/v1/templates/{template_id}/aliases/{alias_name}
+				aliasName := parts[2]
+				switch r.Method {
+				case http.MethodGet:
+					req := &pb.GetPromptByAliasRequest{
+						TemplateId: templateID,
+						AliasName:  aliasName,
+					}
+					resp, err := svc.GetPromptByAlias(context.Background(), req)
+					if err != nil {
+						writeError(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					b, _ := marshaler.Marshal(resp)
+					_, _ = w.Write(b)
+					return
+				case http.MethodPut:
+					authHeader := r.Header.Get("Authorization")
+					if authHeader == "" {
+						http.Error(w, "Authorization header required", http.StatusUnauthorized)
+						return
+					}
+					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+					userID, err := authInterceptor.VerifyToken(tokenStr)
+					if err != nil {
+						http.Error(w, "Invalid token", http.StatusUnauthorized)
+						return
+					}
+					ctx := service.ContextWithUserID(context.Background(), userID)
+
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						http.Error(w, "Failed to read body", http.StatusBadRequest)
+						return
+					}
+					var req pb.UpdateAliasRequest
+					if err := unmarshaler.Unmarshal(body, &req); err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					req.TemplateId = templateID
+					req.AliasName = aliasName
+					resp, err := svc.UpdateAlias(ctx, &req)
+					if err != nil {
+						writeError(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					b, _ := marshaler.Marshal(resp)
+					_, _ = w.Write(b)
+					return
+				case http.MethodDelete:
+					authHeader := r.Header.Get("Authorization")
+					if authHeader == "" {
+						http.Error(w, "Authorization header required", http.StatusUnauthorized)
+						return
+					}
+					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+					userID, err := authInterceptor.VerifyToken(tokenStr)
+					if err != nil {
+						http.Error(w, "Invalid token", http.StatusUnauthorized)
+						return
+					}
+					ctx := service.ContextWithUserID(context.Background(), userID)
+
+					req := &pb.DeleteAliasRequest{
+						TemplateId: templateID,
+						AliasName:  aliasName,
+					}
+					resp, err := svc.DeleteAlias(ctx, req)
+					if err != nil {
+						writeError(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					b, _ := marshaler.Marshal(resp)
+					_, _ = w.Write(b)
+					return
+				default:
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+					return
+				}
+			}
 		}
 
 		if strings.HasSuffix(id, "/fork") {

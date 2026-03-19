@@ -80,6 +80,59 @@ func (m *MockTemplateRepository) ListTags(ctx context.Context, filters map[strin
 }
 
 // MockTemplateVersionRepository
+
+type MockTemplateAliasRepository struct {
+CreateFunc func(ctx context.Context, alias *models.TemplateAlias) error
+GetFunc    func(ctx context.Context, templateID, aliasName string) (*models.TemplateAlias, error)
+ListFunc   func(ctx context.Context, templateID string) ([]*models.TemplateAlias, error)
+UpdateFunc func(ctx context.Context, alias *models.TemplateAlias) error
+DeleteFunc func(ctx context.Context, templateID, aliasName string) error
+UpsertFunc func(ctx context.Context, alias *models.TemplateAlias) error
+}
+
+func (m *MockTemplateAliasRepository) Create(ctx context.Context, alias *models.TemplateAlias) error {
+if m.CreateFunc != nil {
+return m.CreateFunc(ctx, alias)
+}
+return nil
+}
+
+func (m *MockTemplateAliasRepository) Get(ctx context.Context, templateID, aliasName string) (*models.TemplateAlias, error) {
+if m.GetFunc != nil {
+return m.GetFunc(ctx, templateID, aliasName)
+}
+return nil, nil
+}
+
+func (m *MockTemplateAliasRepository) List(ctx context.Context, templateID string) ([]*models.TemplateAlias, error) {
+if m.ListFunc != nil {
+return m.ListFunc(ctx, templateID)
+}
+return nil, nil
+}
+
+func (m *MockTemplateAliasRepository) Update(ctx context.Context, alias *models.TemplateAlias) error {
+if m.UpdateFunc != nil {
+return m.UpdateFunc(ctx, alias)
+}
+return nil
+}
+
+func (m *MockTemplateAliasRepository) Delete(ctx context.Context, templateID, aliasName string) error {
+if m.DeleteFunc != nil {
+return m.DeleteFunc(ctx, templateID, aliasName)
+}
+return nil
+}
+
+func (m *MockTemplateAliasRepository) Upsert(ctx context.Context, alias *models.TemplateAlias) error {
+if m.UpsertFunc != nil {
+return m.UpsertFunc(ctx, alias)
+}
+return nil
+}
+
+
 type MockTemplateVersionRepository struct {
 	mock.Mock
 }
@@ -103,7 +156,8 @@ func TestCreatePrompt(t *testing.T) {
 	mockTemplateRepo := new(MockTemplateRepository)
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo)
+	mockAliasRepo := &MockTemplateAliasRepository{}
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo)
 
 	t.Run("Success", func(t *testing.T) {
 		req := &pb.CreatePromptRequest{
@@ -129,7 +183,8 @@ func TestGetPrompt(t *testing.T) {
 	mockTemplateRepo := new(MockTemplateRepository)
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo)
+	mockAliasRepo := &MockTemplateAliasRepository{}
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo)
 
 	t.Run("Success", func(t *testing.T) {
 		vars, _ := json.Marshal([]string{"v1"})
@@ -153,7 +208,8 @@ func TestDeletePrompt(t *testing.T) {
 	mockTemplateRepo := new(MockTemplateRepository)
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo)
+	mockAliasRepo := &MockTemplateAliasRepository{}
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo)
 
 	t.Run("Success", func(t *testing.T) {
 		prompt := &models.Prompt{ID: "p_1", OwnerID: "user_1"}
@@ -179,7 +235,8 @@ func TestListCategories(t *testing.T) {
 	mockTemplateRepo := new(MockTemplateRepository)
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo)
+	mockAliasRepo := &MockTemplateAliasRepository{}
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo)
 
 	t.Run("Success", func(t *testing.T) {
 		stats := []*models.CategoryStat{
@@ -201,7 +258,8 @@ func TestListTags(t *testing.T) {
 	mockTemplateRepo := new(MockTemplateRepository)
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo)
+	mockAliasRepo := &MockTemplateAliasRepository{}
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo)
 
 	t.Run("Success", func(t *testing.T) {
 		stats := []*models.TagStat{
@@ -216,4 +274,12 @@ func TestListTags(t *testing.T) {
 		assert.Equal(t, "tag1", resp.Tags[0].Name)
 		assert.Equal(t, int32(20), resp.Tags[0].Count)
 	})
+}
+
+func (m *MockTemplateVersionRepository) Get(ctx context.Context, id int32) (*models.TemplateVersion, error) {
+args := m.Called(ctx, id)
+if args.Get(0) == nil {
+return nil, args.Error(1)
+}
+return args.Get(0).(*models.TemplateVersion), args.Error(1)
 }

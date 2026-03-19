@@ -6,7 +6,7 @@
   "dependencies": {
     "@carbon/react": "^1.0.0",
     "@reduxjs/toolkit": "^1.9.0",
-    "axios": "^1.13.2",
+    "axios": "^1.13.6",
     "i18next": "^22.4.9",
     "i18next-browser-languagedetector": "^7.0.1",
     "i18next-http-backend": "^2.1.1",
@@ -14,7 +14,7 @@
     "react-dom": "^18.2.0",
     "react-i18next": "^12.1.5",
     "react-redux": "^8.0.0",
-    "react-router-dom": "^7.11.0",
+    "react-router-dom": "^6.30.3",
     "react-scripts": "5.0.1",
     "sass": "^1.97.1"
   },

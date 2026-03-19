@@ -1,0 +1,79 @@
+.template-alias-manager {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: #f4f4f4;
+  border-radius: 4px;
+
+  .alias-manager-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .alias-manager-desc {
+    font-size: 0.875rem;
+    color: #525252;
+    margin-bottom: 1.5rem;
+  }
+
+  .alias-list {
+    margin-bottom: 2rem;
+
+    .no-aliases {
+      color: #777;
+      font-style: italic;
+    }
+
+    .alias-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+
+      .alias-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .alias-badge {
+          background: #0f62fe;
+          color: #fff;
+          padding: 0.2rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: bold;
+        }
+
+        .icon-arrow {
+          color: #888;
+        }
+
+        .alias-version {
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  .alias-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+
+    .cds--text-input-wrapper {
+      flex: 1;
+    }
+    
+    .cds--select {
+      flex: 1;
+    }
+
+    .alias-btn {
+      white-space: nowrap;
+    }
+  }
+}

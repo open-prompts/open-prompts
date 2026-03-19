@@ -172,6 +172,9 @@ def test_lifecycle():
     print("3. Updating Template...")
     update_payload = {
         "owner_id": owner_id,
+        "template_id": template_id,
+
+        "owner_id": owner_id,
         "title": "Updated Template Title",
         "description": "Updated description",
         # Keep PUBLIC so it can be found in the next step (Guest List)
@@ -591,6 +594,9 @@ def test_version_and_prompt():
     # 2. Update Template (New Version)
     print("2. Updating Content (Creating v2)...")
     update_payload = {
+        "owner_id": owner_id,
+        "template_id": template_id,
+
         "template_id": template_id,
         "owner_id": owner_id,
         "content": "Hello $$, how are you?"
@@ -957,3 +963,67 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def test_template_alias_flow():
+    app_url = "http://localhost:8080"
+    owner_id = f"test_user_{int(time.time())}"
+    token = get_auth_token(owner_id)
+    headers = {"Authorization": f"Bearer {token}"}
+    """Test the complete flow of aliases: Create template -> Generate versions -> Create alias -> Retrieve by alias"""
+    
+    # 1. Create a template (Version 1)
+    template_payload = {
+        "owner_id": owner_id,
+        "type": "TEMPLATE_TYPE_USER",
+
+        "title": "Alias Test Template",
+        "description": "Template for testing aliases",
+        "content": "This is version 1",
+        "variables": ["var1"],
+        "category": "developer",
+        "visibility": "VISIBILITY_PUBLIC"
+    }
+    r = requests.post(f"{app_url}/api/v1/templates", json=template_payload, headers=headers)
+    assert r.status_code == 200, r.text
+    template_id = r.json().get("template", {}).get("id")
+    print("CREATED TEMPLATE ID", template_id)
+
+    # 2. Update template (Version 2)
+    update_payload = {
+        "owner_id": owner_id,
+        "template_id": template_id,
+
+        "title": "Alias Test Template",
+        "description": "Template for testing aliases updated",
+        "content": "This is version 2: {{var1}}",
+        "variables": ["var1"],
+        "category": "developer",
+        "visibility": "VISIBILITY_PUBLIC"
+    }
+    r = requests.put(f"{app_url}/api/v1/templates/{template_id}", json=update_payload, headers=headers)
+    assert r.status_code == 200, r.text
+    v2_id = r.json().get("new_version", {}).get("id")
+    
+    # Check automatically created 'latest' alias
+    r = requests.get(f"{app_url}/api/v1/templates/{template_id}/aliases/latest", headers=headers)
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+    assert r.json().get("id") == v2_id
+    
+    # 3. Create a new alias point to version 1
+    # First, list versions to find version 1 id
+    r = requests.get(f"{app_url}/api/v1/templates/{template_id}/versions", headers=headers)
+    versions = r.json().get("versions", [])
+    print("VERSIONS ARE:", versions)
+    v1_id = next((v["id"] for v in versions if v.get("version") == 1), None)
+    
+    alias_payload = {
+        "alias_name": "prod",
+        "version_id": v1_id
+    }
+    r = requests.post(f"{app_url}/api/v1/templates/{template_id}/aliases", json=alias_payload, headers=headers)
+    assert r.status_code == 200, r.text
+    
+    # 4. Agent retrieves prompt by alias
+    r = requests.get(f"{app_url}/api/v1/templates/{template_id}/aliases/prod", headers=headers)
+    assert r.status_code == 200, r.text
+    assert "This is version 1" in r.json().get("content", ""), f"Content mismatch: {r.json()}"

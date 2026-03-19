@@ -3,6 +3,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CreateTemplateModal from './CreateTemplateModal';
 import * as api from '../services/api';
 
+jest.mock('../context/NotificationContext', () => ({
+  useNotification: () => ({ addNotification: jest.fn() }),
+  NotificationProvider: ({ children }) => children,
+}));
+
+
 // Mock api service
 jest.mock('../services/api');
 

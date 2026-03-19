@@ -14,6 +14,7 @@ import (
 type TemplateVersionRepository interface {
 	Create(ctx context.Context, version *models.TemplateVersion) error
 	GetLatest(ctx context.Context, templateID string) (*models.TemplateVersion, error)
+	Get(ctx context.Context, id int32) (*models.TemplateVersion, error)
 	List(ctx context.Context, limit, offset int, templateID string) ([]*models.TemplateVersion, error)
 }
 
@@ -97,4 +98,21 @@ func (r *templateVersionRepository) List(ctx context.Context, limit, offset int,
 	}
 
 	return versions, nil
+}
+
+// Get retrieves a specific version by its ID.
+func (r *templateVersionRepository) Get(ctx context.Context, id int32) (*models.TemplateVersion, error) {
+	query := `
+SELECT id, template_id, version, content, created_at
+FROM template_versions
+WHERE id = $1
+`
+	var v models.TemplateVersion
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get template version: %w", err)
+	}
+	return &v, nil
 }

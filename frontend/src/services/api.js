@@ -121,3 +121,24 @@ export const getProfile = () => {
 };
 
 export default api;
+
+// API methods for Template Aliases
+export const listTemplateAliases = (templateId) => {
+  return api.get(`/templates/${templateId}/aliases`);
+};
+
+export const createTemplateAlias = (templateId, aliasData) => {
+  return api.post(`/templates/${templateId}/aliases`, aliasData);
+};
+
+export const updateTemplateAlias = (templateId, aliasName, aliasData) => {
+  return api.put(`/templates/${templateId}/aliases/${aliasName}`, aliasData);
+};
+
+export const deleteTemplateAlias = (templateId, aliasName) => {
+  return api.delete(`/templates/${templateId}/aliases/${aliasName}`);
+};
+
+export const getPromptByAlias = (templateId, aliasName) => {
+  return api.get(`/templates/${templateId}/aliases/${aliasName}/prompt`);
+};

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -26,17 +27,20 @@ type PromptService struct {
 	PromptRepo          repository.PromptRepository
 	TemplateRepo        repository.TemplateRepository
 	TemplateVersionRepo repository.TemplateVersionRepository
+	TemplateAliasRepo   repository.TemplateAliasRepository
 }
 
 func NewPromptService(
 	promptRepo repository.PromptRepository,
 	templateRepo repository.TemplateRepository,
 	templateVersionRepo repository.TemplateVersionRepository,
+	templateAliasRepo repository.TemplateAliasRepository,
 ) *PromptService {
 	return &PromptService{
 		PromptRepo:          promptRepo,
 		TemplateRepo:        templateRepo,
 		TemplateVersionRepo: templateVersionRepo,
+		TemplateAliasRepo:   templateAliasRepo,
 	}
 }
 
@@ -97,6 +101,13 @@ func (s *PromptService) CreateTemplate(ctx context.Context, req *pb.CreateTempla
 		// Cleanup template? For now, just fail.
 		return nil, status.Errorf(codes.Internal, "failed to create template version: %v", err)
 	}
+
+	// Auto-create 'latest' alias
+	_ = s.TemplateAliasRepo.Create(ctx, &models.TemplateAlias{
+		TemplateID: template.ID,
+		AliasName:  "latest",
+		VersionID:  version.ID,
+	})
 
 	return &pb.CreateTemplateResponse{
 		Template: s.templateModelToProto(template),
@@ -248,6 +259,13 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 	if err := s.TemplateVersionRepo.Create(ctx, newVersion); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create new version: %v", err)
 	}
+
+	// Upsert 'latest' alias
+	_ = s.TemplateAliasRepo.Upsert(ctx, &models.TemplateAlias{
+		TemplateID: req.TemplateId,
+		AliasName:  "latest",
+		VersionID:  newVersion.ID,
+	})
 
 	return &pb.UpdateTemplateResponse{
 		Template:   s.templateModelToProto(template),
@@ -814,4 +832,100 @@ func (s *PromptService) promptModelToProto(m *models.Prompt) *pb.Prompt {
 		Variables:  variables,
 		CreatedAt:  timestamppb.New(m.CreatedAt),
 	}
+}
+
+// --- Alias RPCs ---
+
+func (s *PromptService) aliasModelToProto(m *models.TemplateAlias) *pb.Alias {
+	if m == nil {
+		return nil
+	}
+	return &pb.Alias{
+		Id:         m.ID,
+		TemplateId: m.TemplateID,
+		AliasName:  m.AliasName,
+		VersionId:  m.VersionID,
+	}
+}
+
+func (s *PromptService) CreateAlias(ctx context.Context, req *pb.CreateAliasRequest) (*pb.Alias, error) {
+	alias := &models.TemplateAlias{
+		TemplateID: req.TemplateId,
+		AliasName:  req.AliasName,
+		VersionID:  req.VersionId,
+	}
+	if err := s.TemplateAliasRepo.Create(ctx, alias); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create alias: %v", err)
+	}
+	return s.aliasModelToProto(alias), nil
+}
+
+func (s *PromptService) UpdateAlias(ctx context.Context, req *pb.UpdateAliasRequest) (*pb.Alias, error) {
+	alias := &models.TemplateAlias{
+		TemplateID: req.TemplateId,
+		AliasName:  req.AliasName,
+		VersionID:  req.VersionId,
+	}
+	if err := s.TemplateAliasRepo.Update(ctx, alias); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update alias: %v", err)
+	}
+
+	// Get it back to return full object
+	updatedAlias, err := s.TemplateAliasRepo.Get(ctx, req.TemplateId, req.AliasName)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "alias not found after update")
+	}
+	return s.aliasModelToProto(updatedAlias), nil
+}
+
+func (s *PromptService) ListAliases(ctx context.Context, req *pb.ListAliasesRequest) (*pb.ListAliasesResponse, error) {
+	aliases, err := s.TemplateAliasRepo.List(ctx, req.TemplateId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list aliases: %v", err)
+	}
+
+	var pbAliases []*pb.Alias
+	for _, a := range aliases {
+		pbAliases = append(pbAliases, s.aliasModelToProto(a))
+	}
+
+	return &pb.ListAliasesResponse{
+		Aliases: pbAliases,
+	}, nil
+}
+
+func (s *PromptService) DeleteAlias(ctx context.Context, req *pb.DeleteAliasRequest) (*pb.DeletePromptResponse, error) {
+	if err := s.TemplateAliasRepo.Delete(ctx, req.TemplateId, req.AliasName); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete alias: %v", err)
+	}
+	return &pb.DeletePromptResponse{Success: true}, nil
+}
+
+func (s *PromptService) GetPromptByAlias(ctx context.Context, req *pb.GetPromptByAliasRequest) (*pb.TemplateVersion, error) {
+	alias, err := s.TemplateAliasRepo.Get(ctx, req.TemplateId, req.AliasName)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "alias not found")
+	}
+
+	version, err := s.TemplateVersionRepo.Get(ctx, alias.VersionID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "version not found")
+	}
+
+	// Extract variables using regexp
+	re := regexp.MustCompile(`\$\$(.*?)\$\$`)
+	matches := re.FindAllStringSubmatch(version.Content, -1)
+	vars := []string{}
+	seen := map[string]bool{}
+	for _, m := range matches {
+		if len(m) > 1 {
+			v := m[1]
+			if !seen[v] {
+				_ = append(vars, v)
+				seen[v] = true
+			}
+		}
+	}
+
+	return s.versionModelToProto(version), nil
 }

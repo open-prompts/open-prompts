@@ -25,7 +25,15 @@ service UserService {
 
   // GetProfile retrieves the profile of the logged-in user.
   rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+
+  // Alias RPCs
+  rpc CreateAlias(CreateAliasRequest) returns (Alias);
+  rpc ListAliases(ListAliasesRequest) returns (ListAliasesResponse);
+  rpc UpdateAlias(UpdateAliasRequest) returns (Alias);
+  rpc DeleteAlias(DeleteAliasRequest) returns (DeleteTemplateResponse);
+  rpc GetPromptByAlias(GetPromptByAliasRequest) returns (TemplateVersion);
 }
+
 
 // PromptService defines the RPC methods for managing templates and prompts.
 service PromptService {
@@ -435,4 +443,43 @@ message GetProfileResponse {
   string email = 2;
   string display_name = 3;
   string avatar = 4;
+}
+
+
+// Alias messages
+message Alias {
+  string id = 1;
+  string template_id = 2;
+  string alias_name = 3;
+  int32 version_id = 4;
+}
+
+message CreateAliasRequest {
+  string template_id = 1;
+  string alias_name = 2;
+  int32 version_id = 3;
+}
+
+message ListAliasesRequest {
+  string template_id = 1;
+}
+
+message ListAliasesResponse {
+  repeated Alias aliases = 1;
+}
+
+message UpdateAliasRequest {
+  string template_id = 1;
+  string alias_name = 2;
+  int32 version_id = 3;
+}
+
+message DeleteAliasRequest {
+  string template_id = 1;
+  string alias_name = 2;
+}
+
+message GetPromptByAliasRequest {
+  string template_id = 1;
+  string alias_name = 2;
 }

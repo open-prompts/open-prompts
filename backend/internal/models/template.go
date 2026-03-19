@@ -38,3 +38,14 @@ type TemplateVersion struct {
 	Content    string    `json:"content"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+
+// TemplateAlias represents an alias pointing to a specific template version.
+// It maps to the "template_aliases" table.
+type TemplateAlias struct {
+ID         string    `json:"id"`
+TemplateID string    `json:"template_id"`
+AliasName  string    `json:"alias_name"`
+VersionID  int32     `json:"version_id"`
+CreatedAt  time.Time `json:"created_at"`
+UpdatedAt  time.Time `json:"updated_at"`
+}
