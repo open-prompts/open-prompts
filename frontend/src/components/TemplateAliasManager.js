@@ -42,10 +42,10 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
 
       if (existing) {
         await updateTemplateAlias(templateId, newAliasName, { version_id: parseInt(newAliasVersionId) });
-        addNotification({ kind: 'success', title: t('common.success'), subtitle: 'Alias updated' });
+        addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_alias.success_update') });
       } else {
         await createTemplateAlias(templateId, { alias_name: newAliasName, version_id: parseInt(newAliasVersionId) });
-        addNotification({ kind: 'success', title: t('common.success'), subtitle: 'Alias created' });
+        addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_alias.success_create') });
       }
 
       setNewAliasName('');
@@ -55,7 +55,7 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
       addNotification({
         kind: 'error',
         title: t('common.error'),
-        subtitle: 'Failed to save alias'
+        subtitle: t('template_alias.error_save')
       });
     } finally {
       setIsSubmitting(false);
@@ -63,14 +63,14 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
   };
 
   const handleDelete = async (aliasName) => {
-    if (!window.confirm('Are you sure you want to delete this alias?')) return;
+    if (!window.confirm(t('template_alias.confirm_delete'))) return;
 
     try {
       await deleteTemplateAlias(templateId, aliasName);
-      addNotification({ kind: 'success', title: t('common.success'), subtitle: 'Alias deleted' });
+      addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_alias.success_delete') });
       fetchAliases();
     } catch (err) {
-      addNotification({ kind: 'error', title: t('common.error'), subtitle: 'Failed to delete alias' });
+      addNotification({ kind: 'error', title: t('common.error'), subtitle: t('template_alias.error_delete') });
     }
   };
 
@@ -78,14 +78,14 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
 
   return (
     <div className="template-alias-manager">
-      <h4 className="alias-manager-title">Environment / API Aliases</h4>
+      <h4 className="alias-manager-title">{t('template_alias.title')}</h4>
       <p className="alias-manager-desc">
-        Map strings like "prod" to versions so API clients can fetch the latest mapped prompts without changing code.
+        {t('template_alias.description')}
       </p>
 
       <div className="alias-list">
         {aliases.length === 0 && (
-          <div className="no-aliases">No aliases mapped yet</div>
+          <div className="no-aliases">{t('template_alias.no_aliases')}</div>
         )}
         {aliases.map(alias => {
           const v = versions.find(v => v.id === alias.version_id);
@@ -114,18 +114,18 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
       <div className="alias-form">
         <TextInput
           id="alias-name"
-          labelText="Alias Name"
+          labelText={t('template_alias.alias_name')}
           value={newAliasName}
           onChange={(e) => setNewAliasName(e.target.value)}
-          placeholder="e.g. prod, dev"
+          placeholder={t('template_alias.alias_placeholder')}
         />
         <Select
           id="alias-version"
-          labelText="Target Version"
+          labelText={t('template_alias.target_version')}
           value={newAliasVersionId}
           onChange={(e) => setNewAliasVersionId(e.target.value)}
         >
-          <SelectItem value="" text={t('common.select', 'Select...')} disabled hidden />
+          <SelectItem value="" text={t('common.select')} disabled hidden />
           {versions.map(v => (
             <SelectItem key={v.id} value={v.id} text={`v${v.version}`} />
           ))}
@@ -137,8 +137,8 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
           className="alias-btn"
         >
           {aliases.some(a => a.alias_name === newAliasName)
-            ? 'Update Alias'
-            : 'Create Alias'}
+            ? t('template_alias.update_btn')
+            : t('template_alias.create_btn')}
         </Button>
       </div>
     </div>

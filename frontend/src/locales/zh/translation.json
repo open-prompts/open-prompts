@@ -40,7 +40,8 @@
     "more": "更多...",
     "save_changes": "保存更改",
     "none": "无",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "select": "请选择..."
   },
   "home": {
       "error_fetch": "获取模板失败。",
@@ -183,5 +184,21 @@
     "logout": "注销",
     "profile": "个人资料",
     "switchLanguage": "切换语言"
+  },
+  "template_alias": {
+    "title": "环境 / API 别名",
+    "description": "将类似 \"prod\" 的字符串映射到指定版本，以便 API 客户端在不更改代码的情况下获取最新映射的提示词。",
+    "no_aliases": "尚未映射任何别名",
+    "alias_name": "别名",
+    "alias_placeholder": "例如：prod, dev",
+    "target_version": "目标版本",
+    "create_btn": "创建别名",
+    "update_btn": "更新别名",
+    "success_create": "别名已创建",
+    "success_update": "别名已更新",
+    "success_delete": "别名已删除",
+    "error_save": "保存别名失败",
+    "error_delete": "删除别名失败",
+    "confirm_delete": "确定要删除此别名吗？"
   }
 }
