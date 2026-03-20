@@ -87,7 +87,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
-            cd awsome-prompt
+            cd open-prompts
             git pull
             docker compose -f deployment/docker-compose.yml down
             docker compose -f deployment/docker-compose.yml up -d --build

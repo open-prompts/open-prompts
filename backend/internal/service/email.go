@@ -40,10 +40,10 @@ func (s *emailService) SendVerificationCode(toEmail, code, lang string) error {
 	var subject, body string
 
 	if lang == "zh" {
-		subject = "Awsome Prompts 验证码"
+		subject = "Open Prompts 验证码"
 		body = fmt.Sprintf("您的验证码是: %s\n该验证码5分钟内有效。", code)
 	} else {
-		subject = "Awsome Prompts Verification Code"
+		subject = "Open Prompts Verification Code"
 		body = fmt.Sprintf("Your verification code is: %s\nThis code is valid for 5 minutes.", code)
 	}
 

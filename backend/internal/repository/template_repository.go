@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"awsome-prompt/backend/internal/models"
+	"open-prompts/backend/internal/models"
 
 	"github.com/lib/pq"
 )

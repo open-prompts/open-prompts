@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"awsome-prompt/backend/internal/models"
+	"open-prompts/backend/internal/models"
 )
 
 var (

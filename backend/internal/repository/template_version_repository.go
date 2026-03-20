@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"awsome-prompt/backend/internal/models"
+	"open-prompts/backend/internal/models"
 )
 
 // TemplateVersionRepository defines the interface for template version data access.

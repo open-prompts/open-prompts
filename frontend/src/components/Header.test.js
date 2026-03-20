@@ -29,7 +29,7 @@ test('renders header with logo and navigation', () => {
     </BrowserRouter>
   );
 
-  const logoElement = screen.getByText(/Awsome Prompts/i);
+  const logoElement = screen.getByText(/Open Prompts/i);
   expect(logoElement).toBeInTheDocument();
 
   const homeLink = screen.getByText(/Home/i);

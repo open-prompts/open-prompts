@@ -1,12 +1,12 @@
-# Awesome Prompt
+# Open Prompts
 
 <div align="center">
 
-![Awesome Prompt](frontend/public/images/logo.jpg)
+![Open Prompts](frontend/public/images/logo.jpg)
 
 **发现、组织和分享最佳 AI 提示词的终极中心**
 
-[在线演示](https://awsomeprompt.top) • [报告 Bug](https://github.com/open-prompts/awsome-prompt/issues) • [功能请求](https://github.com/open-prompts/awsome-prompt/issues)
+[在线演示](https://awsomeprompt.top) • [报告 Bug](https://github.com/open-prompts/open-prompts/issues) • [功能请求](https://github.com/open-prompts/open-prompts/issues)
 
 [English](./README.md) | [简体中文](./README_zh-CN.md)
 
@@ -14,9 +14,9 @@
 
 ## 📖 简介
 
-**Awesome Prompt** 是一个社区驱动的平台，旨在帮助用户充分利用 ChatGPT、Claude 和 Gemini 等大型语言模型（LLM）的潜力。它提供了一个结构化的环境来创建、测试、版本化和分享高质量的提示词（Prompts）。
+**Open Prompts** 是一个社区驱动的平台，旨在帮助用户充分利用 ChatGPT、Claude 和 Gemini 等大型语言模型（LLM）的潜力。它提供了一个结构化的环境来创建、测试、版本化和分享高质量的提示词（Prompts）。
 
-无论你是提示工程师、开发者还是 AI 爱好者，Awesome Prompt 都能像管理代码一样严谨地管理你的提示词库——提供版本控制、标签管理和协作工具。
+无论你是提示工程师、开发者还是 AI 爱好者，Open Prompts 都能像管理代码一样严谨地管理你的提示词库——提供版本控制、标签管理和协作工具。
 
 ## ✨ 特性
 
@@ -61,8 +61,8 @@
 
 1. **克隆代码仓库**
    ```bash
-   git clone https://github.com/open-prompts/awsome-prompt.git
-   cd awsome-prompt
+   git clone https://github.com/open-prompts/open-prompts.git
+   cd open-prompts
    ```
 
 2. **使用 Docker Compose 运行（推荐）**
@@ -137,11 +137,11 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=open-prompts/awsome-prompt&type=date&legend=top-left)](https://www.star-history.com/#open-prompts/awsome-prompt&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=open-prompts/open-prompts&type=date&legend=top-left)](https://www.star-history.com/#open-prompts/open-prompts&type=date&legend=top-left)
 
 ---
 
 <div align="center">
-由 Awesome Prompt 社区用心制作 ❤️
+由 Open Prompts 社区用心制作 ❤️
 </div>
 

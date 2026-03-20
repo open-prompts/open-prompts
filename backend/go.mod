@@ -1,4 +1,4 @@
-module awsome-prompt/backend
+module open-prompts/backend
 
 go 1.25
 

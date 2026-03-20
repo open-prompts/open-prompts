@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	pb "awsome-prompt/backend/api/proto/v1"
-	"awsome-prompt/backend/internal/models"
+	pb "open-prompts/backend/api/proto/v1"
+	"open-prompts/backend/internal/models"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

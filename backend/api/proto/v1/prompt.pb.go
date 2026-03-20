@@ -3540,7 +3540,7 @@ const file_prompt_proto_rawDesc = "" +
 	"\fDeletePrompt\x12\x17.v1.DeletePromptRequest\x1a\x18.v1.DeletePromptResponse\x12G\n" +
 	"\x0eListCategories\x12\x19.v1.ListCategoriesRequest\x1a\x1a.v1.ListCategoriesResponse\x125\n" +
 	"\bListTags\x12\x13.v1.ListTagsRequest\x1a\x14.v1.ListTagsResponse\x12Y\n" +
-	"\x14ListTemplateVersions\x12\x1f.v1.ListTemplateVersionsRequest\x1a .v1.ListTemplateVersionsResponseB'Z%awsome-prompt/backend/api/proto/v1;v1b\x06proto3"
+	"\x14ListTemplateVersions\x12\x1f.v1.ListTemplateVersionsRequest\x1a .v1.ListTemplateVersionsResponseB'Z%open-prompts/backend/api/proto/v1;v1b\x06proto3"
 
 var (
 	file_prompt_proto_rawDescOnce sync.Once

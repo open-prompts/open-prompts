@@ -1,12 +1,12 @@
-# Awesome Prompt
+# Open Prompts
 
 <div align="center">
 
-![Awesome Prompt](frontend/public/images/logo.jpg)
+![Open Prompts](frontend/public/images/logo.jpg)
 
 **Your Ultimate Hub to Discover, Organize, and Share Best AI Prompts**
 
-[Live Demo](https://awsomeprompt.top) • [Report Bug](https://github.com/open-prompts/awsome-prompt/issues) • [Request Feature](https://github.com/open-prompts/awsome-prompt/issues)
+[Live Demo](https://awsomeprompt.top) • [Report Bug](https://github.com/open-prompts/open-prompts/issues) • [Request Feature](https://github.com/open-prompts/open-prompts/issues)
 
 [English](./README.md) | [简体中文](./README_zh-CN.md)
 
@@ -14,9 +14,9 @@
 
 ## 📖 Introduction
 
-**Awesome Prompt** is a community-driven platform designed to help users harness the full potential of Large Language Models (LLMs) like ChatGPT, Claude, and Gemini. It provides a structured environment to create, test, version, and share high-quality prompts.
+**Open Prompts** is a community-driven platform designed to help users harness the full potential of Large Language Models (LLMs) like ChatGPT, Claude, and Gemini. It provides a structured environment to create, test, version, and share high-quality prompts.
 
-Whether you are a prompt engineer, a developer, or an AI enthusiast, Awesome Prompt manages your prompt library with the same rigor as code—featuring version control, tagging, and collaboration tools.
+Whether you are a prompt engineer, a developer, or an AI enthusiast, Open Prompts manages your prompt library with the same rigor as code—featuring version control, tagging, and collaboration tools.
 
 ## ✨ Features
 
@@ -61,8 +61,8 @@ Follow these steps to set up the project locally.
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/open-prompts/awsome-prompt.git
-   cd awsome-prompt
+   git clone https://github.com/open-prompts/open-prompts.git
+   cd open-prompts
    ```
 
 2. **Run with Docker Compose (Recommended)**
@@ -137,10 +137,10 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=open-prompts/awsome-prompt&type=date&legend=top-left)](https://www.star-history.com/#open-prompts/awsome-prompt&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=open-prompts/open-prompts&type=date&legend=top-left)](https://www.star-history.com/#open-prompts/open-prompts&type=date&legend=top-left)
 
 ---
 
 <div align="center">
-Made with ❤️ by the Awesome Prompt Community
+Made with ❤️ by the Open Prompts Community
 </div>

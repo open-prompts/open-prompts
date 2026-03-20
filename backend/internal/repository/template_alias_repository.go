@@ -6,7 +6,7 @@ import (
 "fmt"
 "time"
 
-"awsome-prompt/backend/internal/models"
+"open-prompts/backend/internal/models"
 )
 
 type TemplateAliasRepository interface {

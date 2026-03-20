@@ -4,7 +4,7 @@ package v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "awsome-prompt/backend/api/proto/v1;v1";
+option go_package = "open-prompts/backend/api/proto/v1;v1";
 
 // UserService defines the RPC methods for user management.
 service UserService {

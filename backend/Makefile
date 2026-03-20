@@ -11,7 +11,7 @@ fvt:
 
 # Build Docker Image
 image-build:
-	docker build -t awsome-prompt-backend .
+	docker build -t open-prompts-backend .
 
 # Run Linters
 lint:

@@ -124,7 +124,7 @@ const AuthBackground = () => {
 
         {/* watermark / brand */}
         <g className="brand" opacity="0.06">
-          <text x="12%" y="16%" fontFamily="Inter, Arial, sans-serif" fontWeight="700" fontSize="42" fill="var(--brand)">Awsome Prompts</text>
+          <text x="12%" y="16%" fontFamily="Inter, Arial, sans-serif" fontWeight="700" fontSize="42" fill="var(--brand)">Open Prompts</text>
         </g>
       </svg>
 

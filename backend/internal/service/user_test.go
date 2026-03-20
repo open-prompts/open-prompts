@@ -5,9 +5,9 @@ import (
 "testing"
 "time"
 
-pb "awsome-prompt/backend/api/proto/v1"
-"awsome-prompt/backend/internal/models"
-"awsome-prompt/backend/internal/repository"
+pb "open-prompts/backend/api/proto/v1"
+"open-prompts/backend/internal/models"
+"open-prompts/backend/internal/repository"
 
 "github.com/stretchr/testify/assert"
 "github.com/stretchr/testify/mock"

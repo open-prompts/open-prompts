@@ -12,9 +12,9 @@ import (
 
 	"go.uber.org/zap"
 
-	pb "awsome-prompt/backend/api/proto/v1"
-	"awsome-prompt/backend/internal/models"
-	"awsome-prompt/backend/internal/repository"
+	pb "open-prompts/backend/api/proto/v1"
+	"open-prompts/backend/internal/models"
+	"open-prompts/backend/internal/repository"
 
 	"regexp"
 
@@ -267,7 +267,7 @@ func (s *UserService) generateToken(userID string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": userID,
 		"exp": time.Now().Add(24 * time.Hour).Unix(),
-		"iss": "awsome-prompt",
+		"iss": "open-prompts",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

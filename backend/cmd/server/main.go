@@ -13,11 +13,11 @@ import (
 
 	"go.uber.org/zap"
 
-	pb "awsome-prompt/backend/api/proto/v1"
-	"awsome-prompt/backend/internal/data"
-	"awsome-prompt/backend/internal/models"
-	"awsome-prompt/backend/internal/repository"
-	"awsome-prompt/backend/internal/service"
+	pb "open-prompts/backend/api/proto/v1"
+	"open-prompts/backend/internal/data"
+	"open-prompts/backend/internal/models"
+	"open-prompts/backend/internal/repository"
+	"open-prompts/backend/internal/service"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -68,7 +68,7 @@ func main() {
 	// Database connection
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/awsome_prompt?sslmode=disable"
+		dsn = "postgres://postgres:postgres@localhost:5432/open_prompts?sslmode=disable"
 	}
 	pgConn, err := data.NewPostgresConnection(dsn)
 	if err != nil {
@@ -107,7 +107,7 @@ func main() {
 	smtpPassword := os.Getenv("SMTP_PASSWORD")
 	smtpFrom := os.Getenv("SMTP_FROM")
 	if smtpFrom == "" {
-		smtpFrom = "noreply@awsome-prompt.com"
+		smtpFrom = "noreply@open-prompts.com"
 	}
 	emailSvc := service.NewEmailService(smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom)
 
