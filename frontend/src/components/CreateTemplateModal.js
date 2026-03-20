@@ -36,6 +36,26 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
 
   // Fetch categories when the modal opens
   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await getCategories();
+        const data = response.data;
+        if (data && Array.isArray(data.categories)) {
+          // Extract names from CategoryStats objects
+          setCategories(data.categories.map(c => c.name));
+        } else if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          setCategories([]);
+        }
+      } catch (err) {
+        console.error('Failed to load categories', err);
+        addNotification({ kind: 'warning', title: t('common.warning'), subtitle: t('create_template.error_load_categories') });
+        // Fallback categories if API fails
+        setCategories(['General', 'Writing', 'Coding', 'Business']);
+      }
+    };
+
     if (open) {
       loadCategories();
       // Reset form
@@ -50,27 +70,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
       setCustomCategory('');
       setFormErrors({});
     }
-  }, [open]);
-
-  const loadCategories = async () => {
-    try {
-      const response = await getCategories();
-      const data = response.data;
-      if (data && Array.isArray(data.categories)) {
-        // Extract names from CategoryStats objects
-        setCategories(data.categories.map(c => c.name));
-      } else if (Array.isArray(data)) {
-        setCategories(data);
-      } else {
-        setCategories([]);
-      }
-    } catch (err) {
-      console.error('Failed to load categories', err);
-      addNotification({ kind: 'warning', title: t('common.warning'), subtitle: t('create_template.error_load_categories') });
-      // Fallback categories if API fails
-      setCategories(['General', 'Writing', 'Coding', 'Business']);
-    }
-  };
+  }, [open, addNotification, t]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;

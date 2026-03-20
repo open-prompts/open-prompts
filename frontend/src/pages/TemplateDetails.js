@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,7 @@ import {
 import { Modal } from '@carbon/react';
 import { useNotification } from '../context/NotificationContext';
 import Layout from '../components/Layout';
+import TemplateAliasManager from '../components/TemplateAliasManager';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
 
@@ -32,6 +33,7 @@ const TemplateDetails = () => {
   const [selectedVersionId, setSelectedVersionId] = useState(null);
   const [prompts, setPrompts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isOwner = user && template && user.id === template.owner_id;
 
   // Social Stats
   const [isLiked, setIsLiked] = useState(false);
@@ -118,7 +120,7 @@ const TemplateDetails = () => {
     };
 
     fetchData();
-  }, [id, user]);
+  }, [id, user, addNotification, t]);
 
   // Fetch categories when editing metadata
   useEffect(() => {
@@ -151,16 +153,6 @@ const TemplateDetails = () => {
         fetchCategories();
     }
   }, [isEditingMetadata, i18n.language]);
-
-  // Handle Version Change
-  const handleVersionChange = (e) => {
-    const vId = parseInt(e.target.value);
-    setSelectedVersionId(vId);
-    const version = versions.find(v => v.id === vId);
-    if (version) {
-      setEditContent(version.content);
-    }
-  };
 
   // Metadata Edit Handlers
   const handleRemoveTag = (tagToRemove) => {

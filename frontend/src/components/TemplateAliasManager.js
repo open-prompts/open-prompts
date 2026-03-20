@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, TextInput, Select, SelectItem, InlineLoading } from '@carbon/react';
 import { TrashCan } from '@carbon/icons-react';
@@ -15,13 +15,7 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
   const [newAliasVersionId, setNewAliasVersionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (templateId) {
-       fetchAliases();
-    }
-  }, [templateId]);
-
-  const fetchAliases = async () => {
+  const fetchAliases = useCallback(async () => {
     try {
       setLoading(true);
       const res = await listTemplateAliases(templateId);
@@ -31,7 +25,13 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [templateId]);
+
+  useEffect(() => {
+    if (templateId) {
+       fetchAliases();
+    }
+  }, [templateId, fetchAliases]);
 
   const handleCreateOrUpdate = async () => {
     if (!newAliasName || !newAliasVersionId) return;

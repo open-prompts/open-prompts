@@ -47,7 +47,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
       }
     };
     fetchData();
-  }, [availableTags, i18n.language]); // Re-run if availableTags or language changes
+  }, [availableTags, i18n.language, addNotification, t]); // Re-run if availableTags or language changes
 
   // Use availableTags if present, otherwise fetched tags.
   const displayedTags = availableTags || tags;

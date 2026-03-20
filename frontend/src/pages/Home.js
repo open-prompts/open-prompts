@@ -135,7 +135,7 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, nextPageToken, loading, pageSize, i18n.language]);
+  }, [filters, nextPageToken, loading, pageSize, i18n.language, addNotification, t]);
 
   // Initial load and filter changes
   useEffect(() => {
@@ -171,9 +171,6 @@ const Home = () => {
       fetchTemplates(false);
     }
   };
-
-  const isMixedView = !filters.visibility && isAuthenticated && !filters.my_likes && !filters.my_favorites;
-  const isSpecialView = filters.my_likes || filters.my_favorites;
 
   // Calculate tags from visible templates for Sidebar
   const visibleTags = useMemo(() => {
