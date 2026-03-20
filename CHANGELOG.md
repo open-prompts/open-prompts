@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/open-prompts/open-prompts/compare/v1.8.1...v1.8.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* **backend:** fix unit test cases ([d045dfc](https://github.com/open-prompts/open-prompts/commit/d045dfc533c4f38a47911c4ef09408a1d722feaf))
+
 ## [1.8.1](https://github.com/open-prompts/awsome-prompt/compare/v1.8.0...v1.8.1) (2026-03-20)
 
 
