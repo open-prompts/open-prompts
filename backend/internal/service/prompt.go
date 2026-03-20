@@ -885,8 +885,28 @@ func (s *PromptService) ListAliases(ctx context.Context, req *pb.ListAliasesRequ
 	}
 
 	var pbAliases []*pb.Alias
+	hasLatest := false
 	for _, a := range aliases {
+		if a.AliasName == "latest" {
+			hasLatest = true
+		}
 		pbAliases = append(pbAliases, s.aliasModelToProto(a))
+	}
+
+	if !hasLatest {
+		latestVersion, err := s.TemplateVersionRepo.GetLatest(ctx, req.TemplateId)
+		if err == nil && latestVersion != nil {
+			pbAliases = append(pbAliases, &pb.Alias{
+				TemplateId: req.TemplateId,
+				AliasName:  "latest",
+				VersionId:  int32(latestVersion.ID),
+			})
+			_ = s.TemplateAliasRepo.Upsert(ctx, &models.TemplateAlias{
+				TemplateID: req.TemplateId,
+				AliasName:  "latest",
+				VersionID:  latestVersion.ID,
+			})
+		}
 	}
 
 	return &pb.ListAliasesResponse{
@@ -904,7 +924,20 @@ func (s *PromptService) DeleteAlias(ctx context.Context, req *pb.DeleteAliasRequ
 func (s *PromptService) GetPromptByAlias(ctx context.Context, req *pb.GetPromptByAliasRequest) (*pb.TemplateVersion, error) {
 	alias, err := s.TemplateAliasRepo.Get(ctx, req.TemplateId, req.AliasName)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "alias not found")
+		if req.AliasName == "latest" {
+			latestVersion, lErr := s.TemplateVersionRepo.GetLatest(ctx, req.TemplateId)
+			if lErr == nil && latestVersion != nil {
+				alias = &models.TemplateAlias{
+					TemplateID: req.TemplateId,
+					AliasName:  "latest",
+					VersionID:  latestVersion.ID,
+				}
+			} else {
+				return nil, status.Errorf(codes.NotFound, "alias not found (no latest version)")
+			}
+		} else {
+			return nil, status.Errorf(codes.NotFound, "alias not found")
+		}
 	}
 
 	version, err := s.TemplateVersionRepo.Get(ctx, alias.VersionID)

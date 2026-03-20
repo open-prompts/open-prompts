@@ -1,18 +1,7 @@
 .template-alias-manager {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background: #f4f4f4;
-  border-radius: 4px;
-
-  .alias-manager-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-
   .alias-manager-desc {
     font-size: 0.875rem;
-    color: #525252;
+    color: var(--text-secondary);
     margin-bottom: 1.5rem;
   }
 
@@ -20,7 +9,7 @@
     margin-bottom: 2rem;
 
     .no-aliases {
-      color: #777;
+      color: var(--text-muted);
       font-style: italic;
     }
 
@@ -29,10 +18,10 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.75rem 1rem;
-      background: #fff;
-      border: 1px solid #e0e0e0;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-color);
       margin-bottom: 0.5rem;
-      border-radius: 4px;
+      border-radius: 8px;
 
       .alias-info {
         display: flex;
@@ -40,20 +29,21 @@
         gap: 0.75rem;
 
         .alias-badge {
-          background: #0f62fe;
+          background: var(--primary-color);
           color: #fff;
-          padding: 0.2rem 0.5rem;
+          padding: 0.2rem 0.6rem;
           border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: bold;
+          font-size: 0.8rem;
+          font-weight: 600;
         }
 
         .icon-arrow {
-          color: #888;
+          color: var(--text-secondary);
         }
 
         .alias-version {
           font-weight: 600;
+          color: var(--text-primary);
         }
       }
     }

@@ -78,7 +78,7 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
 
   return (
     <div className="template-alias-manager">
-      <h4 className="alias-manager-title">{t('template_alias.title')}</h4>
+      <h3>{t('template_alias.title')}</h3>
       <p className="alias-manager-desc">
         {t('template_alias.description')}
       </p>
@@ -133,7 +133,7 @@ const TemplateAliasManager = ({ templateId, versions = [] }) => {
         <Button
           size="md"
           onClick={handleCreateOrUpdate}
-          disabled={!newAliasName || !newAliasVersionId || isSubmitting}
+          disabled={!newAliasName || !newAliasVersionId || isSubmitting || newAliasName === 'latest'}
           className="alias-btn"
         >
           {aliases.some(a => a.alias_name === newAliasName)

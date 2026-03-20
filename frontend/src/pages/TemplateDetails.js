@@ -907,13 +907,6 @@ const TemplateDetails = () => {
                     })()}
                 </div>
             </div>
-
-            {/* Template Alias Manager (Only visible to owner) */}
-            {isOwner && (
-              <div className="section template-aliases-section">
-                <TemplateAliasManager templateId={id} versions={versions} />
-              </div>
-            )}
           </div>
         </div>
       </div>
