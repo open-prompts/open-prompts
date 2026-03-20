@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/open-prompts/awsome-prompt/compare/v1.8.0...v1.8.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* **alias:** remove duplicate rendering, sync styles, enforce auto latest alias mapping ([768e3d3](https://github.com/open-prompts/awsome-prompt/commit/768e3d30bc7e464754b30e258dd067aebf7ec7e7))
+
 # [1.8.0](https://github.com/open-prompts/awsome-prompt/compare/v1.7.0...v1.8.0) (2026-03-20)
 
 
