@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/open-prompts/open-prompts/compare/v1.10.0...v1.10.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* **frontend:** adjust missing i18n translation keys on API keys page ([a284b3f](https://github.com/open-prompts/open-prompts/commit/a284b3f3ef8a07918cbd595379c193ebadf779a4))
+
 # [1.10.0](https://github.com/open-prompts/open-prompts/compare/v1.9.1...v1.10.0) (2026-03-24)
 
 
