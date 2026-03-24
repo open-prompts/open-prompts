@@ -1,3 +1,10 @@
+## [1.10.2](https://github.com/open-prompts/open-prompts/compare/v1.10.1...v1.10.2) (2026-03-24)
+
+
+### Bug Fixes
+
+* **ui:** align table headers and content in APIKeyManager ([9a17bc7](https://github.com/open-prompts/open-prompts/commit/9a17bc77517076473ba40a66991e8a5c756889f5))
+
 ## [1.10.1](https://github.com/open-prompts/open-prompts/compare/v1.10.0...v1.10.1) (2026-03-24)
 
 
