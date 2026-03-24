@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/open-prompts/open-prompts/compare/v1.11.0...v1.11.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* lint and test errors in backend and frontend ([5e7c737](https://github.com/open-prompts/open-prompts/commit/5e7c737d358e94f9650a15bae4dd28e8d774bcaf))
+
 # [1.11.0](https://github.com/open-prompts/open-prompts/compare/v1.10.3...v1.11.0) (2026-03-24)
 
 
