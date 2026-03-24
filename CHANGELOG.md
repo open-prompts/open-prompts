@@ -1,3 +1,10 @@
+## [1.10.3](https://github.com/open-prompts/open-prompts/compare/v1.10.2...v1.10.3) (2026-03-24)
+
+
+### Bug Fixes
+
+* **backend:** allow API Keys to be used in HTTP Bearer auth header ([b561cdf](https://github.com/open-prompts/open-prompts/commit/b561cdfc342cf76b3a2bdd840724579843b18bb3))
+
 ## [1.10.2](https://github.com/open-prompts/open-prompts/compare/v1.10.1...v1.10.2) (2026-03-24)
 
 
