@@ -1,3 +1,10 @@
+## [1.11.2](https://github.com/open-prompts/open-prompts/compare/v1.11.1...v1.11.2) (2026-03-24)
+
+
+### Bug Fixes
+
+* prompt sql driver scan type errors for list and get queries ([314e228](https://github.com/open-prompts/open-prompts/commit/314e228d769a4930abf72f6da34a0225bce67315))
+
 ## [1.11.1](https://github.com/open-prompts/open-prompts/compare/v1.11.0...v1.11.1) (2026-03-24)
 
 
