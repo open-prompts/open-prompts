@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/open-prompts/open-prompts/compare/v1.9.0...v1.9.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* lint errors and unit tests ([68c01db](https://github.com/open-prompts/open-prompts/commit/68c01dbe23b0825510dae09cfbdc1f56a0626f52))
+
 # [1.9.0](https://github.com/open-prompts/open-prompts/compare/v1.8.2...v1.9.0) (2026-03-24)
 
 
