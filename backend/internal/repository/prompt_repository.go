@@ -60,9 +60,10 @@ func (r *promptRepository) Create(ctx context.Context, prompt *models.Prompt) er
 func (r *promptRepository) Get(ctx context.Context, id string) (*models.Prompt, error) {
 	zap.S().Infof("PromptRepository.Get: id=%s", id)
 	query := `
-		SELECT id, template_id, version_id, owner_id, variables, created_at
-		FROM prompts
-		WHERE id = $1`
+		SELECT p.id, p.template_id, p.version_id, p.owner_id, p.variables, p.created_at, tv.content
+		FROM prompts p
+		JOIN template_versions tv ON p.version_id = tv.id
+		WHERE p.id = $1`
 
 	var prompt models.Prompt
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
@@ -72,6 +73,7 @@ func (r *promptRepository) Get(ctx context.Context, id string) (*models.Prompt, 
 		&prompt.OwnerID,
 		&prompt.Variables,
 		&prompt.CreatedAt,
+		&prompt.Content,
 	)
 
 	if err != nil {
@@ -88,26 +90,27 @@ func (r *promptRepository) Get(ctx context.Context, id string) (*models.Prompt, 
 func (r *promptRepository) List(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Prompt, error) {
 	zap.S().Infof("PromptRepository.List: filters=%v limit=%d offset=%d", filters, limit, offset)
 	query := `
-		SELECT id, template_id, version_id, owner_id, variables, created_at
-		FROM prompts
+		SELECT p.id, p.template_id, p.version_id, p.owner_id, p.variables, p.created_at, tv.content
+		FROM prompts p
+		JOIN template_versions tv ON p.version_id = tv.id
 		WHERE 1=1
 	`
 	var args []interface{}
 	argID := 1
 
 	if val, ok := filters["owner_id"]; ok && val != "" {
-		query += fmt.Sprintf(" AND owner_id = $%d", argID)
+		query += fmt.Sprintf(" AND p.owner_id = $%d", argID)
 		args = append(args, val)
 		argID++
 	}
 
 	if val, ok := filters["template_id"]; ok && val != "" {
-		query += fmt.Sprintf(" AND template_id = $%d", argID)
+		query += fmt.Sprintf(" AND p.template_id = $%d", argID)
 		args = append(args, val)
 		argID++
 	}
 
-	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argID, argID+1)
+	query += fmt.Sprintf(" ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d", argID, argID+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -126,6 +129,7 @@ func (r *promptRepository) List(ctx context.Context, limit, offset int, filters 
 			&p.OwnerID,
 			&p.Variables,
 			&p.CreatedAt,
+			&p.Content,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan prompt: %w", err)
 		}

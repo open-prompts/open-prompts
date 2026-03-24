@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openprompts"
+version = "0.1.0"
+authors = [
+  { name="OpenPrompts Team", email="team@open-prompts.com" },
+]
+description = "A Python SDK for OpenPrompts"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests>=2.20.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/open-prompts/open-prompts"
+"Bug Tracker" = "https://github.com/open-prompts/open-prompts/issues"

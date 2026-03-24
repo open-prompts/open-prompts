@@ -22,6 +22,8 @@ const APIKeyManager = ({ notification }) => {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [keyToDelete, setKeyToDelete] = useState(null);
   const [newKeyName, setNewKeyName] = useState('');
   const [generatedKey, setGeneratedKey] = useState(null);
   const [page] = useState(1);
@@ -126,9 +128,8 @@ const APIKeyManager = ({ notification }) => {
                     kind="ghost"
                     iconDescription={t('api_keys.delete')}
                     onClick={() => {
-                        if (window.confirm(t('api_keys.confirm_delete'))) {
-                            handleDelete(row.id);
-                        }
+                        setKeyToDelete(row.id);
+                        setDeleteModalOpen(true);
                     }}
                     size="sm"
                   />
@@ -162,6 +163,7 @@ const APIKeyManager = ({ notification }) => {
         onRequestClose={handleModalClose}
         onRequestSubmit={!generatedKey ? handleCreate : handleModalClose}
         danger={false}
+        className="api-key-modal"
       >
         {!generatedKey ? (
             <TextInput
@@ -196,6 +198,31 @@ const APIKeyManager = ({ notification }) => {
                 </div>
             </div>
         )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        modalHeading={t('api_keys.delete')}
+        primaryButtonText={t('common.delete')}
+        secondaryButtonText={t('common.cancel')}
+        onRequestClose={() => {
+            setDeleteModalOpen(false);
+            setKeyToDelete(null);
+        }}
+        onRequestSubmit={() => {
+            if (keyToDelete) {
+                handleDelete(keyToDelete);
+            }
+            setDeleteModalOpen(false);
+            setKeyToDelete(null);
+        }}
+        danger={true}
+        className="api-key-modal"
+      >
+        <p className="delete-confirmation-text">
+            {t('api_keys.confirm_delete', 'Are you sure you want to delete this API Key? This action cannot be undone.')}
+        </p>
       </Modal>
     </div>
   );

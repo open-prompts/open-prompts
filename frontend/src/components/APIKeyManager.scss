@@ -141,8 +141,14 @@
             }
         }
     }
+}
+
+// Modal tweaks inside this component context if needed
+.api-key-modal {
+    .cds--modal-header__heading {
+        color: #f4f4f4 !important;
+    }
     
-    // Modal tweaks inside this component context if needed
     .generated-key-display {
         background: var(--surface-solid);
         padding: 24px;
@@ -187,5 +193,13 @@
                 }
             }
         }
+    }
+
+    .delete-confirmation-text {
+        color: var(--text-main);
+        font-family: var(--font-body);
+        font-size: 1rem;
+        margin-top: 0;
+        margin-bottom: 1rem;
     }
 }

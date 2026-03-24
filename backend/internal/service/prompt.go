@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -646,11 +645,18 @@ func (s *PromptService) CreatePrompt(ctx context.Context, req *pb.CreatePromptRe
 		return nil, status.Errorf(codes.InvalidArgument, "invalid variables: %v", err)
 	}
 
+	// Fetch template version content to render it
+	version, err := s.TemplateVersionRepo.Get(ctx, req.VersionId)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "template version not found")
+	}
+
 	prompt := &models.Prompt{
 		TemplateID: req.TemplateId,
 		VersionID:  req.VersionId,
 		OwnerID:    req.OwnerId,
 		Variables:  variablesJSON,
+		Content:    version.Content,
 	}
 
 	if err := s.PromptRepo.Create(ctx, prompt); err != nil {
@@ -810,18 +816,14 @@ func (s *PromptService) promptModelToProto(m *models.Prompt) *pb.Prompt {
 	if m == nil {
 		return nil
 	}
-	var variables []string
-	// Prefer parsing as array of objects (new format), fallback to array of strings (legacy)
-	var objs []map[string]interface{}
-	if err := json.Unmarshal(m.Variables, &objs); err == nil {
-		for _, obj := range objs {
-			for k, v := range obj {
-				variables = append(variables, fmt.Sprintf("%s:%v", k, v))
-				break
-			}
-		}
-	} else {
-		_ = json.Unmarshal(m.Variables, &variables)
+	var variables map[string]string
+	_ = json.Unmarshal(m.Variables, &variables)
+
+	// Dynamically resolve variables in the template content
+	rendered := m.Content
+	for k, v := range variables {
+		// e.g., Replace ${variable} with value
+		rendered = strings.ReplaceAll(rendered, "${"+k+"}", v)
 	}
 
 	return &pb.Prompt{
@@ -830,6 +832,7 @@ func (s *PromptService) promptModelToProto(m *models.Prompt) *pb.Prompt {
 		VersionId:  m.VersionID,
 		OwnerId:    m.OwnerID,
 		Variables:  variables,
+		Content:    rendered,
 		CreatedAt:  timestamppb.New(m.CreatedAt),
 	}
 }

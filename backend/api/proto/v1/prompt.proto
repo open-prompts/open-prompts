@@ -172,10 +172,12 @@ message Prompt {
   int32 version_id = 3;
   // ID of the user who saved this prompt.
   string owner_id = 4;
-  // List of variable values used to replace placeholders.
-  repeated string variables = 5;
+  // Map of variable values used to replace placeholders.
+  map<string, string> variables = 5;
   // Timestamp when the prompt was created.
   google.protobuf.Timestamp created_at = 6;
+  // The actual rendered content of the prompt.
+  string content = 7;
 }
 
 // CreateTemplateRequest is the request message for CreateTemplate.
@@ -299,7 +301,7 @@ message CreatePromptRequest {
   string template_id = 1;
   int32 version_id = 2;
   string owner_id = 3;
-  repeated string variables = 4;
+  map<string, string> variables = 4;
 }
 
 // CreatePromptResponse is the response message for CreatePrompt.

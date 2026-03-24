@@ -391,7 +391,9 @@ const TemplateDetails = () => {
     }
     setIsGenerating(true);
     try {
-      const variablesPayload = uniqueNames.map(name => ({ [name]: variableValues[name] || '' }));
+      const variablesPayload = {};
+      uniqueNames.forEach(name => { variablesPayload[name] = variableValues[name] || ''; });
+      
       const promptData = {
         template_id: template.id,
         version_id: selectedVersionId,
@@ -845,7 +847,9 @@ const TemplateDetails = () => {
                           if (!vars) return [];
                           const pairs = [];
                           try {
-                            // vars may already be array of strings
+                            if (typeof vars === 'object' && !Array.isArray(vars)) {
+                                Object.keys(vars).forEach(k => { pairs.push({ key: k, value: vars[k] }); });
+                            } else if (Array.isArray(vars)) {
                             if (Array.isArray(vars)) {
                               vars.forEach((v) => {
                                 if (typeof v === 'string') {
