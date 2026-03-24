@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/open-prompts/open-prompts/compare/v1.8.2...v1.9.0) (2026-03-24)
+
+
+### Features
+
+* add api key management ([71b3663](https://github.com/open-prompts/open-prompts/commit/71b36636a581e5a491730e12d2792dd34f7abd3a))
+
 ## [1.8.2](https://github.com/open-prompts/open-prompts/compare/v1.8.1...v1.8.2) (2026-03-20)
 
 
