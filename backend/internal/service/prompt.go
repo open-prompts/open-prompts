@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -640,9 +640,9 @@ func (s *PromptService) CreatePrompt(ctx context.Context, req *pb.CreatePromptRe
 		return nil, status.Error(codes.InvalidArgument, "owner_id is required")
 	}
 
-	variablesJSON, err := json.Marshal(req.Variables)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid variables: %v", err)
+	variables := req.Variables
+	if variables == nil {
+		variables = make(map[string]string)
 	}
 
 	// Fetch template version content to render it
@@ -651,12 +651,17 @@ func (s *PromptService) CreatePrompt(ctx context.Context, req *pb.CreatePromptRe
 		return nil, status.Errorf(codes.NotFound, "template version not found")
 	}
 
+	renderedContent := version.Content
+	for k, v := range variables {
+		renderedContent = strings.ReplaceAll(renderedContent, fmt.Sprintf("${%s}", k), v)
+	}
+
 	prompt := &models.Prompt{
 		TemplateID: req.TemplateId,
 		VersionID:  req.VersionId,
 		OwnerID:    req.OwnerId,
-		Variables:  variablesJSON,
-		Content:    version.Content,
+		Variables:  variables,
+		Content:    renderedContent,
 	}
 
 	if err := s.PromptRepo.Create(ctx, prompt); err != nil {
@@ -816,8 +821,10 @@ func (s *PromptService) promptModelToProto(m *models.Prompt) *pb.Prompt {
 	if m == nil {
 		return nil
 	}
-	var variables map[string]string
-	_ = json.Unmarshal(m.Variables, &variables)
+	variables := m.Variables
+	if variables == nil {
+		variables = make(map[string]string)
+	}
 
 	// Dynamically resolve variables in the template content
 	rendered := m.Content

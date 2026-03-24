@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -164,10 +163,15 @@ func TestCreatePrompt(t *testing.T) {
 			TemplateId: "tpl_1",
 			VersionId:  1,
 			OwnerId:    "user_1",
-			Variables:  []string{"var1"},
+			Variables:  map[string]string{"var1": "value1"},
 		}
 
 		mockPromptRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Prompt")).Return(nil)
+		
+		mockVersionRepo.On("Get", mock.Anything, int32(1)).Return(&models.TemplateVersion{
+			ID: 1,
+			Content: "content with ${var1}",
+		}, nil)
 
 		resp, err := svc.CreatePrompt(context.Background(), req)
 		assert.NoError(t, err)
@@ -175,6 +179,7 @@ func TestCreatePrompt(t *testing.T) {
 		assert.Equal(t, req.OwnerId, resp.Prompt.OwnerId)
 
 		mockPromptRepo.AssertExpectations(t)
+		mockVersionRepo.AssertExpectations(t)
 	})
 }
 
@@ -187,11 +192,10 @@ func TestGetPrompt(t *testing.T) {
 	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo)
 
 	t.Run("Success", func(t *testing.T) {
-		vars, _ := json.Marshal([]string{"v1"})
 		prompt := &models.Prompt{
 			ID:        "p_1",
 			OwnerID:   "user_1",
-			Variables: vars,
+			Variables: map[string]string{"var1": "v1"},
 			CreatedAt: time.Now(),
 		}
 

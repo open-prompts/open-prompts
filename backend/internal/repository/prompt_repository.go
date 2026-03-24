@@ -37,16 +37,21 @@ func (r *promptRepository) Create(ctx context.Context, prompt *models.Prompt) er
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at`
 
-	// Ensure variables is valid JSON
+	// Ensure variables is not nil
 	if prompt.Variables == nil {
-		prompt.Variables = json.RawMessage("[]")
+		prompt.Variables = make(map[string]string)
 	}
 
-	err := r.db.QueryRowContext(ctx, query,
+	variablesJSON, err := json.Marshal(prompt.Variables)
+	if err != nil {
+		return err
+	}
+
+	err = r.db.QueryRowContext(ctx, query,
 		prompt.TemplateID,
 		prompt.VersionID,
 		prompt.OwnerID,
-		prompt.Variables,
+		variablesJSON,
 	).Scan(&prompt.ID, &prompt.CreatedAt)
 
 	if err != nil {

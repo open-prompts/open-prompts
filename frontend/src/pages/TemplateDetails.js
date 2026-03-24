@@ -850,7 +850,6 @@ const TemplateDetails = () => {
                             if (typeof vars === 'object' && !Array.isArray(vars)) {
                                 Object.keys(vars).forEach(k => { pairs.push({ key: k, value: vars[k] }); });
                             } else if (Array.isArray(vars)) {
-                            if (Array.isArray(vars)) {
                               vars.forEach((v) => {
                                 if (typeof v === 'string') {
                                   const idx = v.indexOf(':');

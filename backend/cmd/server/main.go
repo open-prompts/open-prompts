@@ -1027,26 +1027,43 @@ func main() {
 				}
 			}
 
-			// variables can be any JSON array (objects or strings). We'll store raw JSON as-is.
-			var variablesRaw json.RawMessage
+			// variables is now a map[string]string
+			var variables map[string]string
 			if v, ok := payload["variables"]; ok {
-				if b, err := json.Marshal(v); err == nil {
-					variablesRaw = json.RawMessage(b)
-				} else {
-					variablesRaw = json.RawMessage("[]")
+				if m, ok := v.(map[string]interface{}); ok {
+					variables = make(map[string]string)
+					for k, val := range m {
+						variables[k] = fmt.Sprintf("%v", val)
+					}
 				}
-			} else {
-				variablesRaw = json.RawMessage("[]")
 			}
 
-			zap.S().Infof("CreatePrompt: incoming variables JSON: %s", string(variablesRaw))
+			if variables == nil {
+				variables = make(map[string]string)
+			}
 
-			// Build prompt model and persist directly (store variables JSON as provided)
+			zap.S().Infof("CreatePrompt: incoming variables map: %v", variables)
+
+			// Fetch template version content to render it
+			version, err := templateVersionRepo.Get(context.Background(), versionID)
+			if err != nil {
+				writeError(w, status.Errorf(codes.NotFound, "template version not found"))
+				return
+			}
+
+			// Dynamically resolve variables in the template content
+			rendered := version.Content
+			for k, v := range variables {
+				rendered = strings.ReplaceAll(rendered, "${"+k+"}", v)
+			}
+
+			// Build prompt model and persist directly
 			prompt := &models.Prompt{
 				TemplateID: templateID,
 				VersionID:  versionID,
 				OwnerID:    ownerID,
-				Variables:  variablesRaw,
+				Variables:  variables,
+				Content:    rendered,
 			}
 
 			if err := promptRepo.Create(context.Background(), prompt); err != nil {
@@ -1054,29 +1071,15 @@ func main() {
 				return
 			}
 
-			zap.S().Infof("CreatePrompt: stored variables JSON: %s", string(prompt.Variables))
-
-			// Build response manually for backward compatibility
-			var vars []string
-			// Prefer parsing as array of objects (new format), fallback to array of strings (legacy)
-			var objs []map[string]interface{}
-			if err2 := json.Unmarshal(prompt.Variables, &objs); err2 == nil {
-				for _, obj := range objs {
-					for k, v := range obj {
-						vars = append(vars, fmt.Sprintf("%s:%v", k, v))
-						break
-					}
-				}
-			} else {
-				_ = json.Unmarshal(prompt.Variables, &vars)
-			}
+			zap.S().Infof("CreatePrompt: stored prompt ID: %s", prompt.ID)
 
 			pbPrompt := &pb.Prompt{
 				Id:         prompt.ID,
 				TemplateId: prompt.TemplateID,
 				VersionId:  prompt.VersionID,
 				OwnerId:    prompt.OwnerID,
-				Variables:  vars,
+				Variables:  prompt.Variables,
+				Content:    prompt.Content,
 				CreatedAt:  timestamppb.New(prompt.CreatedAt),
 			}
 			resp := &pb.CreatePromptResponse{Prompt: pbPrompt}
