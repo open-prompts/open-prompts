@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/open-prompts/open-prompts/compare/v1.9.1...v1.10.0) (2026-03-24)
+
+
+### Features
+
+* **frontend:** move API key management to dedicated page, add i18n and styles ([dc5118d](https://github.com/open-prompts/open-prompts/commit/dc5118dd4c682bfd876d7c3380f2690c39369e8c))
+
 ## [1.9.1](https://github.com/open-prompts/open-prompts/compare/v1.9.0...v1.9.1) (2026-03-24)
 
 
