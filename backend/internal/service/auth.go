@@ -56,6 +56,14 @@ func NewAuthInterceptor(jwtSecret string, apiKeyRepo *repository.APIKeyRepositor
 }
 
 // VerifyToken validates the token string and returns the user ID.
+// VerifyAnyToken verifies either an API key (if prefixed with sk-) or a JWT.
+func (i *AuthInterceptor) VerifyAnyToken(ctx context.Context, tokenOrKey string) (string, error) {
+	if strings.HasPrefix(tokenOrKey, "sk-") {
+		return i.VerifyAPIKey(ctx, tokenOrKey)
+	}
+	return i.VerifyToken(tokenOrKey)
+}
+
 func (i *AuthInterceptor) VerifyToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

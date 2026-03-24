@@ -225,7 +225,7 @@ func main() {
 			ctx := context.Background()
 			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
 				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-				if userID, err := authInterceptor.VerifyToken(tokenStr); err == nil {
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
 					ctx = service.ContextWithUserID(ctx, userID)
 				} else {
 					// Optional: fail if token matches format but is invalid?
@@ -282,7 +282,7 @@ func main() {
 				return
 			}
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			userID, err := authInterceptor.VerifyToken(tokenStr)
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
@@ -363,7 +363,7 @@ func main() {
 						return
 					}
 					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-					userID, err := authInterceptor.VerifyToken(tokenStr)
+					userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 					if err != nil {
 						http.Error(w, "Invalid token", http.StatusUnauthorized)
 						return
@@ -419,7 +419,7 @@ func main() {
 						return
 					}
 					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-					userID, err := authInterceptor.VerifyToken(tokenStr)
+					userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 					if err != nil {
 						http.Error(w, "Invalid token", http.StatusUnauthorized)
 						return
@@ -454,7 +454,7 @@ func main() {
 						return
 					}
 					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-					userID, err := authInterceptor.VerifyToken(tokenStr)
+					userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 					if err != nil {
 						http.Error(w, "Invalid token", http.StatusUnauthorized)
 						return
@@ -492,7 +492,7 @@ func main() {
 				return
 			}
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			userID, err := authInterceptor.VerifyToken(tokenStr)
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
@@ -549,7 +549,7 @@ func main() {
 				return
 			}
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			userID, err := authInterceptor.VerifyToken(tokenStr)
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
@@ -580,7 +580,7 @@ func main() {
 				return
 			}
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			userID, err := authInterceptor.VerifyToken(tokenStr)
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
@@ -605,7 +605,7 @@ func main() {
 			ctx := context.Background()
 			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
 				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-				if userID, err := authInterceptor.VerifyToken(tokenStr); err == nil {
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
 					ctx = service.ContextWithUserID(ctx, userID)
 				}
 			}
@@ -626,7 +626,7 @@ func main() {
 				return
 			}
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			userID, err := authInterceptor.VerifyToken(tokenStr)
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
@@ -668,7 +668,7 @@ func main() {
 				return
 			}
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			userID, err := authInterceptor.VerifyToken(tokenStr)
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
@@ -809,7 +809,7 @@ func main() {
 			return
 		}
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		userID, err := authInterceptor.VerifyToken(tokenStr)
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
@@ -873,7 +873,7 @@ func main() {
 			return
 		}
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		userID, err := authInterceptor.VerifyToken(tokenStr)
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
@@ -939,7 +939,7 @@ func main() {
 			return
 		}
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		userID, err := authInterceptor.VerifyToken(tokenStr)
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
