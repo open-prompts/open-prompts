@@ -82,7 +82,16 @@
                  letter-spacing: 1px;
                  font-size: 0.85rem;
                  padding: 16px;
+                 text-align: left;
                  font-weight: 600;
+
+                 .cds--table-sort {
+                     justify-content: flex-start;
+                 }
+                 .cds--table-header-label {
+                     text-align: left;
+                     justify-content: flex-start;
+                 }
              }
         }
         
@@ -107,6 +116,7 @@
                     border-bottom: none !important;
                     color: var(--text-primary) !important;
                     padding: 16px;
+                    text-align: left;
                     vertical-align: middle;
                     font-family: var(--font-body);
 
