@@ -127,6 +127,9 @@ const Header = ({ onMenuClick }) => {
                 <div className="dropdown-item" onClick={() => { navigate('/profile'); setIsDropdownOpen(false); }}>
                   {t('header.profile')}
                 </div>
+                <div className="dropdown-item" onClick={() => { navigate('/api-keys'); setIsDropdownOpen(false); }}>
+                  {t('api_keys.title', 'API Keys')}
+                </div>
                  <div className="dropdown-item logout" onClick={handleLogout}>
                   {t('header.logout')}
                 </div>

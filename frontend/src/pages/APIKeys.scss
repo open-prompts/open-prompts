@@ -1,0 +1,45 @@
+@use '@carbon/react/scss/type' as *;
+
+.api-keys-page {
+  padding: 40px 20px;
+  min-height: calc(100vh - 60px); 
+  background-color: transparent;
+
+  .api-keys-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px;
+      background-color: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-card);
+      animation: fadeIn 0.5s ease-out;
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      h1 {
+          font-family: var(--font-heading);
+          font-size: 2rem;
+          font-weight: 700;
+          color: var(--text-main);
+          margin-bottom: 0.5rem;
+          text-shadow: 0 0 10px rgba(123, 97, 255, 0.3);
+      }
+      
+      .page-description {
+          font-family: var(--font-body);
+          font-size: 1rem;
+          color: var(--text-secondary);
+          margin-bottom: 2rem;
+      }
+
+      .api-key-manager-wrapper {
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+  }
+}

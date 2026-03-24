@@ -1,0 +1,96 @@
+@use '@carbon/react/scss/type' as *;
+
+.api-key-manager {
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+
+        h3 {
+            @include type-style('heading-02');
+            color: var(--cds-text-primary);;
+        }
+    }
+
+    .key-prefix {
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+    
+    .empty-state, .loading-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--cds-text-secondary);
+    }
+    
+    // For Carbon Table compatibility in dark mode / glass theme
+    .cds--data-table-container {
+        background-color: transparent;
+        padding-top: 0;
+        
+        // Remove default border if needed
+        // border: none; 
+    }
+    
+    .cds--data-table-header {
+        background-color: transparent;
+        color: var(--cds-text-primary);
+    }
+    
+    .cds--data-table {
+        background-color: transparent;
+        
+        thead {
+             background-color: rgba(255, 255, 255, 0.05);
+             th {
+                 background-color: transparent;
+                 border-bottom: 1px solid var(--cds-border-subtle);
+                 color: var(--cds-text-primary);
+             }
+        }
+        
+        tbody {
+            tr {
+                background-color: transparent;
+                &:hover {
+                    background-color: rgba(255, 255, 255, 0.05);
+                    td {
+                       background-color: transparent;
+                       color: var(--cds-text-primary);
+                    }
+                }
+                td {
+                    background-color: transparent;
+                    border-bottom: 1px solid var(--cds-border-subtle);
+                    color: var(--cds-text-secondary);
+                }
+            }
+        }
+    }
+    
+    // Modal tweaks inside this component context if needed
+    .generated-key-display {
+        .warning-text {
+            margin-bottom: 1rem;
+            color: var(--cds-support-error);
+        }
+        
+        .key-copy-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            
+            .key-input-wrapper {
+                flex: 1;
+            }
+            
+            .copy-btn {
+                margin-bottom: 2px;
+            }
+        }
+    }
+}
