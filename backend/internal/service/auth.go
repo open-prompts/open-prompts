@@ -2,37 +2,38 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"open-prompts/backend/internal/repository"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // AuthInterceptor is a server interceptor that authenticates the user.
 type AuthInterceptor struct {
-	jwtSecret []byte
-	// publicRpcMethods is a map of methods that do not require authentication
+	jwtSecret        []byte
+	apiKeyRepo       *repository.APIKeyRepository
 	publicRpcMethods map[string]bool
 }
 
-type contextKey string
-
-const userIDKey contextKey = "user_id"
-
-// ContextWithUserID adds the user ID to the context.
-func ContextWithUserID(ctx context.Context, userID string) context.Context {
-	return context.WithValue(ctx, userIDKey, userID)
-}
+// ... ContextWithUserID ...
 
 // NewAuthInterceptor creates a new AuthInterceptor.
-func NewAuthInterceptor(jwtSecret string) *AuthInterceptor {
+func NewAuthInterceptor(jwtSecret string, apiKeyRepo *repository.APIKeyRepository) *AuthInterceptor {
 	return &AuthInterceptor{
-		jwtSecret: []byte(jwtSecret),
+		jwtSecret:  []byte(jwtSecret),
+		apiKeyRepo: apiKeyRepo,
 		publicRpcMethods: map[string]bool{
 			"/v1.UserService/Register":         true,
 			"/v1.UserService/Login":            true,
@@ -74,17 +75,34 @@ func (i *AuthInterceptor) VerifyToken(tokenString string) (string, error) {
 // Unary returns a server interceptor function to authenticate unary RPCs.
 func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		// 1. Attempt to extract and verify token if present
+		// 1. Attempt to extract and verify token or API Key
 		var tokenString string
+		var apiKeyString string
+
 		md, ok := metadata.FromIncomingContext(ctx)
 		if ok {
 			zap.S().Infof("AuthInterceptor: md=%v", md)
+
+			// Check Authorization header
 			values := md["authorization"]
 			if len(values) > 0 {
 				authHeader := values[0]
 				parts := strings.Split(authHeader, " ")
-				if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-					tokenString = parts[1]
+				if len(parts) == 2 {
+					scheme := strings.ToLower(parts[0])
+					if scheme == "bearer" {
+						tokenString = parts[1]
+					} else if scheme == "apikey" {
+						apiKeyString = parts[1]
+					}
+				}
+			}
+
+			// Check X-API-Key header if Authorization not set or failed
+			if apiKeyString == "" {
+				apiKeys := md["x-api-key"]
+				if len(apiKeys) > 0 {
+					apiKeyString = apiKeys[0]
 				}
 			}
 		}
@@ -100,14 +118,53 @@ func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 			return handler(newCtx, req)
 		}
 
+		if apiKeyString != "" {
+			userID, err := i.VerifyAPIKey(ctx, apiKeyString)
+			if err != nil {
+				return nil, err
+			}
+			newCtx := context.WithValue(ctx, userIDKey, userID)
+			return handler(newCtx, req)
+		}
+
 		// 2. If no token, check if the method is public
 		if i.publicRpcMethods[info.FullMethod] {
 			return handler(ctx, req)
 		}
 
 		// 3. Not public and no token -> Fail
-		return nil, status.Error(codes.Unauthenticated, "missing authorization token")
+		return nil, status.Error(codes.Unauthenticated, "missing authorization token or api key")
 	}
+}
+
+func (i *AuthInterceptor) VerifyAPIKey(ctx context.Context, key string) (string, error) {
+	// Simple validation
+	if !strings.HasPrefix(key, "sk-") {
+		return "", status.Error(codes.Unauthenticated, "invalid api key format")
+	}
+
+	h := sha256.New()
+	h.Write([]byte(key))
+	keyHash := hex.EncodeToString(h.Sum(nil))
+
+	apiKey, err := i.apiKeyRepo.GetByHash(ctx, keyHash)
+	if err != nil {
+		// Log internal error?
+		return "", status.Errorf(codes.Unauthenticated, "invalid api key")
+	}
+	if apiKey == nil || !apiKey.IsActive {
+		return "", status.Error(codes.Unauthenticated, "api key is inactive or invalid")
+	}
+	if apiKey.ExpiresAt.Valid && apiKey.ExpiresAt.Time.Before(time.Now()) {
+		return "", status.Error(codes.Unauthenticated, "api key expired")
+	}
+
+	// Update last used asynchronously
+	go func() {
+		_ = i.apiKeyRepo.UpdateLastUsed(context.Background(), apiKey.ID)
+	}()
+
+	return apiKey.UserID, nil
 }
 
 // GetUserIDFromContext retrieves the user ID from the context.
@@ -117,4 +174,28 @@ func GetUserIDFromContext(ctx context.Context) (string, error) {
 		return "", status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 	return userID, nil
+}
+
+// VerifyHTTPRequest validates the request credentials (Token or API Key) and returns the user ID.
+func (i *AuthInterceptor) VerifyHTTPRequest(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" {
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 {
+			scheme := strings.ToLower(parts[0])
+			if scheme == "bearer" {
+				return i.VerifyToken(parts[1])
+			} else if scheme == "apikey" {
+				return i.VerifyAPIKey(r.Context(), parts[1])
+			}
+		}
+	}
+
+	// Check X-API-Key header
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey != "" {
+		return i.VerifyAPIKey(r.Context(), apiKey)
+	}
+
+	return "", status.Error(codes.Unauthenticated, "missing or invalid credentials")
 }

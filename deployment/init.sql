@@ -177,3 +177,23 @@ CREATE TABLE IF NOT EXISTS template_aliases (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(template_id, alias_name)
 );
+
+-- -----------------------------------------------------------------------------
+-- Table: api_keys
+-- Description: Stores API keys for user authentication.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL, -- Store hash of the key, not the key itself
+    prefix TEXT NOT NULL, -- partial key for display
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE(key_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+COMMENT ON TABLE api_keys IS 'Stores API keys for user authentication';

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: api/proto/v1/prompt.proto
+// source: backend/api/proto/v1/prompt.proto
 
 package v1
 
@@ -30,6 +30,9 @@ const (
 	UserService_UpdateAlias_FullMethodName          = "/v1.UserService/UpdateAlias"
 	UserService_DeleteAlias_FullMethodName          = "/v1.UserService/DeleteAlias"
 	UserService_GetPromptByAlias_FullMethodName     = "/v1.UserService/GetPromptByAlias"
+	UserService_CreateAPIKey_FullMethodName         = "/v1.UserService/CreateAPIKey"
+	UserService_ListAPIKeys_FullMethodName          = "/v1.UserService/ListAPIKeys"
+	UserService_DeleteAPIKey_FullMethodName         = "/v1.UserService/DeleteAPIKey"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -56,6 +59,10 @@ type UserServiceClient interface {
 	UpdateAlias(ctx context.Context, in *UpdateAliasRequest, opts ...grpc.CallOption) (*Alias, error)
 	DeleteAlias(ctx context.Context, in *DeleteAliasRequest, opts ...grpc.CallOption) (*DeleteTemplateResponse, error)
 	GetPromptByAlias(ctx context.Context, in *GetPromptByAliasRequest, opts ...grpc.CallOption) (*TemplateVersion, error)
+	// API Key RPCs
+	CreateAPIKey(ctx context.Context, in *CreateAPIKeyRequest, opts ...grpc.CallOption) (*CreateAPIKeyResponse, error)
+	ListAPIKeys(ctx context.Context, in *ListAPIKeysRequest, opts ...grpc.CallOption) (*ListAPIKeysResponse, error)
+	DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRequest, opts ...grpc.CallOption) (*DeleteAPIKeyResponse, error)
 }
 
 type userServiceClient struct {
@@ -176,6 +183,36 @@ func (c *userServiceClient) GetPromptByAlias(ctx context.Context, in *GetPromptB
 	return out, nil
 }
 
+func (c *userServiceClient) CreateAPIKey(ctx context.Context, in *CreateAPIKeyRequest, opts ...grpc.CallOption) (*CreateAPIKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAPIKeyResponse)
+	err := c.cc.Invoke(ctx, UserService_CreateAPIKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListAPIKeys(ctx context.Context, in *ListAPIKeysRequest, opts ...grpc.CallOption) (*ListAPIKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAPIKeysResponse)
+	err := c.cc.Invoke(ctx, UserService_ListAPIKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRequest, opts ...grpc.CallOption) (*DeleteAPIKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteAPIKeyResponse)
+	err := c.cc.Invoke(ctx, UserService_DeleteAPIKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -200,6 +237,10 @@ type UserServiceServer interface {
 	UpdateAlias(context.Context, *UpdateAliasRequest) (*Alias, error)
 	DeleteAlias(context.Context, *DeleteAliasRequest) (*DeleteTemplateResponse, error)
 	GetPromptByAlias(context.Context, *GetPromptByAliasRequest) (*TemplateVersion, error)
+	// API Key RPCs
+	CreateAPIKey(context.Context, *CreateAPIKeyRequest) (*CreateAPIKeyResponse, error)
+	ListAPIKeys(context.Context, *ListAPIKeysRequest) (*ListAPIKeysResponse, error)
+	DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*DeleteAPIKeyResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -242,6 +283,15 @@ func (UnimplementedUserServiceServer) DeleteAlias(context.Context, *DeleteAliasR
 }
 func (UnimplementedUserServiceServer) GetPromptByAlias(context.Context, *GetPromptByAliasRequest) (*TemplateVersion, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPromptByAlias not implemented")
+}
+func (UnimplementedUserServiceServer) CreateAPIKey(context.Context, *CreateAPIKeyRequest) (*CreateAPIKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAPIKey not implemented")
+}
+func (UnimplementedUserServiceServer) ListAPIKeys(context.Context, *ListAPIKeysRequest) (*ListAPIKeysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAPIKeys not implemented")
+}
+func (UnimplementedUserServiceServer) DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*DeleteAPIKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAPIKey not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -462,6 +512,60 @@ func _UserService_GetPromptByAlias_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_CreateAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAPIKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).CreateAPIKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_CreateAPIKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).CreateAPIKey(ctx, req.(*CreateAPIKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListAPIKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAPIKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListAPIKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListAPIKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListAPIKeys(ctx, req.(*ListAPIKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_DeleteAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAPIKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DeleteAPIKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DeleteAPIKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DeleteAPIKey(ctx, req.(*DeleteAPIKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -513,9 +617,21 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetPromptByAlias",
 			Handler:    _UserService_GetPromptByAlias_Handler,
 		},
+		{
+			MethodName: "CreateAPIKey",
+			Handler:    _UserService_CreateAPIKey_Handler,
+		},
+		{
+			MethodName: "ListAPIKeys",
+			Handler:    _UserService_ListAPIKeys_Handler,
+		},
+		{
+			MethodName: "DeleteAPIKey",
+			Handler:    _UserService_DeleteAPIKey_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/v1/prompt.proto",
+	Metadata: "backend/api/proto/v1/prompt.proto",
 }
 
 const (
@@ -1103,5 +1219,5 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/v1/prompt.proto",
+	Metadata: "backend/api/proto/v1/prompt.proto",
 }

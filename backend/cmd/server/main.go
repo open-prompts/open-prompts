@@ -95,6 +95,8 @@ func main() {
 
 	// User Service
 	userRepo := repository.NewUserRepository(pgConn.DB)
+	apiKeyRepo := repository.NewAPIKeyRepository(pgConn.DB)
+
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		jwtSecret = "default-secret-key-change-me"
@@ -111,10 +113,10 @@ func main() {
 	}
 	emailSvc := service.NewEmailService(smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom)
 
-	userSvc := service.NewUserService(userRepo, redisClient, emailSvc, jwtSecret)
+	userSvc := service.NewUserService(userRepo, apiKeyRepo, redisClient, emailSvc, jwtSecret)
 
 	// Auth Interceptor
-	authInterceptor := service.NewAuthInterceptor(jwtSecret)
+	authInterceptor := service.NewAuthInterceptor(jwtSecret, apiKeyRepo)
 
 	// gRPC Server
 	go func() {
@@ -337,7 +339,7 @@ func main() {
 		}
 
 		parts := strings.Split(id, "/")
-                zap.S().Infof("DEBUG HTTP ROUTER id='%s' len(parts)=%d", id, len(parts))
+		zap.S().Infof("DEBUG HTTP ROUTER id='%s' len(parts)=%d", id, len(parts))
 		if len(parts) >= 2 && parts[1] == "aliases" {
 			templateID := parts[0]
 			if len(parts) == 2 {
@@ -851,6 +853,116 @@ func main() {
 			_, _ = w.Write(b)
 
 		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// API Key Handlers
+	http.HandleFunc("/api/v1/api-keys", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyToken(tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		switch r.Method {
+		case http.MethodGet:
+			q := r.URL.Query()
+			req := &pb.ListAPIKeysRequest{}
+			if v := q.Get("page_size"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.PageSize = int32(i)
+				}
+			}
+			req.PageToken = q.Get("page_token")
+			resp, err := userSvc.ListAPIKeys(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		case http.MethodPost:
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Failed to read body", http.StatusBadRequest)
+				return
+			}
+			var req pb.CreateAPIKeyRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			resp, err := userSvc.CreateAPIKey(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/v1/api-keys/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyToken(tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		id := strings.TrimPrefix(r.URL.Path, "/api/v1/api-keys/")
+		if id == "" {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+
+		if r.Method == http.MethodDelete {
+			req := &pb.DeleteAPIKeyRequest{Id: id}
+			resp, err := userSvc.DeleteAPIKey(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})

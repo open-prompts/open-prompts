@@ -32,8 +32,12 @@ service UserService {
   rpc UpdateAlias(UpdateAliasRequest) returns (Alias);
   rpc DeleteAlias(DeleteAliasRequest) returns (DeleteTemplateResponse);
   rpc GetPromptByAlias(GetPromptByAliasRequest) returns (TemplateVersion);
-}
 
+  // API Key RPCs
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse);
+}
 
 // PromptService defines the RPC methods for managing templates and prompts.
 service PromptService {
@@ -445,7 +449,6 @@ message GetProfileResponse {
   string avatar = 4;
 }
 
-
 // Alias messages
 message Alias {
   string id = 1;
@@ -482,4 +485,46 @@ message DeleteAliasRequest {
 message GetPromptByAliasRequest {
   string template_id = 1;
   string alias_name = 2;
+}
+
+// API Key Management
+
+message APIKey {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string prefix = 4; // Displayable part of the key
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  google.protobuf.Timestamp last_used_at = 7;
+  bool is_active = 8;
+}
+
+message CreateAPIKeyRequest {
+  string name = 1;
+  int32 expires_days = 2; // Optional, 0 for unlimited or default
+}
+
+message CreateAPIKeyResponse {
+  string id = 1;
+  string api_key = 2; // The raw key, only shown once
+  APIKey metadata = 3;
+}
+
+message ListAPIKeysRequest {
+  string page_token = 1;
+  int32 page_size = 2;
+}
+
+message ListAPIKeysResponse {
+  repeated APIKey api_keys = 1;
+  string next_page_token = 2;
+}
+
+message DeleteAPIKeyRequest {
+  string id = 1;
+}
+
+message DeleteAPIKeyResponse {
+  bool success = 1;
 }

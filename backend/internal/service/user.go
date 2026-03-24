@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -22,6 +24,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var idRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
@@ -34,18 +37,20 @@ type RedisStore interface {
 
 type UserService struct {
 	pb.UnimplementedUserServiceServer
-	Repo      repository.UserRepository
-	Redis     RedisStore
-	EmailSvc  EmailService
-	JWTSecret []byte
+	Repo       repository.UserRepository
+	APIKeyRepo *repository.APIKeyRepository
+	Redis      RedisStore
+	EmailSvc   EmailService
+	JWTSecret  []byte
 }
 
-func NewUserService(repo repository.UserRepository, redisClient RedisStore, emailSvc EmailService, jwtSecret string) *UserService {
+func NewUserService(repo repository.UserRepository, apiKeyRepo *repository.APIKeyRepository, redisClient RedisStore, emailSvc EmailService, jwtSecret string) *UserService {
 	return &UserService{
-		Repo:      repo,
-		Redis:     redisClient,
-		EmailSvc:  emailSvc,
-		JWTSecret: []byte(jwtSecret),
+		Repo:       repo,
+		APIKeyRepo: apiKeyRepo,
+		Redis:      redisClient,
+		EmailSvc:   emailSvc,
+		JWTSecret:  []byte(jwtSecret),
 	}
 }
 
@@ -272,4 +277,137 @@ func (s *UserService) generateToken(userID string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.JWTSecret)
+}
+
+// API Key Methods
+
+func (s *UserService) CreateAPIKey(ctx context.Context, req *pb.CreateAPIKeyRequest) (*pb.CreateAPIKeyResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Name == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+
+	// Generate Key: sk-<uuid> or random bytes
+	rawKey, err := generateSecureKey()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate key: %v", err)
+	}
+	keyHash := hashKey(rawKey)
+	prefix := rawKey[:8] + "..."
+
+	apiKey := &models.APIKey{
+		UserID:   userID,
+		Name:     req.Name,
+		KeyHash:  keyHash,
+		Prefix:   prefix,
+		IsActive: true,
+	}
+
+	if req.ExpiresDays > 0 {
+		exp := time.Now().Add(time.Duration(req.ExpiresDays) * 24 * time.Hour)
+		apiKey.ExpiresAt = sql.NullTime{Time: exp, Valid: true}
+	}
+
+	if err := s.APIKeyRepo.Create(ctx, apiKey); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create api key: %v", err)
+	}
+
+	resp := &pb.CreateAPIKeyResponse{
+		Id:     apiKey.ID,
+		ApiKey: rawKey,
+		Metadata: &pb.APIKey{
+			Id:        apiKey.ID,
+			UserId:    apiKey.UserID,
+			Name:      apiKey.Name,
+			Prefix:    apiKey.Prefix,
+			CreatedAt: timestamppb.New(apiKey.CreatedAt),
+			IsActive:  apiKey.IsActive,
+		},
+	}
+	if apiKey.ExpiresAt.Valid {
+		resp.Metadata.ExpiresAt = timestamppb.New(apiKey.ExpiresAt.Time)
+	}
+
+	return resp, nil
+}
+
+func (s *UserService) ListAPIKeys(ctx context.Context, req *pb.ListAPIKeysRequest) (*pb.ListAPIKeysResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	limit := int(req.PageSize)
+	if limit <= 0 {
+		limit = 10
+	}
+	offset := 0
+	// For simplicity, assuming page_token handles offset if implemented, currently defaulting to first page if not
+
+	keys, err := s.APIKeyRepo.ListByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list api keys: %v", err)
+	}
+
+	var pbKeys []*pb.APIKey
+	for _, k := range keys {
+		pk := &pb.APIKey{
+			Id:        k.ID,
+			UserId:    k.UserID,
+			Name:      k.Name,
+			Prefix:    k.Prefix,
+			CreatedAt: timestamppb.New(k.CreatedAt),
+			IsActive:  k.IsActive,
+		}
+		if k.ExpiresAt.Valid {
+			pk.ExpiresAt = timestamppb.New(k.ExpiresAt.Time)
+		}
+		if k.LastUsedAt.Valid {
+			pk.LastUsedAt = timestamppb.New(k.LastUsedAt.Time)
+		}
+		pbKeys = append(pbKeys, pk)
+	}
+
+	return &pb.ListAPIKeysResponse{ApiKeys: pbKeys}, nil
+}
+
+func (s *UserService) DeleteAPIKey(ctx context.Context, req *pb.DeleteAPIKeyRequest) (*pb.DeleteAPIKeyResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	err = s.APIKeyRepo.Delete(ctx, req.Id, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Error(codes.NotFound, "api key not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to delete api key: %v", err)
+	}
+
+	return &pb.DeleteAPIKeyResponse{Success: true}, nil
+}
+
+// Helpers
+func generateSecureKey() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return "sk-" + hex.EncodeToString(b), nil
+}
+
+func hashKey(key string) string {
+	h := sha256.New()
+	h.Write([]byte(key))
+	return hex.EncodeToString(h.Sum(nil))
 }

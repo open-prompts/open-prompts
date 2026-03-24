@@ -8,6 +8,7 @@ import { Edit, Save, Close } from '@carbon/icons-react';
 import { updateProfile, getProfile } from '../services/api';
 import { loginSuccess } from '../store/authSlice';
 import Header from '../components/Header';
+import APIKeyManager from '../components/APIKeyManager';
 import './Profile.scss';
 
 /**
@@ -220,6 +221,8 @@ const Profile = () => {
               </form>
           )}
         </div>
+        
+        <APIKeyManager notification={addNotification} />
       </div>
     </div>
   );

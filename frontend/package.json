@@ -4,7 +4,8 @@
   "private": true,
   "proxy": "http://localhost:8080",
   "dependencies": {
-    "@carbon/react": "^1.0.0",
+    "@carbon/icons-react": "^11.76.0",
+    "@carbon/react": "^1.103.0",
     "@reduxjs/toolkit": "^1.9.0",
     "axios": "^1.13.6",
     "i18next": "^22.4.9",

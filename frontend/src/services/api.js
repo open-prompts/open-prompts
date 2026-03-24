@@ -142,3 +142,16 @@ export const deleteTemplateAlias = (templateId, aliasName) => {
 export const getPromptByAlias = (templateId, aliasName) => {
   return api.get(`/templates/${templateId}/aliases/${aliasName}/prompt`);
 };
+
+// API methods for API Keys
+export const listAPIKeys = (params) => {
+  return api.get('/api-keys', { params });
+};
+
+export const createAPIKey = (keyData) => {
+  return api.post('/api-keys', keyData);
+};
+
+export const deleteAPIKey = (id) => {
+  return api.delete(`/api-keys/${id}`);
+};
