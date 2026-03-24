@@ -27,7 +27,14 @@ type AuthInterceptor struct {
 	publicRpcMethods map[string]bool
 }
 
-// ... ContextWithUserID ...
+type contextKey string
+
+const userIDKey contextKey = "user_id"
+
+// ContextWithUserID adds the user ID to the context.
+func ContextWithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
 
 // NewAuthInterceptor creates a new AuthInterceptor.
 func NewAuthInterceptor(jwtSecret string, apiKeyRepo *repository.APIKeyRepository) *AuthInterceptor {
@@ -90,9 +97,10 @@ func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 				parts := strings.Split(authHeader, " ")
 				if len(parts) == 2 {
 					scheme := strings.ToLower(parts[0])
-					if scheme == "bearer" {
+					switch scheme {
+					case "bearer":
 						tokenString = parts[1]
-					} else if scheme == "apikey" {
+					case "apikey":
 						apiKeyString = parts[1]
 					}
 				}
@@ -183,9 +191,10 @@ func (i *AuthInterceptor) VerifyHTTPRequest(r *http.Request) (string, error) {
 		parts := strings.Split(authHeader, " ")
 		if len(parts) == 2 {
 			scheme := strings.ToLower(parts[0])
-			if scheme == "bearer" {
+			switch scheme {
+			case "bearer":
 				return i.VerifyToken(parts[1])
-			} else if scheme == "apikey" {
+			case "apikey":
 				return i.VerifyAPIKey(r.Context(), parts[1])
 			}
 		}

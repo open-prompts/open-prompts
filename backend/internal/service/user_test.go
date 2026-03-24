@@ -80,7 +80,7 @@ t.Run("Success", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.RegisterRequest{
 Id:               "user_123",
 Email:            "test@example.com",
@@ -112,7 +112,7 @@ t.Run("DuplicateID", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.RegisterRequest{
 Id:               "user_123",
 Email:            "test@example.com",
@@ -136,7 +136,7 @@ t.Run("InvalidID", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.RegisterRequest{
 Id:               "user-123", // Invalid character '-'
 Email:            "test@example.com",
@@ -158,7 +158,7 @@ t.Run("InvalidVerificationCode", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.RegisterRequest{
 Id:               "user_123",
 Email:            "test@example.com",
@@ -191,7 +191,7 @@ t.Run("SuccessByEmail", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.LoginRequest{
 Email:    "test@example.com",
 Password: password,
@@ -211,7 +211,7 @@ t.Run("SuccessByID", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.LoginRequest{
 Email:    "user_123", // Using ID in Email field as identifier
 Password: password,
@@ -231,7 +231,7 @@ t.Run("InvalidPassword", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.LoginRequest{
 Email:    "test@example.com",
 Password: "wrongpassword",
@@ -250,7 +250,7 @@ t.Run("UserNotFound", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 req := &pb.LoginRequest{
 Email:    "unknown@example.com",
 Password: "password",
@@ -272,7 +272,7 @@ t.Run("Success", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 
 userID := "user_123"
 existingUser := &models.User{
@@ -307,7 +307,7 @@ t.Run("Success_En", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 
 req := &pb.SendVerificationCodeRequest{
 Email:    "real_user@domain.com",
@@ -331,7 +331,7 @@ t.Run("Success_TestUser", func(t *testing.T) {
 mockRepo := new(MockUserRepository)
 mockRedis := new(MockRedisStore)
 mockEmail := new(MockEmailService)
-svc := NewUserService(mockRepo, mockRedis, mockEmail, "secret")
+svc := NewUserService(mockRepo, nil, mockRedis, mockEmail, "secret")
 
 req := &pb.SendVerificationCodeRequest{
 Email:    "test@example.com",

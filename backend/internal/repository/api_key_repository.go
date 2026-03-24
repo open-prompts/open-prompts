@@ -50,7 +50,9 @@ func (r *APIKeyRepository) ListByUserID(ctx context.Context, userID string, limi
 	if err != nil {
 		return nil, fmt.Errorf("failed to list api keys: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var keys []*models.APIKey
 	for rows.Next() {
