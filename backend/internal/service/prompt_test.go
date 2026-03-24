@@ -81,56 +81,55 @@ func (m *MockTemplateRepository) ListTags(ctx context.Context, filters map[strin
 // MockTemplateVersionRepository
 
 type MockTemplateAliasRepository struct {
-CreateFunc func(ctx context.Context, alias *models.TemplateAlias) error
-GetFunc    func(ctx context.Context, templateID, aliasName string) (*models.TemplateAlias, error)
-ListFunc   func(ctx context.Context, templateID string) ([]*models.TemplateAlias, error)
-UpdateFunc func(ctx context.Context, alias *models.TemplateAlias) error
-DeleteFunc func(ctx context.Context, templateID, aliasName string) error
-UpsertFunc func(ctx context.Context, alias *models.TemplateAlias) error
+	CreateFunc func(ctx context.Context, alias *models.TemplateAlias) error
+	GetFunc    func(ctx context.Context, templateID, aliasName string) (*models.TemplateAlias, error)
+	ListFunc   func(ctx context.Context, templateID string) ([]*models.TemplateAlias, error)
+	UpdateFunc func(ctx context.Context, alias *models.TemplateAlias) error
+	DeleteFunc func(ctx context.Context, templateID, aliasName string) error
+	UpsertFunc func(ctx context.Context, alias *models.TemplateAlias) error
 }
 
 func (m *MockTemplateAliasRepository) Create(ctx context.Context, alias *models.TemplateAlias) error {
-if m.CreateFunc != nil {
-return m.CreateFunc(ctx, alias)
-}
-return nil
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, alias)
+	}
+	return nil
 }
 
 func (m *MockTemplateAliasRepository) Get(ctx context.Context, templateID, aliasName string) (*models.TemplateAlias, error) {
-if m.GetFunc != nil {
-return m.GetFunc(ctx, templateID, aliasName)
-}
-return nil, nil
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, templateID, aliasName)
+	}
+	return nil, nil
 }
 
 func (m *MockTemplateAliasRepository) List(ctx context.Context, templateID string) ([]*models.TemplateAlias, error) {
-if m.ListFunc != nil {
-return m.ListFunc(ctx, templateID)
-}
-return nil, nil
+	if m.ListFunc != nil {
+		return m.ListFunc(ctx, templateID)
+	}
+	return nil, nil
 }
 
 func (m *MockTemplateAliasRepository) Update(ctx context.Context, alias *models.TemplateAlias) error {
-if m.UpdateFunc != nil {
-return m.UpdateFunc(ctx, alias)
-}
-return nil
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, alias)
+	}
+	return nil
 }
 
 func (m *MockTemplateAliasRepository) Delete(ctx context.Context, templateID, aliasName string) error {
-if m.DeleteFunc != nil {
-return m.DeleteFunc(ctx, templateID, aliasName)
-}
-return nil
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, templateID, aliasName)
+	}
+	return nil
 }
 
 func (m *MockTemplateAliasRepository) Upsert(ctx context.Context, alias *models.TemplateAlias) error {
-if m.UpsertFunc != nil {
-return m.UpsertFunc(ctx, alias)
+	if m.UpsertFunc != nil {
+		return m.UpsertFunc(ctx, alias)
+	}
+	return nil
 }
-return nil
-}
-
 
 type MockTemplateVersionRepository struct {
 	mock.Mock
@@ -167,9 +166,9 @@ func TestCreatePrompt(t *testing.T) {
 		}
 
 		mockPromptRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Prompt")).Return(nil)
-		
+
 		mockVersionRepo.On("Get", mock.Anything, int32(1)).Return(&models.TemplateVersion{
-			ID: 1,
+			ID:      1,
 			Content: "content with ${var1}",
 		}, nil)
 
@@ -281,9 +280,9 @@ func TestListTags(t *testing.T) {
 }
 
 func (m *MockTemplateVersionRepository) Get(ctx context.Context, id int32) (*models.TemplateVersion, error) {
-args := m.Called(ctx, id)
-if args.Get(0) == nil {
-return nil, args.Error(1)
-}
-return args.Get(0).(*models.TemplateVersion), args.Error(1)
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.TemplateVersion), args.Error(1)
 }

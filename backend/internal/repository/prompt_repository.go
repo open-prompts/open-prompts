@@ -71,12 +71,14 @@ func (r *promptRepository) Get(ctx context.Context, id string) (*models.Prompt, 
 		WHERE p.id = $1`
 
 	var prompt models.Prompt
+	var variablesJSON []byte
+
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&prompt.ID,
 		&prompt.TemplateID,
 		&prompt.VersionID,
 		&prompt.OwnerID,
-		&prompt.Variables,
+		&variablesJSON,
 		&prompt.CreatedAt,
 		&prompt.Content,
 	)
@@ -86,6 +88,13 @@ func (r *promptRepository) Get(ctx context.Context, id string) (*models.Prompt, 
 			return nil, fmt.Errorf("prompt not found: %w", err)
 		}
 		return nil, fmt.Errorf("failed to get prompt: %w", err)
+	}
+
+	if len(variablesJSON) > 0 {
+		_ = json.Unmarshal(variablesJSON, &prompt.Variables)
+	}
+	if prompt.Variables == nil {
+		prompt.Variables = make(map[string]string)
 	}
 
 	return &prompt, nil
@@ -127,17 +136,27 @@ func (r *promptRepository) List(ctx context.Context, limit, offset int, filters 
 	var prompts []*models.Prompt
 	for rows.Next() {
 		var p models.Prompt
+		var variablesJSON []byte
+
 		if err := rows.Scan(
 			&p.ID,
 			&p.TemplateID,
 			&p.VersionID,
 			&p.OwnerID,
-			&p.Variables,
+			&variablesJSON,
 			&p.CreatedAt,
 			&p.Content,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan prompt: %w", err)
 		}
+
+		if len(variablesJSON) > 0 {
+			_ = json.Unmarshal(variablesJSON, &p.Variables)
+		}
+		if p.Variables == nil {
+			p.Variables = make(map[string]string)
+		}
+
 		prompts = append(prompts, &p)
 	}
 
