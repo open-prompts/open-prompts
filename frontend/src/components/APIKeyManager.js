@@ -99,7 +99,7 @@ const APIKeyManager = ({ notification }) => {
       <div className="header-section">
           <h3>{t('api_keys.list_title', 'Your API Keys')}</h3>
           <Button renderIcon={Add} onClick={() => setIsModalOpen(true)} size="sm">
-            {t('api_keys.generate', 'Generate New Key')}
+            {t('api_keys.generate_new', 'Generate New Key')}
           </Button>
       </div>
 
@@ -158,7 +158,7 @@ const APIKeyManager = ({ notification }) => {
         open={isModalOpen}
         modalHeading={!generatedKey ? t('api_keys.modal_create_title') : t('api_keys.modal_created_title')}
         primaryButtonText={!generatedKey ? t('api_keys.btn_generate') : t('api_keys.btn_done')}
-        secondaryButtonText={!generatedKey ? t('api_keys.btn_cancel') : ""}
+        secondaryButtonText={!generatedKey ? t('common.cancel') : ""}
         onRequestClose={handleModalClose}
         onRequestSubmit={!generatedKey ? handleCreate : handleModalClose}
         danger={false}
