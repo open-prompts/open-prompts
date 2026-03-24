@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/open-prompts/open-prompts/compare/v1.10.3...v1.11.0) (2026-03-24)
+
+
+### Features
+
+* refactor prompt implementation to generate and return rendered content ([794ee83](https://github.com/open-prompts/open-prompts/commit/794ee831b6f2a2924e1951c59963de6b727a265d))
+
 ## [1.10.3](https://github.com/open-prompts/open-prompts/compare/v1.10.2...v1.10.3) (2026-03-24)
 
 
