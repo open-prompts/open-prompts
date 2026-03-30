@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Button,
   Table,
@@ -97,9 +98,10 @@ const APIKeyManager = ({ notification }) => {
   }
 
   return (
-    <div className="api-key-manager">
-      <div className="header-section">
-          <h3>{t('api_keys.list_title', 'Your API Keys')}</h3>
+    <>
+      <div className="api-key-manager">
+        <div className="header-section">
+            <h3>{t('api_keys.list_title', 'Your API Keys')}</h3>
           <Button renderIcon={Add} onClick={() => setIsModalOpen(true)} size="sm">
             {t('api_keys.generate_new', 'Generate New Key')}
           </Button>
@@ -153,83 +155,90 @@ const APIKeyManager = ({ notification }) => {
           </TableBody>
         </Table>
       </TableContainer>
+      </div>
 
       {/* Create Modal */}
-      <Modal
-        open={isModalOpen}
-        modalHeading={!generatedKey ? t('api_keys.modal_create_title') : t('api_keys.modal_created_title')}
-        primaryButtonText={!generatedKey ? t('api_keys.btn_generate') : t('api_keys.btn_done')}
-        secondaryButtonText={!generatedKey ? t('common.cancel') : ""}
-        onRequestClose={handleModalClose}
-        onRequestSubmit={!generatedKey ? handleCreate : handleModalClose}
-        danger={false}
-        className="api-key-modal"
-      >
-        <div className="api-key-form">
-          {!generatedKey ? (
-              <TextInput
-                  id="key-name"
-                  labelText={t('api_keys.label_name')}
-                  placeholder={t('api_keys.placeholder_name')}
-                  value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
-                  className="form-field"
-              />
-          ) : (
-              <div className="generated-key-display">
-                  <p className="warning-text">
-                      {t('api_keys.generated_warning')}
-                  </p>
-                  <div className="key-copy-row">
-                      <div className="key-input-wrapper">
-                          <TextInput
-                              id="generated-key"
-                              labelText={t('api_keys.label_key')}
-                              value={generatedKey}
-                              readOnly
-                          />
-                      </div>
-                      <Button
-                          hasIconOnly
-                          renderIcon={Copy}
-                          kind="ghost"
-                          iconDescription={t('api_keys.copy_desc', 'Copy')}
-                          onClick={() => copyToClipboard(generatedKey)}
-                          className="copy-btn"
-                      />
-                  </div>
-              </div>
-          )}
-        </div>
-      </Modal>
+      {createPortal(
+        <Modal
+          open={isModalOpen}
+          modalHeading={!generatedKey ? t('api_keys.modal_create_title') : t('api_keys.modal_created_title')}
+          primaryButtonText={!generatedKey ? t('api_keys.btn_generate') : t('api_keys.btn_done')}
+          secondaryButtonText={!generatedKey ? t('common.cancel') : ""}
+          onRequestClose={handleModalClose}
+          onRequestSubmit={!generatedKey ? handleCreate : handleModalClose}
+          danger={false}
+          className="api-key-modal"
+        >
+          <div className="api-key-form">
+            {!generatedKey ? (
+                <TextInput
+                    id="key-name"
+                    labelText={t('api_keys.label_name')}
+                    placeholder={t('api_keys.placeholder_name')}
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    className="form-field"
+                />
+            ) : (
+                <div className="generated-key-display">
+                    <p className="warning-text">
+                        {t('api_keys.generated_warning')}
+                    </p>
+                    <div className="key-copy-row">
+                        <div className="key-input-wrapper">
+                            <TextInput
+                                id="generated-key"
+                                labelText={t('api_keys.label_key')}
+                                value={generatedKey}
+                                readOnly
+                            />
+                        </div>
+                        <Button
+                            hasIconOnly
+                            renderIcon={Copy}
+                            kind="ghost"
+                            iconDescription={t('api_keys.copy_desc', 'Copy')}
+                            onClick={() => copyToClipboard(generatedKey)}
+                            className="copy-btn"
+                        />
+                    </div>
+                </div>
+            )}
+          </div>
+        </Modal>,
+        document.body
+      )}
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        open={deleteModalOpen}
-        modalHeading={t('api_keys.delete')}
-        primaryButtonText={t('common.delete')}
-        secondaryButtonText={t('common.cancel')}
-        onRequestClose={() => {
-            setDeleteModalOpen(false);
-            setKeyToDelete(null);
-        }}
-        onRequestSubmit={() => {
-            if (keyToDelete) {
-                handleDelete(keyToDelete);
-            }
-            setDeleteModalOpen(false);
-            setKeyToDelete(null);
-        }}
-        danger={true}
-        className="api-key-modal"
-      >
-        <div className="api-key-form">
-          <p className="delete-confirmation-text">
-              {t('api_keys.confirm_delete', 'Are you sure you want to delete this API Key? This action cannot be undone.')}
-          </p>
-        </div>
-      </Modal>
-    </div>
+      {createPortal(
+        <Modal
+          open={deleteModalOpen}
+          modalHeading={t('api_keys.delete')}
+          primaryButtonText={t('common.delete')}
+          secondaryButtonText={t('common.cancel')}
+          onRequestClose={() => {
+              setDeleteModalOpen(false);
+              setKeyToDelete(null);
+          }}
+          onRequestSubmit={() => {
+              if (keyToDelete) {
+                  handleDelete(keyToDelete);
+              }
+              setDeleteModalOpen(false);
+              setKeyToDelete(null);
+          }}
+          danger={true}
+          className="api-key-modal"
+        >
+          <div className="api-key-form">
+            <p className="delete-confirmation-text">
+                {t('api_keys.confirm_delete', 'Are you sure you want to delete this API Key? This action cannot be undone.')}
+            </p>
+          </div>
+        </Modal>,
+        document.body
+      )}
+    </>
   );
 };
 
