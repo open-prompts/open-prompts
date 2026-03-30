@@ -167,7 +167,7 @@ const APIKeyManager = ({ notification }) => {
           onRequestClose={handleModalClose}
           onRequestSubmit={!generatedKey ? handleCreate : handleModalClose}
           danger={false}
-          className="api-key-modal"
+          className="api-key-modal fork-modal"
         >
           <div className="api-key-form">
             {!generatedKey ? (
@@ -228,7 +228,7 @@ const APIKeyManager = ({ notification }) => {
               setKeyToDelete(null);
           }}
           danger={true}
-          className="api-key-modal"
+          className="api-key-modal fork-modal"
         >
           <div className="api-key-form">
             <p className="delete-confirmation-text">
