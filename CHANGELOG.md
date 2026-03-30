@@ -1,3 +1,10 @@
+## [1.12.6](https://github.com/open-prompts/open-prompts/compare/v1.12.5...v1.12.6) (2026-03-30)
+
+
+### Bug Fixes
+
+* **frontend:** initialize auth state synchronously to prevent redirect on refresh ([3e30cd1](https://github.com/open-prompts/open-prompts/commit/3e30cd133f127f37546c9b259e676791ee32229b))
+
 ## [1.12.5](https://github.com/open-prompts/open-prompts/compare/v1.12.4...v1.12.5) (2026-03-30)
 
 
