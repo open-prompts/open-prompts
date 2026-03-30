@@ -1,3 +1,10 @@
+## [1.12.2](https://github.com/open-prompts/open-prompts/compare/v1.12.1...v1.12.2) (2026-03-30)
+
+
+### Bug Fixes
+
+* **ui:** update base_url in SDK code example to real domain ([ed02ad1](https://github.com/open-prompts/open-prompts/commit/ed02ad171eed671a3dc3217bea378c225789af15))
+
 ## [1.12.1](https://github.com/open-prompts/open-prompts/compare/v1.12.0...v1.12.1) (2026-03-30)
 
 
