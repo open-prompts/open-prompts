@@ -202,4 +202,13 @@
         margin-top: 0;
         margin-bottom: 1rem;
     }
+
+    .api-key-form {
+        padding-right: 1rem;
+        margin-bottom: 1rem;
+
+        .form-field {
+            margin-bottom: 1rem !important;
+        }
+    }
 }

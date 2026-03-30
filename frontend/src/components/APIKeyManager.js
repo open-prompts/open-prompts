@@ -165,39 +165,42 @@ const APIKeyManager = ({ notification }) => {
         danger={false}
         className="api-key-modal"
       >
-        {!generatedKey ? (
-            <TextInput
-                id="key-name"
-                labelText={t('api_keys.label_name')}
-                placeholder={t('api_keys.placeholder_name')}
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-            />
-        ) : (
-            <div className="generated-key-display">
-                <p className="warning-text">
-                    {t('api_keys.generated_warning')}
-                </p>
-                <div className="key-copy-row">
-                    <div className="key-input-wrapper">
-                        <TextInput
-                            id="generated-key"
-                            labelText={t('api_keys.label_key')}
-                            value={generatedKey}
-                            readOnly
-                        />
-                    </div>
-                    <Button
-                        hasIconOnly
-                        renderIcon={Copy}
-                        kind="ghost"
-                        iconDescription={t('api_keys.copy_desc', 'Copy')}
-                        onClick={() => copyToClipboard(generatedKey)}
-                        className="copy-btn"
-                    />
-                </div>
-            </div>
-        )}
+        <div className="api-key-form">
+          {!generatedKey ? (
+              <TextInput
+                  id="key-name"
+                  labelText={t('api_keys.label_name')}
+                  placeholder={t('api_keys.placeholder_name')}
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  className="form-field"
+              />
+          ) : (
+              <div className="generated-key-display">
+                  <p className="warning-text">
+                      {t('api_keys.generated_warning')}
+                  </p>
+                  <div className="key-copy-row">
+                      <div className="key-input-wrapper">
+                          <TextInput
+                              id="generated-key"
+                              labelText={t('api_keys.label_key')}
+                              value={generatedKey}
+                              readOnly
+                          />
+                      </div>
+                      <Button
+                          hasIconOnly
+                          renderIcon={Copy}
+                          kind="ghost"
+                          iconDescription={t('api_keys.copy_desc', 'Copy')}
+                          onClick={() => copyToClipboard(generatedKey)}
+                          className="copy-btn"
+                      />
+                  </div>
+              </div>
+          )}
+        </div>
       </Modal>
 
       {/* Delete Confirmation Modal */}
@@ -220,9 +223,11 @@ const APIKeyManager = ({ notification }) => {
         danger={true}
         className="api-key-modal"
       >
-        <p className="delete-confirmation-text">
-            {t('api_keys.confirm_delete', 'Are you sure you want to delete this API Key? This action cannot be undone.')}
-        </p>
+        <div className="api-key-form">
+          <p className="delete-confirmation-text">
+              {t('api_keys.confirm_delete', 'Are you sure you want to delete this API Key? This action cannot be undone.')}
+          </p>
+        </div>
       </Modal>
     </div>
   );
