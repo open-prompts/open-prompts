@@ -842,7 +842,7 @@ const TemplateDetails = () => {
 {`from openprompts import OpenPromptsClient
 
 client = OpenPromptsClient(
-    base_url="https://api.yourdomain.com",
+    base_url="https://awsomeprompt.top",
     api_key="YOUR_API_KEY"
 )
 
