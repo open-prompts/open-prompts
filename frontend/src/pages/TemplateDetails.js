@@ -839,12 +839,16 @@ const TemplateDetails = () => {
                 <div className="code-block-wrapper">
                   <pre>
                     <code>
-{`from openprompts import OpenPrompts
+{`from openprompts import OpenPromptsClient
 
-client = OpenPrompts(api_key="YOUR_API_KEY")
+client = OpenPromptsClient(
+    base_url="https://api.yourdomain.com",
+    api_key="YOUR_API_KEY"
+)
 
-prompt = client.generate_prompt(
+prompt = client.get_prompt(
     template_id="${template.id}",
+    prompt_tag="latest",
     variables={
 ${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}
     }
@@ -853,7 +857,7 @@ print(prompt)`}
                     </code>
                   </pre>
                   <button className="copy-code-btn" onClick={() => {
-                      const codeStr = `from openprompts import OpenPrompts\n\nclient = OpenPrompts(api_key="YOUR_API_KEY")\n\nprompt = client.generate_prompt(\n    template_id="${template.id}",\n    variables={\n${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}\n    }\n)\nprint(prompt)`;
+                      const codeStr = `from openprompts import OpenPromptsClient\n\nclient = OpenPromptsClient(\n    base_url="https://api.yourdomain.com",\n    api_key="YOUR_API_KEY"\n)\n\nprompt = client.get_prompt(\n    template_id="${template.id}",\n    prompt_tag="latest",\n    variables={\n${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}\n    }\n)\nprint(prompt)`;
                       navigator.clipboard.writeText(codeStr).then(() => {
                         addNotification({ kind: 'success', title: t('common.success'), subtitle: t('card.copied') });
                       });
