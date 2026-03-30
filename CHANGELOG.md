@@ -1,3 +1,10 @@
+## [1.12.3](https://github.com/open-prompts/open-prompts/compare/v1.12.2...v1.12.3) (2026-03-30)
+
+
+### Bug Fixes
+
+* **ui:** align API Key generation and deletion modals with global styling ([84160bc](https://github.com/open-prompts/open-prompts/commit/84160bc863b8bad9e6893fec039bb4bec7b2ebf0))
+
 ## [1.12.2](https://github.com/open-prompts/open-prompts/compare/v1.12.1...v1.12.2) (2026-03-30)
 
 
