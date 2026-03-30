@@ -1,3 +1,10 @@
+## [1.12.4](https://github.com/open-prompts/open-prompts/compare/v1.12.3...v1.12.4) (2026-03-30)
+
+
+### Bug Fixes
+
+* **ui:** render API key modals in body portal to prevent transform clipping ([4b5353c](https://github.com/open-prompts/open-prompts/commit/4b5353ccb29c5a9b83b04b0c0579cf36645e392d))
+
 ## [1.12.3](https://github.com/open-prompts/open-prompts/compare/v1.12.2...v1.12.3) (2026-03-30)
 
 
