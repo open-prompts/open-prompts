@@ -1,3 +1,10 @@
+## [1.12.5](https://github.com/open-prompts/open-prompts/compare/v1.12.4...v1.12.5) (2026-03-30)
+
+
+### Bug Fixes
+
+* **frontend:** sync api-key-manager modal theme colors with template delete modal ([dfb4bee](https://github.com/open-prompts/open-prompts/commit/dfb4bee4785b1bef13fb00b8672a380422b791a8))
+
 ## [1.12.4](https://github.com/open-prompts/open-prompts/compare/v1.12.3...v1.12.4) (2026-03-30)
 
 
