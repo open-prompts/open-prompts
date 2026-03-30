@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/open-prompts/open-prompts/compare/v1.12.0...v1.12.1) (2026-03-30)
+
+
+### Bug Fixes
+
+* **ui:** correct python sdk example code in template details ([857b488](https://github.com/open-prompts/open-prompts/commit/857b4888d81de13a0ae39b33e8e0c5469758dbdd))
+
 # [1.12.0](https://github.com/open-prompts/open-prompts/compare/v1.11.2...v1.12.0) (2026-03-30)
 
 
