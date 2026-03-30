@@ -1,13 +1,36 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 /**
+ * Helper to initialize state synchronously from local storage.
+ */
+const getInitialState = () => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+
+  if (token && userStr) {
+    try {
+      return {
+        user: JSON.parse(userStr),
+        token: token,
+        isAuthenticated: true,
+      };
+    } catch (e) {
+      console.error('Failed to parse user from local storage', e);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+  }
+  return {
+    user: null, // User object: { id, displayName, ... }
+    token: null, // JWT token
+    isAuthenticated: false,
+  };
+};
+
+/**
  * Initial state for the authentication slice.
  */
-const initialState = {
-  user: null, // User object: { id, displayName, ... }
-  token: null, // JWT token
-  isAuthenticated: false,
-};
+const initialState = getInitialState();
 
 /**
  * Authentication slice containing state and reducers for user authentication.
