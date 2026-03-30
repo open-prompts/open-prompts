@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/open-prompts/open-prompts/compare/v1.11.2...v1.12.0) (2026-03-30)
+
+
+### Features
+
+* **ui:** add SDK integration instruction card to template details page ([e88ff59](https://github.com/open-prompts/open-prompts/commit/e88ff597926e4aa4df5568fcb840b94546e9aa2e))
+
 ## [1.11.2](https://github.com/open-prompts/open-prompts/compare/v1.11.1...v1.11.2) (2026-03-24)
 
 
