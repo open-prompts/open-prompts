@@ -857,7 +857,7 @@ print(prompt)`}
                     </code>
                   </pre>
                   <button className="copy-code-btn" onClick={() => {
-                      const codeStr = `from openprompts import OpenPromptsClient\n\nclient = OpenPromptsClient(\n    base_url="https://api.yourdomain.com",\n    api_key="YOUR_API_KEY"\n)\n\nprompt = client.get_prompt(\n    template_id="${template.id}",\n    prompt_tag="latest",\n    variables={\n${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}\n    }\n)\nprint(prompt)`;
+                      const codeStr = `from openprompts import OpenPromptsClient\n\nclient = OpenPromptsClient(\n    base_url="https://awsomeprompt.top",\n    api_key="YOUR_API_KEY"\n)\n\nprompt = client.get_prompt(\n    template_id="${template.id}",\n    prompt_tag="latest",\n    variables={\n${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}\n    }\n)\nprint(prompt)`;
                       navigator.clipboard.writeText(codeStr).then(() => {
                         addNotification({ kind: 'success', title: t('common.success'), subtitle: t('card.copied') });
                       });
