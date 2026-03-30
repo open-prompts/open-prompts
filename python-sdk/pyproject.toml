@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openprompts"
-version = "0.1.0"
+version = "0.1.2"
 authors = [
-  { name="OpenPrompts Team", email="team@open-prompts.com" },
+  { name="OpenPrompts Team", email="kelvin.xupt@gmail.com" },
 ]
 description = "A Python SDK for OpenPrompts"
 readme = "README.md"

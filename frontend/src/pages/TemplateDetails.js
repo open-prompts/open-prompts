@@ -833,6 +833,39 @@ const TemplateDetails = () => {
                 <p>{t('template_details.instruction_3')}</p>
             </div>
 
+            <div className="sdk-instruction-card">
+                <h4>{t('template_details.sdk_integration') || 'SDK Integration'}</h4>
+                <p className="sdk-desc">{t('template_details.sdk_desc') || 'Use this template directly via SDK in your code:'}</p>
+                <div className="code-block-wrapper">
+                  <pre>
+                    <code>
+{`from openprompts import OpenPrompts
+
+client = OpenPrompts(api_key="YOUR_API_KEY")
+
+prompt = client.generate_prompt(
+    template_id="${template.id}",
+    variables={
+${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}
+    }
+)
+print(prompt)`}
+                    </code>
+                  </pre>
+                  <button className="copy-code-btn" onClick={() => {
+                      const codeStr = `from openprompts import OpenPrompts\n\nclient = OpenPrompts(api_key="YOUR_API_KEY")\n\nprompt = client.generate_prompt(\n    template_id="${template.id}",\n    variables={\n${uniqueNames.map(name => `        "${name}": "value"`).join(',\n') || '        # no variables required'}\n    }\n)\nprint(prompt)`;
+                      navigator.clipboard.writeText(codeStr).then(() => {
+                        addNotification({ kind: 'success', title: t('common.success'), subtitle: t('card.copied') });
+                      });
+                  }} title={t('card.copy') || 'Copy code'}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+            </div>
+
             <div className="prompt-history">
                 <h3>{t('template_details.saved_prompts')}</h3>
                 <div className="prompt-list">

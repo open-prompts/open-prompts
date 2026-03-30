@@ -140,6 +140,8 @@
       "instruction_1": "Use <code>${varName}</code> as a placeholder in your template.",
       "instruction_2": "Example: <code>Translate ${text} to Spanish.</code>",
       "instruction_3": "When generating, inputs will appear for each placeholder.",
+      "sdk_integration": "SDK Integration",
+      "sdk_desc": "Use this template directly via SDK in your code:",
       "saved_prompts": "Your Saved Prompts",
       "no_saved_prompts": "No prompts saved yet.",
       "variables_label": "Variables",

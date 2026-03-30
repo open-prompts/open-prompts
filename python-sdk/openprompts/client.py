@@ -70,8 +70,10 @@ class OpenPromptsClient:
         try:
             gen_resp = self.session.post(gen_url, json=payload)
             prompt_data = self._handle_response(gen_resp)
+            if "prompt" in prompt_data:
+                return prompt_data["prompt"].get("content", "")
             return prompt_data.get("content", "")
-        except openprompts.exceptions.APIError as e:
+        except APIError as e:
             # Fallback to local rendering if generating prompt fails/unsupported
             content = tv_data.get("content", "")
             if variables:

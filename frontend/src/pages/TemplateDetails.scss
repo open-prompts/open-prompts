@@ -690,6 +690,70 @@
             border: 1px solid rgba(0,255,255,0.2);
         }
     }
+
+    .sdk-instruction-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: var(--glass-border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-card);
+
+        h4 {
+            margin-top: 0;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sdk-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .code-block-wrapper {
+            position: relative;
+            background-color: var(--bg-level-1);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+
+            pre {
+                margin: 0;
+                padding: 16px;
+                overflow-x: auto;
+                font-family: monospace;
+                font-size: 0.85rem;
+                color: var(--text-main);
+            }
+
+            .copy-code-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 6px;
+                cursor: pointer;
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+
+                &:hover {
+                    background: var(--primary-color);
+                    color: black;
+                }
+            }
+        }
+    }
   }
 }
 

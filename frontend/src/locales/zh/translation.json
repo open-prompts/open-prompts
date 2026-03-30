@@ -141,6 +141,8 @@
       "instruction_1": "在模板中使用 <code>${varName}</code> 作为占位符。",
       "instruction_2": "例如：<code>将${text}翻译成中文。</code>",
       "instruction_3": "生成时，每个占位符都会出现输入框。",
+      "sdk_integration": "SDK 接入",
+      "sdk_desc": "在您的代码中通过 SDK 直接使用此模板：",
       "saved_prompts": "您保存的提示词",
       "no_saved_prompts": "暂无保存的提示词。",
       "variables_label": "变量",
