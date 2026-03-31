@@ -1,3 +1,10 @@
+## [1.13.1](https://github.com/open-prompts/open-prompts/compare/v1.13.0...v1.13.1) (2026-03-31)
+
+
+### Bug Fixes
+
+* fvt tests cleanup logic and structure ([c954547](https://github.com/open-prompts/open-prompts/commit/c954547e92d0b38095c408e756e78f15d4841a0b))
+
 # [1.13.0](https://github.com/open-prompts/open-prompts/compare/v1.12.6...v1.13.0) (2026-03-31)
 
 
