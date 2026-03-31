@@ -1,0 +1,12 @@
+{{- if .Values.postgres.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "open-prompts.fullname" . }}-postgres-init
+  labels:
+    {{- include "open-prompts.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+data:
+  01_init.sql: |-
+{{ .Files.Get "init.sql" | indent 4 }}
+{{- end }}

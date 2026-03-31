@@ -1,0 +1,51 @@
+{{- if .Values.postgres.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-prompts.fullname" . }}-postgres
+  labels:
+    {{- include "open-prompts.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "open-prompts.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "open-prompts.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.auth.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.auth.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.auth.database | quote }}
+          volumeMounts:
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          {{- if .Values.postgres.persistence.enabled }}
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          {{- end }}
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: {{ include "open-prompts.fullname" . }}-postgres-init
+      {{- if .Values.postgres.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "open-prompts.fullname" . }}-postgres
+      {{- end }}
+{{- end }}

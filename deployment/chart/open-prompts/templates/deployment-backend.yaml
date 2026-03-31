@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-prompts.fullname" . }}-backend
+  labels:
+    {{- include "open-prompts.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "open-prompts.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "open-prompts.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.backend.env.databaseUrl | default (printf "postgres://%s:%s@%s-postgres:%d/%s?sslmode=disable" .Values.postgres.auth.username .Values.postgres.auth.password (include "open-prompts.fullname" .) (.Values.postgres.service.port | int) .Values.postgres.auth.database) | quote }}
+            - name: REDIS_ADDR
+              value: {{ .Values.backend.env.redisAddr | default (printf "%s-redis:%d" (include "open-prompts.fullname" .) (.Values.redis.service.port | int)) | quote }}
+            - name: SMTP_HOST
+              value: {{ .Values.backend.env.smtpHost | quote }}
+            - name: SMTP_PORT
+              value: {{ .Values.backend.env.smtpPort | quote }}
+            - name: SMTP_USER
+              value: {{ .Values.backend.env.smtpUser | quote }}
+            - name: SMTP_PASSWORD
+              value: {{ .Values.backend.env.smtpPassword | quote }}
+            - name: SMTP_FROM
+              value: {{ .Values.backend.env.smtpFrom | quote }}

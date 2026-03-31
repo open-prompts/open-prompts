@@ -1,0 +1,6 @@
+apiVersion: v2
+name: open-prompts
+description: A Helm chart for deploying Open Prompts on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,19 @@
+{{- if .Values.redis.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "open-prompts.fullname" . }}-redis
+  labels:
+    {{- include "open-prompts.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.redis.service.port }}
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    {{- include "open-prompts.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+{{- end }}
