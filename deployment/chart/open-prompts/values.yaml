@@ -1,0 +1,72 @@
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+backend:
+  replicaCount: 1
+  image:
+    repository: sanmuny1987/open-prompts-backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8080
+    grpcPort: 50051
+  env:
+    # Set this to external database url or use the internal postgres (default)
+    databaseUrl: ""
+    redisAddr: ""
+    smtpHost: ""
+    smtpPort: ""
+    smtpUser: ""
+    smtpPassword: ""
+    smtpFrom: ""
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: sanmuny1987/open-prompts-frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 80
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+  auth:
+    username: user
+    password: password
+    database: open_prompts
+  service:
+    port: 5432
+  persistence:
+    enabled: false
+    size: 8Gi
+    storageClass: ""
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
