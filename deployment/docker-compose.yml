@@ -12,7 +12,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql
-      - ./data.sql:/docker-entrypoint-initdb.d/02_data.sql
 
   redis:
     image: redis:7-alpine
