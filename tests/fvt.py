@@ -318,24 +318,7 @@ def test_prompt_lifecycle():
 
     # 1. Register & Login User 1
     user1_id = f"test_user1_{int(time.time())}"
-    email = f"test_user1_{int(time.time())}@example.com"
-    password = "password"
-
-    # Send code
-    requests.post("http://localhost:8080/api/v1/verification-code", json={"email": email})
-
-    register_payload = {
-        "id": user1_id,
-        "email": email,
-        "password": password,
-        "display_name": "User 1",
-        "verification_code": "123456"
-    }
-    resp = requests.post("http://localhost:8080/api/v1/register", json=register_payload)
-    if resp.status_code != 200:
-        print(f"Register failed: {resp.status_code} - {resp.text}")
-        return False
-    token = resp.json().get("token")
+    token = get_auth_token(user1_id)
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. Create Template (User 1)
@@ -951,6 +934,7 @@ def main():
     if success: success = test_pagination()
     if success: success = test_likes_and_favorites()
     if success: success = test_profile_update()
+    if success: success = test_template_alias_flow()
 
     # Cleanup is handled by atexit
 
@@ -961,8 +945,6 @@ def main():
         print("Tests failed!")
         sys.exit(1)
 
-if __name__ == "__main__":
-    main()
 
 def test_template_alias_flow():
     app_url = "http://localhost:8080"
@@ -1027,3 +1009,9 @@ def test_template_alias_flow():
     r = requests.get(f"{app_url}/api/v1/templates/{template_id}/aliases/prod", headers=headers)
     assert r.status_code == 200, r.text
     assert "This is version 1" in r.json().get("content", ""), f"Content mismatch: {r.json()}"
+    CREATED_TEMPLATES.append({"id": template_id, "owner_id": owner_id})
+    print("--- Template Alias Flow Test Passed ---")
+    return True
+
+if __name__ == "__main__":
+    main()
