@@ -684,10 +684,6 @@ body {
   font-family: var(--font-body);
   background-color: var(--bg-color);
   color: var(--text-main);
-  background-image:
-    radial-gradient(circle at 10% 20%, rgba(123, 97, 255, 0.15) 0%, transparent 20%),
-    radial-gradient(circle at 90% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 20%);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 

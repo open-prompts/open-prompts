@@ -21,14 +21,13 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.02), rgba(0,0,0,0.02) 60%);
   mix-blend-mode: overlay;
 }
 
 /* Theme variables (light and dark flavors) */
 .light-theme {
   --bg-grad-start: #f7fbff;
-  --bg-grad-end: #e6f7ff;
+  --bg-grad-end: #f7fbff;
   --link-start: #0ea5b6; /* teal */
   --link-end: #60a5fa;   /* blue */
   --node: #0ea5b6;
@@ -39,7 +38,7 @@
 
 .dark-theme {
   --bg-grad-start: #02111a;
-  --bg-grad-end: #061428;
+  --bg-grad-end: #02111a;
   --link-start: #00e6ff; /* cyan */
   --link-end: #7b61ff;   /* purple */
   --node: #7b61ff;
