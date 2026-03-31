@@ -1,3 +1,10 @@
+## [1.13.2](https://github.com/open-prompts/open-prompts/compare/v1.13.1...v1.13.2) (2026-03-31)
+
+
+### Bug Fixes
+
+* **deployment:** remove non-existent data.sql from docker-compose.yml ([e60c861](https://github.com/open-prompts/open-prompts/commit/e60c861fbd9d46ba05b5152fc3bac54669f48555))
+
 ## [1.13.1](https://github.com/open-prompts/open-prompts/compare/v1.13.0...v1.13.1) (2026-03-31)
 
 
