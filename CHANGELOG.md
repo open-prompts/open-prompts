@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/open-prompts/open-prompts/compare/v1.12.6...v1.13.0) (2026-03-31)
+
+
+### Features
+
+* push docker images to dockerhub org sanmuny1987 on release ([b9c6731](https://github.com/open-prompts/open-prompts/commit/b9c673156414a8bfa421a45f1ed3c589a0b2392a))
+
 ## [1.12.6](https://github.com/open-prompts/open-prompts/compare/v1.12.5...v1.12.6) (2026-03-30)
 
 
