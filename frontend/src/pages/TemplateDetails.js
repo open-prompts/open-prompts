@@ -128,8 +128,9 @@ const TemplateDetails = () => {
     if (isEditingMetadata) {
         const fetchCategories = async () => {
              try {
-                 const currentLang = i18n.language ? i18n.language.split('-')[0] : 'en';
-                 const res = await getCategories({ language: currentLang });
+                 // Note: no language filter on purpose — categories are shared
+                 // across UI languages so a template's category always shows up.
+                 const res = await getCategories();
                  const data = res.data;
                  let cats = [];
                  if (data && Array.isArray(data.categories)) {
@@ -153,7 +154,7 @@ const TemplateDetails = () => {
         };
         fetchCategories();
     }
-  }, [isEditingMetadata, i18n.language]);
+  }, [isEditingMetadata]);
 
   // Metadata Edit Handlers
   const handleRemoveTag = (tagToRemove) => {

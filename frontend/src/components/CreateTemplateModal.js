@@ -16,7 +16,7 @@ import './CreateTemplateModal.scss';
  * @param {Function} props.onSuccess - Function to call when creation is successful
  */
 const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -24,6 +24,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
     visibility: 'private',
     category: '',
     tags: '',
+    language: 'en',
   });
   const [categories, setCategories] = useState([]);
   const [customCategory, setCustomCategory] = useState('');
@@ -65,6 +66,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
         visibility: 'private',
         category: '',
         tags: '',
+        language: 'en',
       });
       setCustomCategory('');
       setFormErrors({});
@@ -111,15 +113,14 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      // Prepare payload
-      const lang = (i18n && (i18n.language === 'zh' || i18n.language.startsWith('zh'))) ? 'zh' : 'en';
-
+      // Prepare payload. The template language is an explicit attribute of the
+      // template itself (chosen in the form), NOT the UI display language.
       const payload = {
         ...formData,
         category: formData.category === 'create_new' ? customCategory.trim() : formData.category,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         type: 'user', // Default to user type
-        language: lang,
+        language: formData.language || 'en',
       };
 
       await createTemplate(payload);
@@ -210,6 +211,19 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
           >
             <option value="public">{t('create_template.visibility_public')}</option>
             <option value="private">{t('create_template.visibility_private')}</option>
+          </select>
+        </Field>
+
+        <Field id="language" label={t('create_template.label_language')}>
+          <select
+            className="select"
+            value={formData.language}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, language: e.target.value }));
+            }}
+          >
+            <option value="en">{t('template.en')}</option>
+            <option value="zh">{t('template.zh')}</option>
           </select>
         </Field>
 

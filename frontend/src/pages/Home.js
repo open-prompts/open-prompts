@@ -12,7 +12,7 @@ import './Home.scss';
  * Displays a grid of prompt templates with filtering and infinite scroll.
  */
 const Home = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { addNotification } = useNotification();
   const { isAuthenticated } = useSelector((state) => state.auth);
   const [templates, setTemplates] = useState([]);
@@ -57,7 +57,9 @@ const Home = () => {
       const params = {
         page_size: pageSize,
         page_token: currentToken,
-        language: (i18n.language || 'en').startsWith('zh') ? 'zh' : 'en',
+        // Note: no language filter here on purpose — templates of all
+        // languages are shared between the EN and ZH UI. The language field
+        // remains available as an explicit filter for callers who want it.
         ...filters,
       };
 
@@ -135,14 +137,15 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, nextPageToken, loading, pageSize, i18n.language, addNotification, t]);
+  }, [filters, nextPageToken, loading, pageSize, addNotification, t]);
 
   // Initial load and filter changes
   useEffect(() => {
     fetchTemplates(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, i18n.language]);
-  // removed page dep. added filters.
+  }, [filters]);
+  // removed page dep. added filters. Language switch intentionally does not
+  // refetch: UI language only changes labels, templates are shared.
 
   // Handle filter changes from Sidebar
   const handleFilterChange = (newFilters) => {

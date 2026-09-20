@@ -14,7 +14,7 @@ import './Sidebar.scss';
  * @param {Array} props.availableTags - Tags to display (overrides fetching)
  */
 const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, onClose }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { addNotification } = useNotification();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [categories, setCategories] = useState([]);
@@ -31,11 +31,13 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
   useEffect(() => {
     // Fetch categories and tags on mount
     const fetchData = async () => {
-      const language = (i18n.language || 'en').startsWith('zh') ? 'zh' : 'en';
+      // Note: no language filter on purpose — categories and tags are shared
+      // across UI languages. The backend still supports an explicit language
+      // filter for callers who want it.
       try {
         const [catRes, tagRes] = await Promise.all([
-             getCategories({ language }),
-             availableTags ? Promise.resolve({ data: { tags: [] } }) : getTags({ language })
+             getCategories(),
+             availableTags ? Promise.resolve({ data: { tags: [] } }) : getTags()
         ]);
         setCategories(catRes.data.categories || []);
         if (!availableTags) {
@@ -47,7 +49,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
       }
     };
     fetchData();
-  }, [availableTags, i18n.language, addNotification, t]); // Re-run if availableTags or language changes
+  }, [availableTags, addNotification, t]); // Re-run if availableTags changes. Language switch intentionally does not refetch.
 
   // Use availableTags if present, otherwise fetched tags.
   const displayedTags = availableTags || tags;

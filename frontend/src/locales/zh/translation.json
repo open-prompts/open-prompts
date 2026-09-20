@@ -110,6 +110,7 @@
     "label_visibility": "可见性",
     "visibility_public": "公开",
     "visibility_private": "私有",
+    "label_language": "模板语言",
     "label_description": "描述",
     "ph_description": "简要描述此模板的作用",
     "label_content": "提示词内容",

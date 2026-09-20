@@ -142,11 +142,51 @@ describe('CreateTemplateModal Component', () => {
       expect(api.createTemplate).toHaveBeenCalledWith(expect.objectContaining({
         title: 'My Template',
         content: 'Hello World',
-        type: 'user'
+        type: 'user',
+        language: 'en'
       }));
     });
     expect(mockOnSuccess).toHaveBeenCalled();
     expect(mockOnRequestClose).toHaveBeenCalled();
+  });
+
+  test('submits with the explicitly selected template language', async () => {
+    api.createTemplate.mockResolvedValue({});
+
+    render(
+      <CreateTemplateModal
+        open={true}
+        onRequestClose={mockOnRequestClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    // Wait for categories to load
+    await waitFor(() => expect(api.getCategories).toHaveBeenCalled());
+
+    // Fill form
+    fireEvent.change(screen.getByLabelText('create_template.label_title'), {
+      target: { value: 'My Chinese Template' },
+    });
+    fireEvent.change(screen.getByLabelText('create_template.label_content'), {
+      target: { value: '你好世界' },
+    });
+    fireEvent.change(screen.getByLabelText('create_template.label_category'), {
+      target: { value: 'Coding' },
+    });
+    // Explicitly choose the template language (independent of UI language)
+    fireEvent.change(screen.getByLabelText('create_template.label_language'), {
+      target: { value: 'zh' },
+    });
+
+    fireEvent.click(screen.getByText('common.create'));
+
+    await waitFor(() => {
+      expect(api.createTemplate).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'My Chinese Template',
+        language: 'zh'
+      }));
+    });
   });
 
   test('handles API errors', async () => {

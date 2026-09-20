@@ -110,6 +110,7 @@
     "label_visibility": "Visibility",
     "visibility_public": "Public",
     "visibility_private": "Private",
+    "label_language": "Template Language",
     "label_description": "Description",
     "ph_description": "Brief description of what this template does",
     "label_content": "Prompt Content",

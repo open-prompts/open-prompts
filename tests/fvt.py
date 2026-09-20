@@ -935,6 +935,7 @@ def main():
     if success: success = test_likes_and_favorites()
     if success: success = test_profile_update()
     if success: success = test_template_alias_flow()
+    if success: success = test_language_behavior()
 
     # Cleanup is handled by atexit
 
@@ -945,6 +946,106 @@ def main():
         print("Tests failed!")
         sys.exit(1)
 
+
+def test_language_behavior():
+    """Language field behavior:
+    1. Templates of all languages are returned when no language filter is given
+       (UI language switch must not hide templates).
+    2. The language filter still works when explicitly requested.
+    3. Categories/tags are aggregated across languages when no filter is given.
+    """
+    print("--- Starting Language Behavior Test ---")
+    owner_id = f"user_lang_{int(time.time())}"
+    token = get_auth_token(owner_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create templates in different languages
+    templates_data = [
+        {"title": "LangTest_EN", "language": "en", "category": "lang_test_cat", "tags": ["lang_test"]},
+        {"title": "LangTest_ZH", "language": "zh", "category": "lang_test_cat", "tags": ["lang_test"]},
+    ]
+
+    created_ids = {}
+    for t_data in templates_data:
+        payload = {
+            "owner_id": owner_id,
+            "title": t_data["title"],
+            "description": "Language behavior testing",
+            "visibility": "VISIBILITY_PUBLIC",
+            "type": "TEMPLATE_TYPE_USER",
+            "tags": t_data["tags"],
+            "category": t_data["category"],
+            "language": t_data["language"],
+        }
+        resp = requests.post(BASE_URL, json=payload, headers=headers)
+        if resp.status_code != 200:
+            print(f"Failed to create template {t_data['title']}: {resp.text}")
+            return False
+        tid = resp.json()["template"]["id"]
+        created_ids[t_data["title"]] = tid
+        CREATED_TEMPLATES.append({"id": tid, "owner_id": owner_id})
+
+    time.sleep(1)  # Allow for consistency
+
+    # Test 1: No language filter -> both EN and ZH templates are visible.
+    # This is what the UI relies on: switching display language must not
+    # change which templates are listed.
+    print("Testing list without language filter returns all languages...")
+    resp = requests.get(BASE_URL, params={"category": "lang_test_cat"}, headers=headers)
+    if resp.status_code != 200:
+        print(f"List request failed: {resp.text}")
+        return False
+    data = resp.json()
+    returned_templates = data.get("templates", []) + data.get("private_templates", [])
+    returned_ids = [t["id"] for t in returned_templates]
+    if created_ids["LangTest_EN"] not in returned_ids:
+        print("No-filter list did not include EN template")
+        return False
+    if created_ids["LangTest_ZH"] not in returned_ids:
+        print("No-filter list did not include ZH template")
+        return False
+    print("No-filter list passed.")
+
+    # Test 2: Explicit language filter still narrows results.
+    print("Testing explicit language filter 'zh'...")
+    resp = requests.get(BASE_URL, params={"category": "lang_test_cat", "language": "zh"}, headers=headers)
+    if resp.status_code != 200:
+        print(f"Filtered list request failed: {resp.text}")
+        return False
+    data = resp.json()
+    returned_templates = data.get("templates", []) + data.get("private_templates", [])
+    returned_ids = [t["id"] for t in returned_templates]
+    if created_ids["LangTest_ZH"] not in returned_ids:
+        print("Filter 'zh' did not include ZH template")
+        return False
+    if created_ids["LangTest_EN"] in returned_ids:
+        print("Filter 'zh' unexpectedly included EN template")
+        return False
+    print("Explicit language filter passed.")
+
+    # Test 3: Categories and tags aggregate across languages without filter.
+    print("Testing categories/tags aggregation without language filter...")
+    resp = requests.get("http://localhost:8080/api/v1/categories", headers=headers)
+    if resp.status_code != 200:
+        print(f"Categories request failed: {resp.text}")
+        return False
+    categories = [c["name"] for c in resp.json().get("categories", [])]
+    if "lang_test_cat" not in categories:
+        print("Categories without filter did not include 'lang_test_cat'")
+        return False
+
+    resp = requests.get("http://localhost:8080/api/v1/tags", headers=headers)
+    if resp.status_code != 200:
+        print(f"Tags request failed: {resp.text}")
+        return False
+    tags = [t["name"] for t in resp.json().get("tags", [])]
+    if "lang_test" not in tags:
+        print("Tags without filter did not include 'lang_test'")
+        return False
+    print("Categories/tags aggregation passed.")
+
+    print("--- Language Behavior Test Passed ---")
+    return True
 
 def test_template_alias_flow():
     app_url = "http://localhost:8080"

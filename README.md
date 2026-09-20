@@ -22,7 +22,7 @@ Whether you are a prompt engineer, a developer, or an AI enthusiast, Open Prompt
 
 - **📚 Centralized Prompt Library**: Store and organize all your AI prompts in one place.
 - **🔄 Version Control**: Track changes to your prompts, fork existing templates, and maintain a history of iterations.
-- **🌍 Multi-language Support**: Native support for Internationalization (English & Chinese).
+- **🌍 Multi-language Support**: Native support for Internationalization (English & Chinese). Switching the UI language only changes display labels — prompt templates are shared across languages.
 - **🎨 Modern UI/UX**: Custom **Aurora design system** with light & dark themes, fully responsive and accessible.
 - **📱 One-Click Sharing**: Share your best prompts with the community or keep them private.
 - **🔐 Secure Authentication**: Robust user management and authentication system (JWT).
