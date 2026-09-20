@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/open-prompts/open-prompts/compare/v1.15.0...v1.15.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **frontend:** make language switch affect UI display only, not prompt filtering ([6e6ccb7](https://github.com/open-prompts/open-prompts/commit/6e6ccb7702c39d0e30178b76de80498d2839397f))
+
 # [1.15.0](https://github.com/open-prompts/open-prompts/compare/v1.14.1...v1.15.0) (2026-08-06)
 
 
