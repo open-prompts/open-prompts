@@ -30,7 +30,7 @@ Open Prompts currently has **zero administrative capability**: no admin role, no
 5. **Template moderation overview** (flagged/reported content) as the second pillar, since content oversight is why admins exist.
 6. **Separate admin authentication** — either a separate login realm or a strictly enforced permission check, never a hidden client-side-only gate.
 
-For v1 we adopt the dashboard + user management + template moderation overview pattern, and deliberately defer pre-publication review queues and monetization/featured curation to later features.
+For v1 we adopt the dashboard + user management + template moderation overview pattern, and deliberately defer pre-publication review queues and featured curation to later features.
 
 ---
 
