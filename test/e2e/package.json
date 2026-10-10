@@ -1,0 +1,16 @@
+{
+  "name": "open-prompts-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nightwatch.js end-to-end tests for open-prompts (regular user + admin flows)",
+  "scripts": {
+    "e2e": "nightwatch",
+    "e2e:firefox": "nightwatch --env firefox",
+    "e2e:chromium": "nightwatch --env chromium",
+    "smoke": "nightwatch --env firefox tests/smoke.spec.js"
+  },
+  "devDependencies": {
+    "geckodriver": "^4.4.4",
+    "nightwatch": "^3.11.0"
+  }
+}

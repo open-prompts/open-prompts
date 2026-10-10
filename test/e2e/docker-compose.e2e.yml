@@ -1,0 +1,11 @@
+# Local override for e2e runs on machines where host port 8080 is already
+# taken by another service. The backend container still listens on 8080
+# internally (the frontend nginx proxies /api/ to backend:8080), only the
+# published host port changes. Usage:
+#   docker compose -f deployment/docker-compose.yml \
+#                  -f test/e2e/docker-compose.e2e.yml up -d --build
+services:
+  backend:
+    ports: !override
+      - "50051:50051"
+      - "18080:8080"
