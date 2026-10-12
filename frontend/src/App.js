@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { initializeAuth } from './store/authSlice';
@@ -10,6 +10,22 @@ import TemplateDetails from './pages/TemplateDetails';
 import Profile from './pages/Profile';
 import APIKeys from './pages/APIKeys';
 import './index.scss'; // Global styles
+
+// Admin console: lazy-loaded so the main bundle stays small.
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
+const DashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
+const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
+const UserDetailPage = lazy(() => import('./pages/admin/UserDetailPage'));
+const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'));
+const TemplateDetailPage = lazy(() => import('./pages/admin/TemplateDetailPage'));
+const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
+
+const PageSpinner = () => (
+  <div className="admin-page-loading" role="status">
+    Loading…
+  </div>
+);
 
 /**
  * Main App component.
@@ -33,6 +49,71 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/api-keys" element={<APIKeys />} />
             <Route path="/templates/:id" element={<TemplateDetails />} />
+            <Route
+              path="/admin/login"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <AdminLoginPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <AdminLayout />
+                </Suspense>
+              }
+            >
+              <Route
+                index
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <DashboardPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <UsersPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="users/:id"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <UserDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="templates"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <TemplatesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="templates/:id"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <TemplateDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="audit-log"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <AuditLogPage />
+                  </Suspense>
+                }
+              />
+            </Route>
           </Routes>
         </div>
       </NotificationProvider>

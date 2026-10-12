@@ -1,0 +1,41 @@
+.admin-audit__filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+
+  .admin-search {
+    flex: 1;
+    min-width: 220px;
+  }
+}
+
+.admin-audit__actor {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.admin-audit__target-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: monospace;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.admin-audit__reason {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-primary);
+}

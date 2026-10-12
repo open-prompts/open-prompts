@@ -20,6 +20,7 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	GetByID(ctx context.Context, id string) (*models.User, error)
 	Update(ctx context.Context, user *models.User) error
+	UpdateRoleAndStatus(ctx context.Context, userID, role, status string) error
 }
 
 type userRepository struct {
@@ -33,9 +34,18 @@ func NewUserRepository(db *sql.DB) UserRepository {
 func (r *userRepository) Insert(ctx context.Context, user *models.User) error {
 	zap.S().Infof("UserRepository.Insert: email=%s", user.Email)
 	query := `
-INSERT INTO users (id, email, mobile, password_hash, display_name, avatar, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO users (id, email, mobile, password_hash, display_name, avatar, role, status, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING created_at, updated_at`
+
+	role := user.Role
+	if role == "" {
+		role = "user"
+	}
+	status := user.Status
+	if status == "" {
+		status = "active"
+	}
 
 	args := []interface{}{
 		user.ID,
@@ -44,6 +54,8 @@ RETURNING created_at, updated_at`
 		user.PasswordHash,
 		user.DisplayName,
 		user.Avatar,
+		role,
+		status,
 		time.Now(),
 		time.Now(),
 	}
@@ -54,7 +66,7 @@ RETURNING created_at, updated_at`
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	zap.S().Infof("UserRepository.GetByEmail: email=%s", email)
 	query := `
-SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), created_at, updated_at
+SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status, created_at, updated_at
 FROM users
 WHERE email = $1`
 
@@ -66,6 +78,8 @@ WHERE email = $1`
 		&user.PasswordHash,
 		&user.DisplayName,
 		&user.Avatar,
+		&user.Role,
+		&user.Status,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -83,7 +97,7 @@ WHERE email = $1`
 func (r *userRepository) GetByID(ctx context.Context, id string) (*models.User, error) {
 	zap.S().Infof("UserRepository.GetByID: id=%s", id)
 	query := `
-SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), created_at, updated_at
+SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status, created_at, updated_at
 FROM users
 WHERE id = $1`
 
@@ -95,6 +109,8 @@ WHERE id = $1`
 		&user.PasswordHash,
 		&user.DisplayName,
 		&user.Avatar,
+		&user.Role,
+		&user.Status,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -127,6 +143,31 @@ WHERE id = $1`
 	}
 
 	result, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+// UpdateRoleAndStatus sets the role and status of a user (admin actions).
+func (r *userRepository) UpdateRoleAndStatus(ctx context.Context, userID, role, status string) error {
+	zap.S().Infof("UserRepository.UpdateRoleAndStatus: id=%s role=%s status=%s", userID, role, status)
+	query := `
+UPDATE users
+SET role = $2, status = $3, updated_at = NOW()
+WHERE id = $1`
+
+	result, err := r.db.ExecContext(ctx, query, userID, role, status)
 	if err != nil {
 		return err
 	}

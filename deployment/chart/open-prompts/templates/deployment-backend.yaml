@@ -47,3 +47,9 @@ spec:
               value: {{ .Values.backend.env.smtpPassword | quote }}
             - name: SMTP_FROM
               value: {{ .Values.backend.env.smtpFrom | quote }}
+            - name: ADMIN_BOOTSTRAP_EMAIL
+              value: {{ .Values.backend.env.adminBootstrapEmail | quote }}
+            - name: ADMIN_BOOTSTRAP_PASSWORD
+              value: {{ .Values.backend.env.adminBootstrapPassword | quote }}
+            - name: ADMIN_SESSION_TTL_MINUTES
+              value: {{ .Values.backend.env.adminSessionTtlMinutes | quote }}

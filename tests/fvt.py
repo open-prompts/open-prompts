@@ -908,6 +908,322 @@ def test_profile_update():
     print("PASSED: Profile Update Test")
     return True
 
+def test_admin_user_management():
+    """Admin console API end-to-end: login, stats, list/detail, ban/unban,
+    role change, audit log, and access control. Requires the stack to be
+    started with ADMIN_BOOTSTRAP_EMAIL/PASSWORD set (see deployment/.env)."""
+    print("--- Starting Admin User Management Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+
+    bootstrap_email = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "admin@example.com")
+    bootstrap_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "Admin_123456")
+
+    # 1. Admin login with bootstrap credentials
+    print("1. Admin login...")
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": bootstrap_email,
+        "password": bootstrap_password,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    data = resp.json()
+    admin_token = data.get("token")
+    if not admin_token or not data.get("user"):
+        print("Admin login response missing token/user")
+        return False
+    if data["user"].get("role") != "admin":
+        print(f"Bootstrap user role is {data['user'].get('role')}, expected admin")
+        return False
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    print("Admin login OK.")
+
+    # 2. Non-admin user cannot log in to admin console
+    print("2. Non-admin login rejected...")
+    ts = int(time.time())
+    victim_id = f"fvt_admin_victim_{ts}"
+    victim_token = get_auth_token(victim_id)
+    if not victim_token:
+        print("Could not create victim user")
+        return False
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": f"{victim_id}@example.com",
+        "password": "password123",
+    })
+    if resp.status_code != 403:
+        print(f"Non-admin login should be 403, got {resp.status_code}: {resp.text}")
+        return False
+    print("Non-admin login rejected as expected.")
+
+    # 3. Regular user token cannot call admin APIs
+    print("3. Regular token rejected on admin APIs...")
+    resp = requests.get(f"{ADMIN}/users", headers={"Authorization": f"Bearer {victim_token}"})
+    if resp.status_code != 403:
+        print(f"Regular token on admin API should be 403, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{ADMIN}/users")
+    if resp.status_code != 401:
+        print(f"Missing token should be 401, got {resp.status_code}")
+        return False
+    print("Access control OK.")
+
+    # 4. Stats endpoint
+    print("4. Admin stats...")
+    resp = requests.get(f"{ADMIN}/stats", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Stats failed: {resp.status_code} - {resp.text}")
+        return False
+    stats = resp.json()
+    for field in ("total_users", "active_users", "total_templates", "public_templates"):
+        if field not in stats:
+            print(f"Stats missing field: {field}")
+            return False
+    if int(stats["total_users"]) < 1:
+        print("Stats total_users should be >= 1")
+        return False
+    print(f"Stats OK: {stats['total_users']} users, {stats['total_templates']} templates.")
+
+    # 5. List users with filters and pagination
+    print("5. List users...")
+    resp = requests.get(f"{ADMIN}/users", headers=admin_headers,
+                        params={"per_page": 5, "page": 1, "status": "active"})
+    if resp.status_code != 200:
+        print(f"List users failed: {resp.status_code} - {resp.text}")
+        return False
+    listing = resp.json()
+    if listing.get("page") != 1 or listing.get("per_page") != 5:
+        print(f"Pagination echo wrong: page={listing.get('page')} per_page={listing.get('per_page')}")
+        return False
+    if len(listing.get("users", [])) > 5:
+        print("List users returned more than per_page")
+        return False
+    for u in listing.get("users", []):
+        if u.get("status") != "active":
+            print("Status filter not applied")
+            return False
+
+    # Search should find the victim
+    resp = requests.get(f"{ADMIN}/users", headers=admin_headers,
+                        params={"search": victim_id})
+    if resp.status_code != 200:
+        print(f"User search failed: {resp.status_code}")
+        return False
+    found = [u for u in resp.json().get("users", []) if u.get("id") == victim_id]
+    if not found:
+        print(f"Search did not find {victim_id}")
+        return False
+    print("List users OK.")
+
+    # 6. Get user detail
+    print("6. Get user detail...")
+    resp = requests.get(f"{ADMIN}/users/{victim_id}", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Get user failed: {resp.status_code} - {resp.text}")
+        return False
+    detail = resp.json()
+    if detail.get("user", {}).get("id") != victim_id:
+        print("User detail returned wrong user")
+        return False
+    for section in ("stats", "identities", "api_keys", "templates", "action_history"):
+        if section not in detail:
+            print(f"User detail missing section: {section}")
+            return False
+    print("User detail OK.")
+
+    # 7. Ban requires a reason
+    print("7. Reason validation...")
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/ban", headers=admin_headers,
+                         json={"reason": "ab"})
+    if resp.status_code != 400:
+        print(f"Short reason should be 400, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/ban", headers=admin_headers, json={})
+    if resp.status_code != 400:
+        print(f"Missing reason should be 400, got {resp.status_code}")
+        return False
+    print("Reason validation OK.")
+
+    # 8. Ban the victim
+    print("8. Ban user...")
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/ban", headers=admin_headers,
+                         json={"reason": "FVT test ban"})
+    if resp.status_code != 200:
+        print(f"Ban failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("user", {}).get("status") != "banned":
+        print("Ban response status not banned")
+        return False
+
+    # Banned user cannot log in
+    resp = requests.post(f"{APP}/login", json={
+        "email": f"{victim_id}@example.com",
+        "password": "password123",
+    })
+    if resp.status_code != 403:
+        print(f"Banned user login should be 403, got {resp.status_code}")
+        return False
+
+    # Banned user's existing token is rejected
+    resp = requests.get(f"{APP}/profile", headers={"Authorization": f"Bearer {victim_token}"})
+    if resp.status_code == 200:
+        print("Banned user's old token still works - revocation failed")
+        return False
+
+    # Banned filter finds the victim
+    resp = requests.get(f"{ADMIN}/users", headers=admin_headers,
+                        params={"status": "banned", "search": victim_id})
+    if resp.status_code != 200:
+        print(f"Banned filter failed: {resp.status_code}")
+        return False
+    found = [u for u in resp.json().get("users", []) if u.get("id") == victim_id]
+    if not found:
+        print("Banned filter did not find victim")
+        return False
+    print("Ban flow OK.")
+
+    # 9. Double ban is rejected
+    print("9. Double ban rejected...")
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/ban", headers=admin_headers,
+                         json={"reason": "ban again"})
+    if resp.status_code != 409:
+        print(f"Double ban should be 409, got {resp.status_code}")
+        return False
+    print("Double ban rejected as expected.")
+
+    # 10. Self-ban is rejected
+    print("10. Self-ban rejected...")
+    resp = requests.post(f"{ADMIN}/users/admin_bootstrap/ban", headers=admin_headers,
+                         json={"reason": "self ban attempt"})
+    if resp.status_code != 403:
+        print(f"Self-ban should be 403, got {resp.status_code} - {resp.text}")
+        return False
+    print("Self-ban rejected as expected.")
+
+    # 11. Unban the victim
+    print("11. Unban user...")
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/unban", headers=admin_headers,
+                         json={"reason": "FVT test unban"})
+    if resp.status_code != 200:
+        print(f"Unban failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("user", {}).get("status") != "active":
+        print("Unban response status not active")
+        return False
+
+    # User can log in again
+    resp = requests.post(f"{APP}/login", json={
+        "email": f"{victim_id}@example.com",
+        "password": "password123",
+    })
+    if resp.status_code != 200:
+        print(f"Unbanned user login failed: {resp.status_code} - {resp.text}")
+        return False
+    print("Unban flow OK.")
+
+    # 12. Role change
+    print("12. Role change...")
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/role", headers=admin_headers,
+                         json={"role": "admin", "reason": "FVT promote"})
+    if resp.status_code != 200:
+        print(f"Promote failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("user", {}).get("role") != "admin":
+        print("Promote response role not admin")
+        return False
+
+    # Invalid role rejected
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/role", headers=admin_headers,
+                         json={"role": "superadmin", "reason": "invalid role"})
+    if resp.status_code != 400:
+        print(f"Invalid role should be 400, got {resp.status_code}")
+        return False
+
+    # Demote back
+    resp = requests.post(f"{ADMIN}/users/{victim_id}/role", headers=admin_headers,
+                         json={"role": "user", "reason": "FVT demote"})
+    if resp.status_code != 200:
+        print(f"Demote failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("user", {}).get("role") != "user":
+        print("Demote response role not user")
+        return False
+    print("Role change OK.")
+
+    # 13. Audit log contains our actions
+    print("13. Audit log...")
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit log failed: {resp.status_code} - {resp.text}")
+        return False
+    entries = resp.json().get("entries", [])
+    victim_actions = [e for e in entries if e.get("target_id") == victim_id]
+    actions_seen = {e.get("action") for e in victim_actions}
+    if not {"ban", "unban", "role_change"}.issubset(actions_seen):
+        print(f"Audit log missing actions, saw: {actions_seen}")
+        return False
+    for e in victim_actions:
+        if not e.get("reason"):
+            print("Audit entry missing reason")
+            return False
+        if not e.get("actor_id"):
+            print("Audit entry missing actor_id")
+            return False
+
+    # Action filter works
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "ban", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit action filter failed: {resp.status_code}")
+        return False
+    for e in resp.json().get("entries", []):
+        if e.get("action") != "ban":
+            print("Audit action filter not applied")
+            return False
+    print("Audit log OK.")
+
+    # 14. Admin templates list and detail
+    print("14. Admin templates...")
+    resp = requests.get(f"{ADMIN}/templates", headers=admin_headers, params={"per_page": 5})
+    if resp.status_code != 200:
+        print(f"Admin templates failed: {resp.status_code} - {resp.text}")
+        return False
+    templates = resp.json().get("templates", [])
+    if templates:
+        tid = templates[0].get("id")
+        resp = requests.get(f"{ADMIN}/templates/{tid}", headers=admin_headers)
+        if resp.status_code != 200:
+            print(f"Admin template detail failed: {resp.status_code}")
+            return False
+        if "versions" not in resp.json():
+            print("Template detail missing versions")
+            return False
+    print("Admin templates OK.")
+
+    # 15. Session refresh
+    print("15. Session refresh...")
+    resp = requests.post(f"{ADMIN}/session/refresh", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Session refresh failed: {resp.status_code} - {resp.text}")
+        return False
+    if not resp.json().get("token"):
+        print("Refresh response missing token")
+        return False
+    print("Session refresh OK.")
+
+    # 16. Unknown user returns 404
+    print("16. Unknown user 404...")
+    resp = requests.get(f"{ADMIN}/users/does_not_exist_xyz", headers=admin_headers)
+    if resp.status_code != 404:
+        print(f"Unknown user should be 404, got {resp.status_code}")
+        return False
+    print("Unknown user 404 OK.")
+
+    print("--- Admin User Management Test Passed ---")
+    return True
+
+
 def main():
     # Start containers
     print("Starting containers...")
@@ -936,6 +1252,7 @@ def main():
     if success: success = test_profile_update()
     if success: success = test_template_alias_flow()
     if success: success = test_language_behavior()
+    if success: success = test_admin_user_management()
 
     # Cleanup is handled by atexit
 

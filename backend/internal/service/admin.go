@@ -1,0 +1,737 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	pb "open-prompts/backend/api/proto/v1"
+	"open-prompts/backend/internal/models"
+	"open-prompts/backend/internal/repository"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	adminLoginMaxAttempts  = 5
+	adminLoginWindow       = 15 * time.Minute
+	adminBanKeyTTL         = 25 * time.Hour
+	defaultAdminSessionTTL = 30 * time.Minute
+)
+
+// APIKeyLister is the subset of APIKeyRepository used by the admin service.
+type APIKeyLister interface {
+	ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*models.APIKey, error)
+}
+
+// AdminService implements the admin console RPCs.
+type AdminService struct {
+	pb.UnimplementedAdminServiceServer
+
+	UserRepo   repository.UserRepository
+	AdminRepo  repository.AdminRepository
+	APIKeyRepo APIKeyLister
+	Redis      RedisStore
+	JWTSecret  []byte
+	SessionTTL time.Duration
+}
+
+// NewAdminService creates a new AdminService.
+func NewAdminService(
+	userRepo repository.UserRepository,
+	adminRepo repository.AdminRepository,
+	apiKeyRepo APIKeyLister,
+	redis RedisStore,
+	jwtSecret string,
+	sessionTTL time.Duration,
+) *AdminService {
+	if sessionTTL <= 0 {
+		sessionTTL = defaultAdminSessionTTL
+	}
+	return &AdminService{
+		UserRepo:   userRepo,
+		AdminRepo:  adminRepo,
+		APIKeyRepo: apiKeyRepo,
+		Redis:      redis,
+		JWTSecret:  []byte(jwtSecret),
+		SessionTTL: sessionTTL,
+	}
+}
+
+// ---- helpers ----
+
+// requireAdminContext verifies the caller holds an admin-scoped token.
+func (s *AdminService) requireAdminContext(ctx context.Context) (*models.User, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if GetUserRoleFromContext(ctx) != "admin" || GetUserScopeFromContext(ctx) != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "admin privileges required")
+	}
+	user, err := s.UserRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid token")
+	}
+	if user.Role != "admin" || user.Status == "banned" {
+		return nil, status.Error(codes.PermissionDenied, "admin privileges required")
+	}
+	return user, nil
+}
+
+// generateAdminToken issues a short-lived admin-scoped JWT.
+func (s *AdminService) generateAdminToken(user *models.User) (string, error) {
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"sub":   user.ID,
+		"role":  "admin",
+		"scope": "admin",
+		"iat":   now.Unix(),
+		"exp":   now.Add(s.SessionTTL).Unix(),
+		"iss":   "open-prompts",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.JWTSecret)
+}
+
+// validateReason enforces the mandatory 3-500 char reason on admin mutations.
+func validateReason(reason string) error {
+	trimmed := strings.TrimSpace(reason)
+	if len(trimmed) < 3 || len(trimmed) > 500 {
+		return status.Error(codes.InvalidArgument, "reason must be between 3 and 500 characters")
+	}
+	return nil
+}
+
+// writeAudit persists an audit entry; failures are logged, never fatal.
+func (s *AdminService) writeAudit(ctx context.Context, actor *models.User, action, targetType, targetID, reason string) {
+	entry := &models.AdminAuditLog{
+		ActorID:    actor.ID,
+		ActorEmail: actor.Email,
+		Action:     action,
+		TargetType: targetType,
+		TargetID:   targetID,
+		Reason:     strings.TrimSpace(reason),
+	}
+	if err := s.AdminRepo.InsertAuditLog(ctx, entry); err != nil {
+		zap.S().Errorf("AdminService: failed to write audit log action=%s target=%s: %v", action, targetID, err)
+	}
+}
+
+// userToSummary converts a models.User to the proto summary.
+func userToSummary(user *models.User, templateCount int32) *pb.AdminUserSummary {
+	return &pb.AdminUserSummary{
+		Id:            user.ID,
+		Email:         user.Email,
+		DisplayName:   user.DisplayName,
+		Avatar:        user.Avatar,
+		Role:          user.Role,
+		Status:        user.Status,
+		TemplateCount: templateCount,
+		CreatedAt:     timestamppb.New(user.CreatedAt),
+		UpdatedAt:     timestamppb.New(user.UpdatedAt),
+	}
+}
+
+// templateToSummary converts a models.AdminTemplate to the proto summary.
+func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
+	return &pb.AdminTemplateSummary{
+		Id:               t.ID,
+		Title:            t.Title,
+		Visibility:       t.Visibility,
+		Type:             t.Type,
+		Language:         t.Language,
+		Tags:             t.Tags,
+		LikeCount:        t.LikeCount,
+		FavoriteCount:    t.FavoriteCount,
+		CreatedAt:        timestamppb.New(t.CreatedAt),
+		UpdatedAt:        timestamppb.New(t.UpdatedAt),
+		OwnerId:          t.OwnerID,
+		OwnerDisplayName: t.OwnerDisplayName,
+	}
+}
+
+// clientIPFromContext extracts the client IP from the x-client-ip metadata
+// (set by the REST gateway) or falls back to "unknown".
+func clientIPFromContext(ctx context.Context) string {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if vals := md.Get("x-client-ip"); len(vals) > 0 && vals[0] != "" {
+			return vals[0]
+		}
+	}
+	return "unknown"
+}
+
+// ---- auth ----
+
+// AdminLogin authenticates an admin with rate limiting (5 fails / 15 min / IP).
+func (s *AdminService) AdminLogin(ctx context.Context, req *pb.AdminLoginRequest) (*pb.AdminLoginResponse, error) {
+	email := strings.TrimSpace(strings.ToLower(req.Email))
+	if email == "" || req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "email and password are required")
+	}
+
+	ip := clientIPFromContext(ctx)
+	attemptKey := "admin_login_attempts:" + ip
+	if s.Redis != nil {
+		if v, err := s.Redis.Get(ctx, attemptKey); err == nil && v != "" {
+			var attempts int
+			if _, err := fmt.Sscanf(v, "%d", &attempts); err == nil && attempts >= adminLoginMaxAttempts {
+				return nil, status.Error(codes.ResourceExhausted, "too many failed login attempts, try again later")
+			}
+		}
+	}
+
+	user, err := s.UserRepo.GetByEmail(ctx, email)
+	if err != nil {
+		s.recordFailedAdminLogin(ctx, attemptKey)
+		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		s.recordFailedAdminLogin(ctx, attemptKey)
+		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+	}
+	if user.Role != "admin" {
+		s.recordFailedAdminLogin(ctx, attemptKey)
+		return nil, status.Error(codes.PermissionDenied, "admin privileges required")
+	}
+	if user.Status == "banned" {
+		s.recordFailedAdminLogin(ctx, attemptKey)
+		return nil, status.Error(codes.PermissionDenied, "account banned")
+	}
+
+	// Successful login clears the failure counter.
+	if s.Redis != nil {
+		_ = s.Redis.Del(ctx, attemptKey)
+	}
+
+	token, err := s.generateAdminToken(user)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate token: %v", err)
+	}
+
+	return &pb.AdminLoginResponse{
+		Token: token,
+		User:  userToSummary(user, 0),
+	}, nil
+}
+
+// recordFailedAdminLogin increments the per-IP failure counter.
+func (s *AdminService) recordFailedAdminLogin(ctx context.Context, key string) {
+	if s.Redis == nil {
+		return
+	}
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1", adminLoginWindow)
+		return
+	}
+	var attempts int
+	if _, err := fmt.Sscanf(v, "%d", &attempts); err != nil {
+		_ = s.Redis.Set(ctx, key, "1", adminLoginWindow)
+		return
+	}
+	_ = s.Redis.Set(ctx, key, fmt.Sprintf("%d", attempts+1), adminLoginWindow)
+}
+
+// RefreshAdminSession renews the admin token (sliding expiration).
+func (s *AdminService) RefreshAdminSession(ctx context.Context, _ *pb.RefreshAdminSessionRequest) (*pb.RefreshAdminSessionResponse, error) {
+	user, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	token, err := s.generateAdminToken(user)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate token: %v", err)
+	}
+	return &pb.RefreshAdminSessionResponse{Token: token}, nil
+}
+
+// ---- stats ----
+
+// GetAdminStats returns dashboard KPIs and recent activity.
+func (s *AdminService) GetAdminStats(ctx context.Context, _ *pb.GetAdminStatsRequest) (*pb.GetAdminStatsResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+
+	stats, err := s.AdminRepo.GetStats(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get stats: %v", err)
+	}
+
+	recentSignups, err := s.AdminRepo.ListRecentSignups(ctx, 10)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get recent signups: %v", err)
+	}
+	recentTemplates, err := s.AdminRepo.ListRecentPublicTemplates(ctx, 10)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get recent templates: %v", err)
+	}
+
+	resp := &pb.GetAdminStatsResponse{
+		TotalUsers:      stats.TotalUsers,
+		ActiveUsers:     stats.ActiveUsers,
+		BannedUsers:     stats.BannedUsers,
+		TotalTemplates:  stats.TotalTemplates,
+		PublicTemplates: stats.PublicTemplates,
+		PromptsCreated:  stats.PromptsCreated,
+	}
+	for _, u := range recentSignups {
+		resp.RecentSignups = append(resp.RecentSignups, userToSummary(u, 0))
+	}
+	for _, t := range recentTemplates {
+		resp.RecentTemplates = append(resp.RecentTemplates, templateToSummary(t))
+	}
+	return resp, nil
+}
+
+// ---- users ----
+
+// ListUsers returns a paginated, searchable, filterable user list.
+func (s *AdminService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+
+	if req.Status != "" && req.Status != "active" && req.Status != "banned" {
+		return nil, status.Error(codes.InvalidArgument, "invalid status filter")
+	}
+	if req.Role != "" && req.Role != "user" && req.Role != "admin" {
+		return nil, status.Error(codes.InvalidArgument, "invalid role filter")
+	}
+	switch req.Sort {
+	case "", "newest", "oldest", "recently_updated":
+	default:
+		return nil, status.Error(codes.InvalidArgument, "invalid sort")
+	}
+
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	users, total, err := s.AdminRepo.ListUsers(ctx, repository.UserFilters{
+		Search: strings.TrimSpace(req.Search),
+		Status: req.Status,
+		Role:   req.Role,
+		Sort:   req.Sort,
+		Limit:  perPage,
+		Offset: (page - 1) * perPage,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list users: %v", err)
+	}
+
+	resp := &pb.ListUsersResponse{Total: total, Page: int32(page), PerPage: int32(perPage)}
+	for _, u := range users {
+		count, err := s.AdminRepo.CountUserTemplates(ctx, u.ID)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to count templates: %v", err)
+		}
+		resp.Users = append(resp.Users, userToSummary(u, int32(count)))
+	}
+	return resp, nil
+}
+
+// GetUser returns full admin detail for one user.
+func (s *AdminService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+
+	user, err := s.AdminRepo.GetUserDetail(ctx, req.Id)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
+	}
+
+	stats, err := s.AdminRepo.GetUserStats(ctx, user.ID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user stats: %v", err)
+	}
+	identities, err := s.AdminRepo.ListUserIdentities(ctx, user.ID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user identities: %v", err)
+	}
+	apiKeys, err := s.APIKeyRepo.ListByUserID(ctx, user.ID, 100, 0)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user api keys: %v", err)
+	}
+	templates, total, err := s.AdminRepo.ListTemplates(ctx, repository.TemplateFilters{OwnerID: user.ID, Sort: "recently_updated", Limit: 5, Offset: 0})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user templates: %v", err)
+	}
+	history, err := s.AdminRepo.ListAuditByTarget(ctx, user.ID, 20)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get action history: %v", err)
+	}
+
+	resp := &pb.GetUserResponse{
+		User: userToSummary(user, int32(total)),
+		Stats: &pb.UserStats{
+			Templates:         stats.Templates,
+			LikesReceived:     stats.LikesReceived,
+			FavoritesReceived: stats.FavoritesReceived,
+			PromptsCreated:    stats.PromptsCreated,
+		},
+	}
+	for _, id := range identities {
+		resp.Identities = append(resp.Identities, &pb.OAuthIdentity{
+			Provider:  id.Provider,
+			CreatedAt: timestamppb.New(id.CreatedAt),
+		})
+	}
+	for _, k := range apiKeys {
+		key := &pb.AdminAPIKeySummary{
+			Id:       k.ID,
+			Name:     k.Name,
+			Prefix:   k.Prefix,
+			IsActive: k.IsActive,
+			CreatedAt: timestamppb.New(k.CreatedAt),
+		}
+		if k.LastUsedAt.Valid {
+			key.LastUsedAt = timestamppb.New(k.LastUsedAt.Time)
+		}
+		resp.ApiKeys = append(resp.ApiKeys, key)
+	}
+	for _, t := range templates {
+		resp.Templates = append(resp.Templates, templateToSummary(t))
+	}
+	for _, e := range history {
+		resp.ActionHistory = append(resp.ActionHistory, auditLogToProto(e))
+	}
+	return resp, nil
+}
+
+// BanUser bans a user, invalidating live sessions and API keys.
+func (s *AdminService) BanUser(ctx context.Context, req *pb.BanUserRequest) (*pb.UserActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+	if req.UserId == actor.ID {
+		return nil, status.Error(codes.PermissionDenied, "cannot ban yourself")
+	}
+
+	user, err := s.AdminRepo.GetUserDetail(ctx, req.UserId)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
+	}
+	if user.Status == "banned" {
+		return nil, status.Error(codes.FailedPrecondition, "user is already banned")
+	}
+
+	if err := s.UserRepo.UpdateRoleAndStatus(ctx, user.ID, user.Role, "banned"); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to ban user: %v", err)
+	}
+
+	// Invalidate live sessions and API keys via Redis (25h TTL outlives the
+	// 24h max token lifetime).
+	if s.Redis != nil {
+		now := time.Now().Unix()
+		_ = s.Redis.Set(ctx, "user_banned:"+user.ID, "1", adminBanKeyTTL)
+		_ = s.Redis.Set(ctx, "token_revoked_before:"+user.ID, fmt.Sprintf("%d", now), adminBanKeyTTL)
+	}
+
+	s.writeAudit(ctx, actor, "ban", "user", user.ID, req.Reason)
+
+	user.Status = "banned"
+	return &pb.UserActionResponse{User: userToSummary(user, 0)}, nil
+}
+
+// UnbanUser lifts a ban. Existing tokens stay revoked; the user must sign in
+// again.
+func (s *AdminService) UnbanUser(ctx context.Context, req *pb.UnbanUserRequest) (*pb.UserActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+
+	user, err := s.AdminRepo.GetUserDetail(ctx, req.UserId)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
+	}
+	if user.Status != "banned" {
+		return nil, status.Error(codes.FailedPrecondition, "user is not banned")
+	}
+
+	if err := s.UserRepo.UpdateRoleAndStatus(ctx, user.ID, user.Role, "active"); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to unban user: %v", err)
+	}
+
+	// Only the ban marker is removed; tokens revoked before the ban stay
+	// revoked so the user must re-authenticate.
+	if s.Redis != nil {
+		_ = s.Redis.Del(ctx, "user_banned:"+user.ID)
+	}
+
+	s.writeAudit(ctx, actor, "unban", "user", user.ID, req.Reason)
+
+	user.Status = "active"
+	return &pb.UserActionResponse{User: userToSummary(user, 0)}, nil
+}
+
+// ChangeUserRole promotes or demotes a user (self-demotion rejected).
+func (s *AdminService) ChangeUserRole(ctx context.Context, req *pb.ChangeUserRoleRequest) (*pb.UserActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	if req.Role != "admin" && req.Role != "user" {
+		return nil, status.Error(codes.InvalidArgument, "role must be admin or user")
+	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+	if req.UserId == actor.ID && req.Role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "cannot demote yourself")
+	}
+
+	user, err := s.AdminRepo.GetUserDetail(ctx, req.UserId)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
+	}
+	if user.Role == req.Role {
+		return nil, status.Error(codes.FailedPrecondition, "user already has this role")
+	}
+
+	if err := s.UserRepo.UpdateRoleAndStatus(ctx, user.ID, req.Role, user.Status); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to change role: %v", err)
+	}
+
+	// Role changes revoke existing tokens so stale role claims cannot be used.
+	if s.Redis != nil {
+		now := time.Now().Unix()
+		_ = s.Redis.Set(ctx, "token_revoked_before:"+user.ID, fmt.Sprintf("%d", now), adminBanKeyTTL)
+	}
+
+	s.writeAudit(ctx, actor, "role_change", "user", user.ID, req.Reason)
+
+	user.Role = req.Role
+	return &pb.UserActionResponse{User: userToSummary(user, 0)}, nil
+}
+
+// ---- templates ----
+
+// ListTemplates returns a paginated moderation list of ALL templates.
+func (s *AdminService) ListTemplates(ctx context.Context, req *pb.ListAdminTemplatesRequest) (*pb.ListAdminTemplatesResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+
+	if req.Visibility != "" && req.Visibility != "public" && req.Visibility != "private" {
+		return nil, status.Error(codes.InvalidArgument, "invalid visibility filter")
+	}
+	switch req.Sort {
+	case "", "recently_updated", "newest", "oldest", "most_likes":
+	default:
+		return nil, status.Error(codes.InvalidArgument, "invalid sort")
+	}
+
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	templates, total, err := s.AdminRepo.ListTemplates(ctx, repository.TemplateFilters{
+		Search:     strings.TrimSpace(req.Search),
+		Visibility: req.Visibility,
+		OwnerID:    req.OwnerId,
+		Sort:       req.Sort,
+		Limit:      perPage,
+		Offset:     (page - 1) * perPage,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list templates: %v", err)
+	}
+
+	resp := &pb.ListAdminTemplatesResponse{Total: total, Page: int32(page), PerPage: int32(perPage)}
+	for _, t := range templates {
+		resp.Templates = append(resp.Templates, templateToSummary(t))
+	}
+	return resp, nil
+}
+
+// GetTemplate returns any template with all versions (read-only).
+func (s *AdminService) GetTemplate(ctx context.Context, req *pb.GetAdminTemplateRequest) (*pb.GetAdminTemplateResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+
+	template, versions, err := s.AdminRepo.GetTemplateWithVersions(ctx, req.Id)
+	if err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get template: %v", err)
+	}
+
+	resp := &pb.GetAdminTemplateResponse{
+		Template:    templateToSummary(template),
+		Description: template.Description.String,
+	}
+	for _, v := range versions {
+		resp.Versions = append(resp.Versions, &pb.AdminTemplateVersion{
+			Id:        v.ID,
+			Version:   v.Version,
+			Content:   v.Content,
+			CreatedAt: timestamppb.New(v.CreatedAt),
+			AliasName: v.AliasName,
+		})
+	}
+	return resp, nil
+}
+
+// ---- audit ----
+
+// ListAuditLogs returns the append-only audit trail.
+func (s *AdminService) ListAuditLogs(ctx context.Context, req *pb.ListAuditLogsRequest) (*pb.ListAuditLogsResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+
+	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" {
+		return nil, status.Error(codes.InvalidArgument, "invalid action filter")
+	}
+
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	entries, total, err := s.AdminRepo.ListAuditLogs(ctx, repository.AuditFilters{
+		Action: req.Action,
+		Actor:  strings.TrimSpace(req.Actor),
+		Limit:  perPage,
+		Offset: (page - 1) * perPage,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list audit logs: %v", err)
+	}
+
+	resp := &pb.ListAuditLogsResponse{Total: total, Page: int32(page), PerPage: int32(perPage)}
+	for _, e := range entries {
+		resp.Entries = append(resp.Entries, auditLogToProto(e))
+	}
+	return resp, nil
+}
+
+// auditLogToProto converts a models.AdminAuditLog to the proto entry.
+func auditLogToProto(e *models.AdminAuditLog) *pb.AdminAuditLogEntry {
+	return &pb.AdminAuditLogEntry{
+		Id:         e.ID,
+		ActorId:    e.ActorID,
+		ActorEmail: e.ActorEmail,
+		Action:     e.Action,
+		TargetType: e.TargetType,
+		TargetId:   e.TargetID,
+		Reason:     e.Reason,
+		CreatedAt:  timestamppb.New(e.CreatedAt),
+	}
+}
+
+// BootstrapAdmin promotes or creates the bootstrap admin account at startup.
+// It is a no-op when ADMIN_BOOTSTRAP_EMAIL is empty.
+func BootstrapAdmin(ctx context.Context, userRepo repository.UserRepository, email, password string) error {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return nil
+	}
+	if len(password) < 8 {
+		return fmt.Errorf("ADMIN_BOOTSTRAP_PASSWORD must be at least 8 characters when bootstrap is enabled")
+	}
+
+	user, err := userRepo.GetByEmail(ctx, email)
+	if err == nil {
+		if user.Role != "admin" || user.Status != "active" {
+			if err := userRepo.UpdateRoleAndStatus(ctx, user.ID, "admin", "active"); err != nil {
+				return fmt.Errorf("failed to promote bootstrap admin: %w", err)
+			}
+		}
+		zap.S().Infof("Admin bootstrap: existing account %s promoted to active admin", email)
+		return nil
+	}
+	if err != repository.ErrUserNotFound {
+		return fmt.Errorf("failed to look up bootstrap admin: %w", err)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash bootstrap password: %w", err)
+	}
+	user = &models.User{
+		ID:           "admin_bootstrap",
+		Email:        email,
+		PasswordHash: string(hash),
+		DisplayName:  "Admin",
+		Role:         "admin",
+		Status:       "active",
+	}
+	if err := userRepo.Insert(ctx, user); err != nil {
+		return fmt.Errorf("failed to create bootstrap admin: %w", err)
+	}
+	zap.S().Infof("Admin bootstrap: created admin account %s", email)
+	return nil
+}

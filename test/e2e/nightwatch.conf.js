@@ -9,7 +9,7 @@ module.exports = {
 
   test_settings: {
     default: {
-      launch_url: 'http://localhost:3000',
+      launch_url: 'http://127.0.0.1:3000',
       selenium: {
         start_process: false,
         host: 'localhost',
@@ -19,6 +19,11 @@ module.exports = {
         server_path: '/snap/bin/geckodriver',
         port: 4444,
         cli_args: [],
+        // Snap geckodriver needs a moment to bind its port; without this the
+        // first status ping races and logs a benign ECONNRESET.
+        check_process_delay: 1000,
+        status_poll_interval: 500,
+        max_status_poll_tries: 10,
       },
       desiredCapabilities: {
         browserName: 'firefox',

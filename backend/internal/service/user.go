@@ -160,7 +160,7 @@ func (s *UserService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 	}
 
 	// Generate token
-	token, err := s.generateToken(user.ID)
+	token, err := s.generateToken(user)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate token: %v", err)
 	}
@@ -199,8 +199,13 @@ func (s *UserService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}
 
+	// Banned users cannot sign in.
+	if user.Status == "banned" {
+		return nil, status.Error(codes.PermissionDenied, "account banned")
+	}
+
 	// Generate token
-	token, err := s.generateToken(user.ID)
+	token, err := s.generateToken(user)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate token: %v", err)
 	}
@@ -268,11 +273,13 @@ func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileRequest)
 	}, nil
 }
 
-func (s *UserService) generateToken(userID string) (string, error) {
+func (s *UserService) generateToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"sub": userID,
-		"exp": time.Now().Add(24 * time.Hour).Unix(),
-		"iss": "open-prompts",
+		"sub":  user.ID,
+		"role": user.Role,
+		"exp":  time.Now().Add(24 * time.Hour).Unix(),
+		"iat":  time.Now().Unix(),
+		"iss":  "open-prompts",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

@@ -197,3 +197,55 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 COMMENT ON TABLE api_keys IS 'Stores API keys for user authentication';
+
+-- -----------------------------------------------------------------------------
+-- Admin: users.role / users.status
+-- Description: Role-based access control and account status for administration.
+-- -----------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='role') THEN
+        ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+        COMMENT ON COLUMN users.role IS 'Account role: user or admin';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='status') THEN
+        ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+        COMMENT ON COLUMN users.status IS 'Account status: active or banned';
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+
+-- -----------------------------------------------------------------------------
+-- Table: admin_audit_logs
+-- Description: Append-only audit trail of administrative mutations.
+--              Deliberately no FK: history must survive user deletion.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    actor_id TEXT NOT NULL,
+    actor_email TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('ban', 'unban', 'role_change')),
+    target_type TEXT NOT NULL CHECK (target_type IN ('user')),
+    target_id TEXT NOT NULL,
+    reason TEXT NOT NULL CHECK (char_length(reason) BETWEEN 3 AND 500),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE admin_audit_logs IS 'Append-only audit trail of admin mutations';
+COMMENT ON COLUMN admin_audit_logs.actor_id IS 'Acting admin user ID (from verified JWT)';
+COMMENT ON COLUMN admin_audit_logs.actor_email IS 'Admin email snapshot at action time';
+COMMENT ON COLUMN admin_audit_logs.action IS 'ban | unban | role_change';
+COMMENT ON COLUMN admin_audit_logs.target_type IS 'Target entity type (user)';
+COMMENT ON COLUMN admin_audit_logs.target_id IS 'Affected user ID';
+COMMENT ON COLUMN admin_audit_logs.reason IS 'Mandatory justification, 3-500 chars';
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor_id ON admin_audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_target_id ON admin_audit_logs(target_id);

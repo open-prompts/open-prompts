@@ -1,0 +1,239 @@
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "open-prompts/backend/api/proto/v1;v1";
+
+// AdminService defines administrative RPCs. Every RPC except AdminLogin
+// requires an admin-scoped JWT (role=admin, scope=admin).
+service AdminService {
+  // AdminLogin authenticates an admin and returns a short-lived admin token.
+  rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
+
+  // RefreshAdminSession renews the admin token (sliding expiration).
+  rpc RefreshAdminSession(RefreshAdminSessionRequest) returns (RefreshAdminSessionResponse);
+
+  // GetAdminStats returns dashboard KPIs and recent activity.
+  rpc GetAdminStats(GetAdminStatsRequest) returns (GetAdminStatsResponse);
+
+  // ListUsers returns a paginated, searchable, filterable user list.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+  // GetUser returns full admin detail for one user.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // BanUser bans a user (reason required).
+  rpc BanUser(BanUserRequest) returns (UserActionResponse);
+
+  // UnbanUser lifts a ban (reason required).
+  rpc UnbanUser(UnbanUserRequest) returns (UserActionResponse);
+
+  // ChangeUserRole promotes/demotes (reason required; self-demotion rejected).
+  rpc ChangeUserRole(ChangeUserRoleRequest) returns (UserActionResponse);
+
+  // ListTemplates returns a paginated moderation list of ALL templates.
+  rpc ListTemplates(ListAdminTemplatesRequest) returns (ListAdminTemplatesResponse);
+
+  // GetTemplate returns any template with all versions (read-only).
+  rpc GetTemplate(GetAdminTemplateRequest) returns (GetAdminTemplateResponse);
+
+  // ListAuditLogs returns the append-only audit trail.
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+}
+
+// ---- Auth ----
+
+message AdminLoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message AdminLoginResponse {
+  string token = 1;        // admin-scoped JWT, exp = now + ADMIN_SESSION_TTL_MINUTES
+  AdminUserSummary user = 2;
+}
+
+message RefreshAdminSessionRequest {}
+
+message RefreshAdminSessionResponse {
+  string token = 1;
+}
+
+// ---- Stats ----
+
+message GetAdminStatsRequest {}
+
+message GetAdminStatsResponse {
+  int64 total_users = 1;
+  int64 active_users = 2;
+  int64 banned_users = 3;
+  int64 total_templates = 4;
+  int64 public_templates = 5;
+  int64 prompts_created = 6;
+  repeated AdminUserSummary recent_signups = 7;      // latest 10
+  repeated AdminTemplateSummary recent_templates = 8; // latest 10 public, by updated_at
+}
+
+// ---- Users ----
+
+message AdminUserSummary {
+  string id = 1;
+  string email = 2;
+  string display_name = 3;
+  string avatar = 4;
+  string role = 5;      // "user" | "admin"
+  string status = 6;    // "active" | "banned"
+  int32 template_count = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListUsersRequest {
+  string search = 1;    // matches id, email, display_name (case-insensitive)
+  string status = 2;    // "" | "active" | "banned"
+  string role = 3;      // "" | "user" | "admin"
+  string sort = 4;      // "newest" (default) | "oldest" | "recently_updated"
+  int32 page = 5;       // 1-based
+  int32 per_page = 6;   // default 20, max 100
+}
+
+message ListUsersResponse {
+  repeated AdminUserSummary users = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  AdminUserSummary user = 1;
+  UserStats stats = 2;
+  repeated OAuthIdentity identities = 3;
+  repeated AdminAPIKeySummary api_keys = 4;
+  repeated AdminTemplateSummary templates = 5;      // latest 5
+  repeated AdminAuditLogEntry action_history = 6;   // entries targeting this user, latest 20
+}
+
+message UserStats {
+  int64 templates = 1;
+  int64 likes_received = 2;
+  int64 favorites_received = 3;
+  int64 prompts_created = 4;
+}
+
+message OAuthIdentity {
+  string provider = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+message AdminAPIKeySummary {
+  string id = 1;
+  string name = 2;
+  string prefix = 3;
+  bool is_active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp last_used_at = 6; // null if never used
+}
+
+message BanUserRequest {
+  string user_id = 1;
+  string reason = 2;    // 3-500 chars, required
+}
+
+message UnbanUserRequest {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message ChangeUserRoleRequest {
+  string user_id = 1;
+  string role = 2;      // "admin" | "user"
+  string reason = 3;
+}
+
+message UserActionResponse {
+  AdminUserSummary user = 1;  // post-action state
+}
+
+// ---- Templates ----
+
+message AdminTemplateSummary {
+  string id = 1;
+  string title = 2;
+  string visibility = 3;   // "public" | "private"
+  string type = 4;         // "system" | "user"
+  string language = 5;
+  repeated string tags = 6;
+  int32 like_count = 7;
+  int32 favorite_count = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  string owner_id = 11;
+  string owner_display_name = 12;
+}
+
+message ListAdminTemplatesRequest {
+  string search = 1;      // matches title or owner id/display_name
+  string visibility = 2;  // "" | "public" | "private"
+  string owner_id = 3;    // deep-link filter from user detail
+  string sort = 4;        // "recently_updated" (default) | "newest" | "oldest" | "most_likes"
+  int32 page = 5;
+  int32 per_page = 6;
+}
+
+message ListAdminTemplatesResponse {
+  repeated AdminTemplateSummary templates = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
+}
+
+message GetAdminTemplateRequest {
+  string id = 1;
+}
+
+message GetAdminTemplateResponse {
+  AdminTemplateSummary template = 1;
+  string description = 2;
+  repeated AdminTemplateVersion versions = 3;  // all versions, newest first
+}
+
+message AdminTemplateVersion {
+  int32 id = 1;
+  int32 version = 2;
+  string content = 3;
+  google.protobuf.Timestamp created_at = 4;
+  string alias_name = 5;   // "" if no alias points at this version
+}
+
+// ---- Audit ----
+
+message AdminAuditLogEntry {
+  string id = 1;
+  string actor_id = 2;
+  string actor_email = 3;
+  string action = 4;        // "ban" | "unban" | "role_change"
+  string target_type = 5;   // "user"
+  string target_id = 6;
+  string reason = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message ListAuditLogsRequest {
+  string action = 1;    // "" | "ban" | "unban" | "role_change"
+  string actor = 2;     // matches actor_id or actor_email
+  int32 page = 3;
+  int32 per_page = 4;
+}
+
+message ListAuditLogsResponse {
+  repeated AdminAuditLogEntry entries = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
+}

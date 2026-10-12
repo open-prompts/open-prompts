@@ -1,0 +1,61 @@
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--accent {
+    background: rgba(124, 148, 255, 0.16);
+    color: #7c94ff;
+  }
+
+  &--success {
+    background: rgba(38, 178, 106, 0.16);
+    color: #26b26a;
+  }
+
+  &--danger {
+    background: rgba(234, 74, 90, 0.16);
+    color: #ea4a5a;
+  }
+
+  &--warning {
+    background: rgba(240, 171, 25, 0.18);
+    color: #d5a013;
+  }
+
+  &--neutral {
+    background: rgba(130, 140, 155, 0.16);
+    color: var(--text-secondary);
+  }
+}
+
+:global(.light-theme) {
+  .admin-badge--accent {
+    color: #4d6bff;
+  }
+
+  .admin-badge--success {
+    color: #1c8a50;
+  }
+
+  .admin-badge--danger {
+    color: #cf2536;
+  }
+
+  .admin-badge--warning {
+    color: #a97c0a;
+  }
+}

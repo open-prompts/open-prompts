@@ -45,6 +45,11 @@ args := m.Called(ctx, user)
 return args.Error(0)
 }
 
+func (m *MockUserRepository) UpdateRoleAndStatus(ctx context.Context, userID string, role string, status string) error {
+args := m.Called(ctx, userID, role, status)
+return args.Error(0)
+}
+
 // MockRedisStore is a mock implementation of RedisStore
 type MockRedisStore struct {
 mock.Mock

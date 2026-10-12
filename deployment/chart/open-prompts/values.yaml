@@ -23,6 +23,10 @@ backend:
     smtpUser: ""
     smtpPassword: ""
     smtpFrom: ""
+    # Admin console bootstrap (empty adminBootstrapEmail disables it)
+    adminBootstrapEmail: ""
+    adminBootstrapPassword: ""
+    adminSessionTtlMinutes: "30"
 
 frontend:
   replicaCount: 1

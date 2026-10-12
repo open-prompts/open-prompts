@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -21,6 +22,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -52,6 +54,10 @@ func writeError(w http.ResponseWriter, err error) {
 		code = http.StatusNotImplemented
 	case codes.Unavailable:
 		code = http.StatusServiceUnavailable
+	case codes.ResourceExhausted:
+		code = http.StatusTooManyRequests
+	case codes.FailedPrecondition:
+		code = http.StatusConflict
 	default:
 		code = http.StatusInternalServerError
 	}
@@ -115,8 +121,25 @@ func main() {
 
 	userSvc := service.NewUserService(userRepo, apiKeyRepo, redisClient, emailSvc, jwtSecret)
 
+	// Admin Service
+	adminRepo := repository.NewAdminRepository(pgConn.DB)
+	sessionTTLMinutes := 30
+	if v := os.Getenv("ADMIN_SESSION_TTL_MINUTES"); v != "" {
+		if parsed, perr := strconv.Atoi(v); perr == nil && parsed > 0 {
+			sessionTTLMinutes = parsed
+		}
+	}
+	adminSvc := service.NewAdminService(userRepo, adminRepo, apiKeyRepo, redisClient, jwtSecret, time.Duration(sessionTTLMinutes)*time.Minute)
+
 	// Auth Interceptor
 	authInterceptor := service.NewAuthInterceptor(jwtSecret, apiKeyRepo)
+	authInterceptor.SetUserRepository(userRepo)
+	authInterceptor.SetRedis(redisClient)
+
+	// Admin bootstrap (no-op when ADMIN_BOOTSTRAP_EMAIL is empty)
+	if err := service.BootstrapAdmin(context.Background(), userRepo, os.Getenv("ADMIN_BOOTSTRAP_EMAIL"), os.Getenv("ADMIN_BOOTSTRAP_PASSWORD")); err != nil {
+		zap.S().Errorf("admin bootstrap failed: %v", err)
+	}
 
 	// gRPC Server
 	go func() {
@@ -132,6 +155,7 @@ func main() {
 
 		pb.RegisterPromptServiceServer(s, svc)
 		pb.RegisterUserServiceServer(s, userSvc)
+		pb.RegisterAdminServiceServer(s, adminSvc)
 		zap.S().Infof("gRPC server listening at %v", lis.Addr())
 		if err := s.Serve(lis); err != nil {
 			zap.S().Fatalf("failed to serve: %v", err)
@@ -1162,6 +1186,387 @@ func main() {
 
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// ---- Admin REST handlers (/api/v1/admin/*) ----
+
+	// requireAdmin verifies the admin token and returns an admin context.
+	requireAdmin := func(w http.ResponseWriter, r *http.Request) (context.Context, bool) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return nil, false
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := authInterceptor.VerifyTokenWithClaims(tokenStr)
+		if err != nil {
+			writeError(w, err)
+			return nil, false
+		}
+		if claims.Role != "admin" || claims.Scope != "admin" {
+			http.Error(w, "admin privileges required", http.StatusForbidden)
+			return nil, false
+		}
+		ctx := service.ContextWithUserID(r.Context(), claims.UserID)
+		ctx = service.ContextWithUserRole(ctx, claims.Role)
+		ctx = service.ContextWithUserScope(ctx, claims.Scope)
+		return ctx, true
+	}
+
+	// clientIP extracts the caller IP for admin login rate limiting.
+	clientIP := func(r *http.Request) string {
+		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+			if idx := strings.Index(fwd, ","); idx > 0 {
+				return strings.TrimSpace(fwd[:idx])
+			}
+			return strings.TrimSpace(fwd)
+		}
+		host := r.RemoteAddr
+		if idx := strings.LastIndex(host, ":"); idx > 0 {
+			host = host[:idx]
+		}
+		return host
+	}
+
+	// withClientIP attaches the client IP as gRPC metadata for the service.
+	withClientIP := func(ctx context.Context, ip string) context.Context {
+		return metadata.NewIncomingContext(ctx, metadata.Pairs("x-client-ip", ip))
+	}
+
+	http.HandleFunc("/api/v1/admin/login", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+		var req pb.AdminLoginRequest
+		if err := unmarshaler.Unmarshal(body, &req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		resp, err := adminSvc.AdminLogin(withClientIP(context.Background(), clientIP(r)), &req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/session/refresh", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+		resp, err := adminSvc.RefreshAdminSession(ctx, &pb.RefreshAdminSessionRequest{})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/stats", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+		resp, err := adminSvc.GetAdminStats(ctx, &pb.GetAdminStatsRequest{})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/users", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		req := &pb.ListUsersRequest{}
+		q := r.URL.Query()
+		req.Search = q.Get("search")
+		req.Status = q.Get("status")
+		req.Role = q.Get("role")
+		req.Sort = q.Get("sort")
+		if v, err := strconv.Atoi(q.Get("page")); err == nil {
+			req.Page = int32(v)
+		}
+		if v, err := strconv.Atoi(q.Get("per_page")); err == nil {
+			req.PerPage = int32(v)
+		}
+
+		resp, err := adminSvc.ListUsers(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/templates", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		req := &pb.ListAdminTemplatesRequest{}
+		q := r.URL.Query()
+		req.Search = q.Get("search")
+		req.Visibility = q.Get("visibility")
+		req.OwnerId = q.Get("owner_id")
+		req.Sort = q.Get("sort")
+		if v, err := strconv.Atoi(q.Get("page")); err == nil {
+			req.Page = int32(v)
+		}
+		if v, err := strconv.Atoi(q.Get("per_page")); err == nil {
+			req.PerPage = int32(v)
+		}
+
+		resp, err := adminSvc.ListTemplates(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/audit-log", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		req := &pb.ListAuditLogsRequest{}
+		q := r.URL.Query()
+		req.Action = q.Get("action")
+		req.Actor = q.Get("actor")
+		if v, err := strconv.Atoi(q.Get("page")); err == nil {
+			req.Page = int32(v)
+		}
+		if v, err := strconv.Atoi(q.Get("per_page")); err == nil {
+			req.PerPage = int32(v)
+		}
+
+		resp, err := adminSvc.ListAuditLogs(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/templates/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		id := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/templates/")
+		if id == "" {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+
+		resp, err := adminSvc.GetTemplate(ctx, &pb.GetAdminTemplateRequest{Id: id})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/users/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/users/")
+		parts := strings.Split(rest, "/")
+		if parts[0] == "" {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+		userID := parts[0]
+
+		// GET /api/v1/admin/users/{id}
+		if r.Method == http.MethodGet && len(parts) == 1 {
+			resp, err := adminSvc.GetUser(ctx, &pb.GetUserRequest{Id: userID})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		if r.Method != http.MethodPost || len(parts) != 2 {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+
+		switch parts[1] {
+		case "ban":
+			var req pb.BanUserRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.UserId = userID
+			resp, err := adminSvc.BanUser(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		case "unban":
+			var req pb.UnbanUserRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.UserId = userID
+			resp, err := adminSvc.UnbanUser(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		case "role":
+			var req pb.ChangeUserRoleRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.UserId = userID
+			resp, err := adminSvc.ChangeUserRole(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		default:
+			http.Error(w, "Unknown action", http.StatusNotFound)
 		}
 	})
 

@@ -102,6 +102,17 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 		}
 		return nil, fmt.Errorf("failed to get template: %w", err)
 	}
+	// Public templates of banned owners are hidden from everyone except the
+	// owner themselves (who cannot authenticate while banned anyway).
+	if t.Visibility == "public" && t.OwnerID != currentUserID {
+		var banned bool
+		err := r.db.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND status = 'banned')`, t.OwnerID,
+		).Scan(&banned)
+		if err == nil && banned {
+			return nil, fmt.Errorf("template not found")
+		}
+	}
 	return &t, nil
 }
 
@@ -160,6 +171,11 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 	if val, ok := filters["my_favorites"]; ok && val.(bool) {
 		query += " AND tf.user_id IS NOT NULL"
 	}
+	// Hide public templates of banned owners from the public square. A
+	// private listing (owner's own view) is unaffected.
+	if val, ok := filters["visibility"]; !ok || val == "" || val == "public" {
+		query += " AND NOT EXISTS (SELECT 1 FROM users bu WHERE bu.id = t.owner_id AND bu.status = 'banned')"
+	}
 
 	query += fmt.Sprintf(" ORDER BY t.created_at DESC LIMIT $%d OFFSET $%d", argID, argID+1)
 	args = append(args, limit, offset)
@@ -200,6 +216,7 @@ func (r *templateRepository) ListCategories(ctx context.Context, filters map[str
 		SELECT category, COUNT(*) as count
 		FROM templates
 		WHERE category IS NOT NULL AND category != ''
+		AND NOT EXISTS (SELECT 1 FROM users bu WHERE bu.id = templates.owner_id AND bu.status = 'banned')
 	`
 	var args []interface{}
 	argID := 1
@@ -272,7 +289,7 @@ func (r *templateRepository) ListTags(ctx context.Context, filters map[string]in
 		FROM (
 			SELECT unnest(tags) as tag
 			FROM templates
-			WHERE 1=1 %s
+			WHERE 1=1 AND NOT EXISTS (SELECT 1 FROM users bu WHERE bu.id = templates.owner_id AND bu.status = 'banned') %s
 		) as t
 		GROUP BY tag
 		ORDER BY count DESC

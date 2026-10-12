@@ -1,0 +1,42 @@
+.admin-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  &__control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+
+    select {
+      appearance: none;
+      height: 38px;
+      padding: 0 32px 0 12px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+      min-width: 140px;
+
+      &:focus {
+        border-color: var(--primary);
+      }
+    }
+
+    svg {
+      position: absolute;
+      right: 10px;
+      pointer-events: none;
+      color: var(--text-secondary);
+    }
+  }
+}

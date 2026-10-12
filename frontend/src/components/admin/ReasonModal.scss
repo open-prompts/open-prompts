@@ -1,0 +1,58 @@
+.admin-reason-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__consequences {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    font-size: 13px;
+
+    li {
+      margin-bottom: 4px;
+    }
+  }
+
+  &__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--background);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+
+    &:focus {
+      border-color: var(--primary);
+    }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: #ea4a5a;
+  }
+
+  &__count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: auto;
+  }
+}
