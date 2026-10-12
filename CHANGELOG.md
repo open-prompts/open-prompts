@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/open-prompts/open-prompts/compare/v1.16.0...v1.17.0) (2026-10-12)
+
+
+### Features
+
+* **notifications:** add engagement notification center with unread badge ([dbf46c7](https://github.com/open-prompts/open-prompts/commit/dbf46c7542ef2eb39b208a3507c75b99040b0ee7))
+
 # [1.16.0](https://github.com/open-prompts/open-prompts/compare/v1.15.1...v1.16.0) (2026-10-12)
 
 
