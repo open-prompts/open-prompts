@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/open-prompts/open-prompts/compare/v1.19.0...v1.19.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **i18n:** remove double-nested versioning keys in locale files ([69c29cd](https://github.com/open-prompts/open-prompts/commit/69c29cd810b0a0d66c0e20b35f285139a6c1e912))
+
 # [1.19.0](https://github.com/open-prompts/open-prompts/compare/v1.18.0...v1.19.0) (2026-10-12)
 
 
