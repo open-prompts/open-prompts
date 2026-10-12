@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/open-prompts/open-prompts/compare/v1.17.0...v1.18.0) (2026-10-12)
+
+
+### Features
+
+* **comments:** add template comments with moderation ([793a48f](https://github.com/open-prompts/open-prompts/commit/793a48f9a1acf121db998652f743942c29855c38))
+
 # [1.17.0](https://github.com/open-prompts/open-prompts/compare/v1.16.0...v1.17.0) (2026-10-12)
 
 
