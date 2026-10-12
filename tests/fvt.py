@@ -4,10 +4,18 @@ import requests
 import sys
 import os
 import json
+import shlex
 import atexit
 
 BASE_URL = "http://localhost:8080/api/v1/templates"
 PROMPT_URL = "http://localhost:8080/api/v1/prompts"
+
+# Admin console bootstrap credentials. The backend only creates/promotes the
+# admin account when ADMIN_BOOTSTRAP_EMAIL is set, and the admin suites below
+# need it, so main() passes these as an env prefix on the compose command.
+# Overridable from the environment (production uses deployment/.env or helm).
+ADMIN_BOOTSTRAP_EMAIL = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "admin@example.com")
+ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "Admin_123456")
 
 # Resource Tracking
 CREATED_TEMPLATES = [] # List of {'id': uuid, 'owner_id': string}
@@ -911,13 +919,14 @@ def test_profile_update():
 def test_admin_user_management():
     """Admin console API end-to-end: login, stats, list/detail, ban/unban,
     role change, audit log, and access control. Requires the stack to be
-    started with ADMIN_BOOTSTRAP_EMAIL/PASSWORD set (see deployment/.env)."""
+    started with an admin bootstrap account (main() passes
+    ADMIN_BOOTSTRAP_EMAIL/PASSWORD on the compose command)."""
     print("--- Starting Admin User Management Test ---")
     APP = "http://localhost:8080/api/v1"
     ADMIN = f"{APP}/admin"
 
-    bootstrap_email = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "admin@example.com")
-    bootstrap_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "Admin_123456")
+    bootstrap_email = ADMIN_BOOTSTRAP_EMAIL
+    bootstrap_password = ADMIN_BOOTSTRAP_PASSWORD
 
     # 1. Admin login with bootstrap credentials
     print("1. Admin login...")
@@ -1643,8 +1652,8 @@ def test_template_comments():
     banned_id = f"cmt_banned_{int(time.time())}"
     token_banned = get_auth_token(banned_id)
     headers_banned = {"Authorization": f"Bearer {token_banned}"}
-    bootstrap_email = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "admin@example.com")
-    bootstrap_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "Admin_123456")
+    bootstrap_email = ADMIN_BOOTSTRAP_EMAIL
+    bootstrap_password = ADMIN_BOOTSTRAP_PASSWORD
     resp = requests.post(f"{ADMIN}/login", json={"email": bootstrap_email, "password": bootstrap_password})
     if resp.status_code != 200:
         print(f"Admin login failed: {resp.status_code} {resp.text}")
@@ -1779,9 +1788,17 @@ def test_template_comments():
 
 
 def main():
-    # Start containers
+    # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
+    # compose command rather than baked into docker-compose.yml, so the stack
+    # gets an admin account without shipping a privileged default (CI needs no
+    # workflow change either).
     print("Starting containers...")
-    if not run_command("docker compose -f deployment/docker-compose.yml up -d --build"):
+    compose_up = (
+        f"ADMIN_BOOTSTRAP_EMAIL={shlex.quote(ADMIN_BOOTSTRAP_EMAIL)} "
+        f"ADMIN_BOOTSTRAP_PASSWORD={shlex.quote(ADMIN_BOOTSTRAP_PASSWORD)} "
+        "docker compose -f deployment/docker-compose.yml up -d --build"
+    )
+    if not run_command(compose_up):
         sys.exit(1)
 
     # Wait for backend
