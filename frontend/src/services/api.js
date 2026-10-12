@@ -155,3 +155,24 @@ export const createAPIKey = (keyData) => {
 export const deleteAPIKey = (id) => {
   return api.delete(`/api-keys/${id}`);
 };
+
+// API methods for Notifications
+export const getNotifications = (params) => {
+  return api.get('/notifications', { params });
+};
+
+export const getUnreadNotificationCount = () => {
+  return api.get('/notifications/unread-count');
+};
+
+export const markNotificationRead = (id) => {
+  return api.post(`/notifications/${id}/read`);
+};
+
+export const markAllNotificationsRead = () => {
+  return api.post('/notifications/read-all');
+};
+
+export const deleteNotification = (id) => {
+  return api.delete(`/notifications/${id}`);
+};

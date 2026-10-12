@@ -86,8 +86,13 @@ func main() {
 	promptRepo := repository.NewPromptRepository(pgConn.DB)
 	templateVersionRepo := repository.NewTemplateVersionRepository(pgConn.DB)
 	templateAliasRepo := repository.NewTemplateAliasRepository(pgConn.DB)
+	notificationRepo := repository.NewNotificationRepository(pgConn.DB)
 
-	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo, templateAliasRepo)
+	// User repository is needed by the prompt service for notification
+	// actor lookups; construct it before the prompt service.
+	userRepo := repository.NewUserRepository(pgConn.DB)
+
+	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo, templateAliasRepo, notificationRepo, userRepo)
 
 	// Redis
 	redisAddr := os.Getenv("REDIS_ADDR")
@@ -100,7 +105,6 @@ func main() {
 	}
 
 	// User Service
-	userRepo := repository.NewUserRepository(pgConn.DB)
 	apiKeyRepo := repository.NewAPIKeyRepository(pgConn.DB)
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -131,6 +135,21 @@ func main() {
 	}
 	adminSvc := service.NewAdminService(userRepo, adminRepo, apiKeyRepo, redisClient, jwtSecret, time.Duration(sessionTTLMinutes)*time.Minute)
 
+	// Notification Service (engagement notifications)
+	notificationReadRetentionDays := 90
+	if v := os.Getenv("NOTIFICATION_READ_RETENTION_DAYS"); v != "" {
+		if parsed, perr := strconv.Atoi(v); perr == nil && parsed > 0 {
+			notificationReadRetentionDays = parsed
+		}
+	}
+	notificationRetentionDays := 180
+	if v := os.Getenv("NOTIFICATION_RETENTION_DAYS"); v != "" {
+		if parsed, perr := strconv.Atoi(v); perr == nil && parsed > 0 {
+			notificationRetentionDays = parsed
+		}
+	}
+	notificationSvc := service.NewNotificationService(notificationRepo, notificationReadRetentionDays, notificationRetentionDays)
+
 	// Auth Interceptor
 	authInterceptor := service.NewAuthInterceptor(jwtSecret, apiKeyRepo)
 	authInterceptor.SetUserRepository(userRepo)
@@ -156,6 +175,7 @@ func main() {
 		pb.RegisterPromptServiceServer(s, svc)
 		pb.RegisterUserServiceServer(s, userSvc)
 		pb.RegisterAdminServiceServer(s, adminSvc)
+		pb.RegisterNotificationServiceServer(s, notificationSvc)
 		zap.S().Infof("gRPC server listening at %v", lis.Addr())
 		if err := s.Serve(lis); err != nil {
 			zap.S().Fatalf("failed to serve: %v", err)
@@ -1019,6 +1039,148 @@ func main() {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+
+	// Notification Handlers (user-facing; recipient always from the token)
+	http.HandleFunc("/api/v1/notifications", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		q := r.URL.Query()
+		req := &pb.ListNotificationsRequest{Filter: q.Get("filter")}
+		if v := q.Get("page_size"); v != "" {
+			if i, cerr := strconv.Atoi(v); cerr == nil {
+				req.PageSize = int32(i)
+			}
+		}
+		req.PageToken = q.Get("page_token")
+
+		resp, err := notificationSvc.ListNotifications(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/notifications/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/notifications/")
+		parts := strings.Split(rest, "/")
+
+		// /api/v1/notifications/unread-count (GET)
+		if len(parts) == 1 && parts[0] == "unread-count" {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			resp, err := notificationSvc.GetUnreadNotificationCount(ctx, &pb.GetUnreadNotificationCountRequest{})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/notifications/read-all (POST)
+		if len(parts) == 1 && parts[0] == "read-all" {
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			resp, err := notificationSvc.MarkAllNotificationsRead(ctx, &pb.MarkAllNotificationsReadRequest{})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/notifications/{id}/read (POST)
+		if len(parts) == 2 && parts[1] == "read" {
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			resp, err := notificationSvc.MarkNotificationRead(ctx, &pb.MarkNotificationReadRequest{Id: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/notifications/{id} (DELETE)
+		if len(parts) == 1 && parts[0] != "" {
+			if r.Method != http.MethodDelete {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			resp, err := notificationSvc.DeleteNotification(ctx, &pb.DeleteNotificationRequest{Id: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		http.Error(w, "Not found", http.StatusNotFound)
 	})
 
 	// Prompt Handlers

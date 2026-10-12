@@ -1224,6 +1224,279 @@ def test_admin_user_management():
     return True
 
 
+def test_notifications():
+    """Engagement notifications:
+    1. like/favorite/fork events create notifications for the template owner
+    2. self-actions create no notification
+    3. re-like while unread is deduplicated
+    4. filter=pagination, mark-read idempotency, read-all, delete semantics
+    5. cross-user access returns 404, unauthenticated returns 401
+    """
+    print("\n--- Starting Notifications Test ---")
+
+    NOTIF_URL = "http://localhost:8080/api/v1/notifications"
+
+    owner_id = f"notif_owner_{int(time.time())}"
+    token_owner = get_auth_token(owner_id)
+    headers_owner = {"Authorization": f"Bearer {token_owner}"}
+
+    actor_id = f"notif_actor_{int(time.time())}"
+    token_actor = get_auth_token(actor_id)
+    headers_actor = {"Authorization": f"Bearer {token_actor}"}
+
+    # 1. Owner creates a template
+    print(f"Creating template by {owner_id}...")
+    t_data = {
+        "title": "Notif Template",
+        "description": "For notification tests",
+        "content": "Notify me",
+        "owner_id": owner_id,
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "Social",
+        "tags": ["notify"]
+    }
+    resp = requests.post(BASE_URL, json=t_data, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Failed to create template: {resp.text}")
+        return False
+    t_id = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({'id': t_id, 'owner_id': owner_id})
+    print(f"Template created: {t_id}")
+
+    # 2. Unauthenticated requests are rejected on all endpoints
+    print("Checking 401 on unauthenticated requests...")
+    if requests.get(NOTIF_URL).status_code != 401:
+        print("List without token should be 401")
+        return False
+    if requests.get(f"{NOTIF_URL}/unread-count").status_code != 401:
+        print("Unread-count without token should be 401")
+        return False
+    if requests.post(f"{NOTIF_URL}/read-all").status_code != 401:
+        print("Read-all without token should be 401")
+        return False
+    if requests.post(f"{NOTIF_URL}/some-id/read").status_code != 401:
+        print("Mark-read without token should be 401")
+        return False
+    if requests.delete(f"{NOTIF_URL}/some-id").status_code != 401:
+        print("Delete without token should be 401")
+        return False
+    print("401 checks passed")
+
+    # 3. Owner starts with zero notifications
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    if resp.status_code != 200 or resp.json().get("count", -1) < 0:
+        print(f"Unread-count failed: {resp.text}")
+        return False
+    initial_unread = resp.json()["count"]
+
+    # 4. Actor likes the template -> notification created
+    print("Actor likes template...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)
+    if resp.status_code != 200 or not resp.json().get("is_liked"):
+        print(f"Like failed: {resp.text}")
+        return False
+
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    if resp.json()["count"] != initial_unread + 1:
+        print(f"Unread count should be {initial_unread + 1}, got {resp.json()['count']}")
+        return False
+
+    # 5. Actor favorites the template -> notification created
+    print("Actor favorites template...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/favorite", headers=headers_actor)
+    if resp.status_code != 200 or not resp.json().get("is_favorited"):
+        print(f"Favorite failed: {resp.text}")
+        return False
+
+    # 6. Actor forks the template -> notification created
+    print("Actor forks template...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/fork", headers=headers_actor)
+    if resp.status_code != 200:
+        print(f"Fork failed: {resp.text}")
+        return False
+    forked_id = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({'id': forked_id, 'owner_id': actor_id})
+
+    # 7. Owner lists notifications - should see like/favorite/fork for this template
+    print("Owner lists notifications...")
+    resp = requests.get(NOTIF_URL, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"List failed: {resp.text}")
+        return False
+    data = resp.json()
+    notifs = [n for n in data.get("notifications", []) if n.get("template_id") == t_id]
+    types = sorted(n["type"] for n in notifs)
+    if types != ["favorite", "fork", "like"]:
+        print(f"Expected like/favorite/fork notifications, got: {types}")
+        return False
+    like_notif = next(n for n in notifs if n["type"] == "like")
+    if like_notif.get("actor_id") != actor_id:
+        print(f"actor_id mismatch: {like_notif.get('actor_id')}")
+        return False
+    if not like_notif.get("actor_display_name"):
+        print("actor_display_name should be populated")
+        return False
+    if like_notif.get("template_title") != "Notif Template":
+        print(f"template_title mismatch: {like_notif.get('template_title')}")
+        return False
+    if like_notif.get("read_at"):
+        print("read_at should be empty for unread notification")
+        return False
+    if not like_notif.get("created_at"):
+        print("created_at should be populated")
+        return False
+    print("List content verified")
+
+    # 8. unread_count in list response matches
+    resp = requests.get(NOTIF_URL, headers=headers_owner)
+    if resp.json().get("unread_count") != initial_unread + 3:
+        print(f"unread_count in list should be {initial_unread + 3}, got {resp.json().get('unread_count')}")
+        return False
+
+    # 9. filter=unread returns only unread
+    resp = requests.get(f"{NOTIF_URL}?filter=unread", headers=headers_owner)
+    unread_notifs = [n for n in resp.json().get("notifications", []) if n.get("template_id") == t_id]
+    if len(unread_notifs) != 3:
+        print(f"filter=unread should return 3 for this template, got {len(unread_notifs)}")
+        return False
+
+    # 10. Dedupe: actor unlikes and re-likes while unread -> no new notification
+    print("Verifying dedupe on re-like...")
+    requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)  # unlike
+    resp = requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)  # re-like
+    if not resp.json().get("is_liked"):
+        print("Re-like failed")
+        return False
+    resp = requests.get(f"{NOTIF_URL}?filter=unread", headers=headers_owner)
+    unread_notifs = [n for n in resp.json().get("notifications", []) if n.get("template_id") == t_id]
+    if len(unread_notifs) != 3:
+        print(f"Dedupe failed: expected 3 unread, got {len(unread_notifs)}")
+        return False
+    print("Dedupe verified")
+
+    # 11. Self-actions create no notification
+    print("Owner self-like/favorite/fork...")
+    requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_owner)
+    requests.post(f"{BASE_URL}/{t_id}/favorite", headers=headers_owner)
+    resp = requests.post(f"{BASE_URL}/{t_id}/fork", headers=headers_owner)
+    if resp.status_code == 200:
+        CREATED_TEMPLATES.append({'id': resp.json()["template"]["id"], 'owner_id': owner_id})
+    resp = requests.get(f"{NOTIF_URL}?filter=unread", headers=headers_owner)
+    unread_notifs = [n for n in resp.json().get("notifications", []) if n.get("template_id") == t_id]
+    if len(unread_notifs) != 3:
+        print(f"Self-actions should not create notifications, got {len(unread_notifs)}")
+        return False
+    print("Self-action suppression verified")
+
+    # 12. Pagination: page_size=2
+    print("Testing pagination...")
+    resp = requests.get(f"{NOTIF_URL}?page_size=2", headers=headers_owner)
+    page1 = resp.json()
+    if len(page1.get("notifications", [])) != 2:
+        print(f"page_size=2 should return 2 items, got {len(page1.get('notifications', []))}")
+        return False
+    if not page1.get("next_page_token"):
+        print("next_page_token should be set when more pages exist")
+        return False
+    resp = requests.get(f"{NOTIF_URL}?page_size=2&page_token={page1['next_page_token']}", headers=headers_owner)
+    page2 = resp.json()
+    p1_ids = {n["id"] for n in page1["notifications"]}
+    p2_ids = {n["id"] for n in page2["notifications"]}
+    if p1_ids & p2_ids:
+        print("Pages should not overlap")
+        return False
+    print("Pagination verified")
+
+    # 13. Mark read: idempotent
+    print("Testing mark-read...")
+    resp = requests.get(f"{NOTIF_URL}?filter=unread", headers=headers_owner)
+    target = next(n for n in resp.json()["notifications"] if n["template_id"] == t_id)
+    resp = requests.post(f"{NOTIF_URL}/{target['id']}/read", headers=headers_owner)
+    if resp.status_code != 200 or not resp.json().get("success"):
+        print(f"Mark-read failed: {resp.text}")
+        return False
+    resp = requests.post(f"{NOTIF_URL}/{target['id']}/read", headers=headers_owner)
+    if resp.status_code != 200 or not resp.json().get("success"):
+        print(f"Mark-read should be idempotent: {resp.text}")
+        return False
+    resp = requests.get(f"{NOTIF_URL}?filter=unread", headers=headers_owner)
+    if any(n["id"] == target["id"] for n in resp.json().get("notifications", [])):
+        print("Marked notification should not appear in unread filter")
+        return False
+    print("Mark-read idempotency verified")
+
+    # 14. Cross-user access: actor cannot read/delete owner's notification
+    print("Testing cross-user 404...")
+    if requests.post(f"{NOTIF_URL}/{target['id']}/read", headers=headers_actor).status_code != 404:
+        print("Cross-user mark-read should be 404")
+        return False
+    if requests.delete(f"{NOTIF_URL}/{target['id']}", headers=headers_actor).status_code != 404:
+        print("Cross-user delete should be 404")
+        return False
+    print("Cross-user 404 verified")
+
+    # 15. Read-all
+    print("Testing read-all...")
+    resp = requests.post(f"{NOTIF_URL}/read-all", headers=headers_owner)
+    if resp.status_code != 200 or not resp.json().get("success"):
+        print(f"Read-all failed: {resp.text}")
+        return False
+    if resp.json().get("updated_count", 0) < 1:
+        print(f"updated_count should be >= 1, got {resp.json().get('updated_count')}")
+        return False
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    if resp.json()["count"] != 0:
+        print(f"Unread count should be 0 after read-all, got {resp.json()['count']}")
+        return False
+    print("Read-all verified")
+
+    # 16. Delete: success then 404 on repeat
+    print("Testing delete...")
+    resp = requests.delete(f"{NOTIF_URL}/{target['id']}", headers=headers_owner)
+    if resp.status_code != 200 or not resp.json().get("success"):
+        print(f"Delete failed: {resp.text}")
+        return False
+    if requests.delete(f"{NOTIF_URL}/{target['id']}", headers=headers_owner).status_code != 404:
+        print("Repeat delete should be 404")
+        return False
+    print("Delete verified")
+
+    # 17. Actor has no notifications of their own from these actions
+    resp = requests.get(NOTIF_URL, headers=headers_actor)
+    actor_notifs = [n for n in resp.json().get("notifications", []) if n.get("template_id") == t_id]
+    if actor_notifs:
+        print(f"Actor should have no notifications for template {t_id}")
+        return False
+
+    # 18. Template deletion cascades notifications
+    print("Testing template-delete cascade...")
+    # The actor's like is still ON from the dedupe step; toggle it off first
+    # so the like below is a fresh toggle-ON that creates a new notification
+    # (the previous one is either read or deleted, so dedupe does not apply).
+    requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)  # unlike
+    resp = requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)  # like ON
+    if not resp.json().get("is_liked"):
+        print("Pre-cascade like failed")
+        return False
+    resp = requests.get(NOTIF_URL, headers=headers_owner)
+    if not any(n.get("template_id") == t_id for n in resp.json().get("notifications", [])):
+        print("Notification should exist before cascade test")
+        return False
+    resp = requests.delete(f"{BASE_URL}/{t_id}?owner_id={owner_id}", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Template delete failed: {resp.text}")
+        return False
+    # cleanup() tolerates 404 for already-deleted templates
+    resp = requests.get(NOTIF_URL, headers=headers_owner)
+    if any(n.get("template_id") == t_id for n in resp.json().get("notifications", [])):
+        print("Notifications should be cascade-deleted with template")
+        return False
+    print("Cascade verified")
+
+    print("--- Notifications Test Passed ---")
+    return True
+
+
 def main():
     # Start containers
     print("Starting containers...")
@@ -1249,6 +1522,7 @@ def main():
     if success: success = test_tag_filtering()
     if success: success = test_pagination()
     if success: success = test_likes_and_favorites()
+    if success: success = test_notifications()
     if success: success = test_profile_update()
     if success: success = test_template_alias_flow()
     if success: success = test_language_behavior()

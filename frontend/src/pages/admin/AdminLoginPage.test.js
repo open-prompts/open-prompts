@@ -54,7 +54,7 @@ describe('AdminLoginPage', () => {
   test('submit is disabled until both fields are filled', () => {
     renderWithRedux(<AdminLoginPage />);
 
-    const submit = screen.getByText('admin.login.submit').closest('button');
+    const submit = screen.getByRole('button', { name: 'admin.login.submit' });
     expect(submit).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('admin.login.email'), {

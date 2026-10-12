@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package v1;
+
+option go_package = "open-prompts/backend/api/proto/v1;v1";
+
+// NotificationService serves per-user engagement notifications.
+// All RPCs require authentication; the recipient is always derived
+// from the authenticated user, never from request fields. Event
+// creation is internal-only (repository insert from the like/
+// favorite/fork service paths), not an RPC.
+service NotificationService {
+  // ListNotifications returns the caller's notifications, newest first.
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+  // GetUnreadNotificationCount returns the unread badge count.
+  rpc GetUnreadNotificationCount(GetUnreadNotificationCountRequest) returns (GetUnreadNotificationCountResponse);
+  // MarkNotificationRead marks a single notification read (idempotent).
+  rpc MarkNotificationRead(MarkNotificationReadRequest) returns (MarkNotificationReadResponse);
+  // MarkAllNotificationsRead marks every unread notification of the caller read.
+  rpc MarkAllNotificationsRead(MarkAllNotificationsReadRequest) returns (MarkAllNotificationsReadResponse);
+  // DeleteNotification deletes a single notification.
+  rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteNotificationResponse);
+}
+
+message ListNotificationsRequest {
+  string filter = 1;      // "all" (default) | "unread"
+  int32 page_size = 2;    // 1-100, default 20
+  string page_token = 3;  // offset-as-string (existing convention)
+}
+
+message Notification {
+  string id = 1;
+  string type = 2;               // "like" | "favorite" | "fork"
+  string actor_id = 3;
+  string actor_display_name = 4; // snapshot at event time
+  string actor_avatar = 5;       // live join, may be empty
+  string template_id = 6;
+  string template_title = 7;     // live join
+  string read_at = 8;            // RFC3339, empty when unread
+  string created_at = 9;         // RFC3339
+}
+
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
+  string next_page_token = 2;
+  int32 unread_count = 3; // badge reconciliation in one call
+}
+
+message GetUnreadNotificationCountRequest {}
+
+message GetUnreadNotificationCountResponse {
+  int32 count = 1;
+}
+
+message MarkNotificationReadRequest {
+  string id = 1;
+}
+
+message MarkNotificationReadResponse {
+  bool success = 1;
+}
+
+message MarkAllNotificationsReadRequest {}
+
+message MarkAllNotificationsReadResponse {
+  bool success = 1;
+  int32 updated_count = 2;
+}
+
+message DeleteNotificationRequest {
+  string id = 1;
+}
+
+message DeleteNotificationResponse {
+  bool success = 1;
+}

@@ -53,3 +53,7 @@ spec:
               value: {{ .Values.backend.env.adminBootstrapPassword | quote }}
             - name: ADMIN_SESSION_TTL_MINUTES
               value: {{ .Values.backend.env.adminSessionTtlMinutes | quote }}
+            - name: NOTIFICATION_READ_RETENTION_DAYS
+              value: {{ .Values.backend.env.notificationReadRetentionDays | quote }}
+            - name: NOTIFICATION_RETENTION_DAYS
+              value: {{ .Values.backend.env.notificationRetentionDays | quote }}

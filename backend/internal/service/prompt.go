@@ -27,6 +27,8 @@ type PromptService struct {
 	TemplateRepo        repository.TemplateRepository
 	TemplateVersionRepo repository.TemplateVersionRepository
 	TemplateAliasRepo   repository.TemplateAliasRepository
+	NotificationRepo    repository.NotificationRepository
+	UserRepo            repository.UserRepository
 }
 
 func NewPromptService(
@@ -34,12 +36,48 @@ func NewPromptService(
 	templateRepo repository.TemplateRepository,
 	templateVersionRepo repository.TemplateVersionRepository,
 	templateAliasRepo repository.TemplateAliasRepository,
+	notificationRepo repository.NotificationRepository,
+	userRepo repository.UserRepository,
 ) *PromptService {
 	return &PromptService{
 		PromptRepo:          promptRepo,
 		TemplateRepo:        templateRepo,
 		TemplateVersionRepo: templateVersionRepo,
 		TemplateAliasRepo:   templateAliasRepo,
+		NotificationRepo:    notificationRepo,
+		UserRepo:            userRepo,
+	}
+}
+
+// createEngagementNotification emits a like/favorite/fork notification to the
+// template owner. It is strictly best-effort (FR-7): self-actions are
+// suppressed (FR-2) and any failure is logged and swallowed so the triggering
+// engagement is never affected.
+func (s *PromptService) createEngagementNotification(ctx context.Context, notificationType, templateID, ownerID, actorID string) {
+	if s.NotificationRepo == nil || s.UserRepo == nil {
+		return
+	}
+	if ownerID == actorID {
+		return
+	}
+	actor, err := s.UserRepo.GetByID(ctx, actorID)
+	if err != nil || actor == nil {
+		zap.S().Warnf("notification hook: failed to load actor %s: %v", actorID, err)
+		return
+	}
+	displayName := actor.DisplayName
+	if displayName == "" {
+		displayName = actor.ID
+	}
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      ownerID,
+		ActorID:          actorID,
+		TemplateID:       templateID,
+		Type:             notificationType,
+		ActorDisplayName: displayName,
+	}); err != nil {
+		zap.S().Errorf("notification hook: failed to create %s notification (template=%s actor=%s): %v",
+			notificationType, templateID, actorID, err)
 	}
 }
 
@@ -170,6 +208,9 @@ func (s *PromptService) ForkTemplate(ctx context.Context, templateID string) (*p
 	if err := s.TemplateVersionRepo.Create(ctx, newVer); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create forked version: %v", err)
 	}
+
+	// Notify the source template owner (best-effort, self-suppressed).
+	s.createEngagementNotification(ctx, "fork", templateID, sourceTpl.OwnerID, userID)
 
 	return &pb.CreateTemplateResponse{
 		Template: s.templateModelToProto(newTpl),
@@ -547,6 +588,15 @@ func (s *PromptService) ToggleLikeTemplate(ctx context.Context, req *pb.ToggleLi
 		return nil, status.Errorf(codes.Internal, "failed to toggle like: %v", err)
 	}
 
+	// Notify the owner when the like was toggled ON (best-effort).
+	if isLiked {
+		if tpl, terr := s.TemplateRepo.Get(ctx, req.TemplateId, userID); terr == nil {
+			s.createEngagementNotification(ctx, "like", req.TemplateId, tpl.OwnerID, userID)
+		} else {
+			zap.S().Warnf("notification hook: failed to load template %s after like: %v", req.TemplateId, terr)
+		}
+	}
+
 	return &pb.ToggleLikeResponse{
 		IsLiked:   isLiked,
 		LikeCount: count,
@@ -564,6 +614,15 @@ func (s *PromptService) ToggleFavoriteTemplate(ctx context.Context, req *pb.Togg
 	isFavorited, count, err := s.TemplateRepo.ToggleFavorite(ctx, userID, req.TemplateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to toggle favorite: %v", err)
+	}
+
+	// Notify the owner when the favorite was toggled ON (best-effort).
+	if isFavorited {
+		if tpl, terr := s.TemplateRepo.Get(ctx, req.TemplateId, userID); terr == nil {
+			s.createEngagementNotification(ctx, "favorite", req.TemplateId, tpl.OwnerID, userID)
+		} else {
+			zap.S().Warnf("notification hook: failed to load template %s after favorite: %v", req.TemplateId, terr)
+		}
 	}
 
 	return &pb.ToggleFavoriteResponse{

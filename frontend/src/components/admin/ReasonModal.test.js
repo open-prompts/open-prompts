@@ -32,7 +32,7 @@ describe('ReasonModal', () => {
       <ReasonModal open action="ban" name="alice" onConfirm={onConfirm} onClose={onClose} />
     );
 
-    const confirmBtn = screen.getByText('admin.reasonModal.confirm_ban').closest('button');
+    const confirmBtn = screen.getByRole('button', { name: 'admin.reasonModal.confirm_ban' });
     expect(confirmBtn).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('admin.reasonModal.reason_label'), {
@@ -95,7 +95,7 @@ describe('ReasonModal', () => {
       <ReasonModal open action="ban" name="alice" onConfirm={onConfirm} onClose={onClose} busy />
     );
 
-    const confirmBtn = screen.getByText('admin.reasonModal.confirm_ban').closest('button');
+    const confirmBtn = screen.getByRole('button', { name: 'admin.reasonModal.confirm_ban' });
     expect(confirmBtn).toBeDisabled();
     expect(screen.getByLabelText('admin.reasonModal.reason_label')).toBeDisabled();
   });

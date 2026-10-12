@@ -429,5 +429,49 @@
       "language": "Language",
       "theme": "Theme"
     }
+  },
+  "notifications": {
+    "bell_aria": "Notifications, {{count}} unread",
+    "bell_aria_zero": "Notifications",
+    "title": "Notifications",
+    "mark_all_read": "Mark all read",
+    "view_all": "View all",
+    "mark_read": "Mark read",
+    "delete": "Delete",
+    "load_more": "Load more",
+    "filter": {
+      "all": "All ({{count}})",
+      "unread": "Unread ({{count}})"
+    },
+    "event": {
+      "like": "{{actor}} liked your template \"{{title}}\"",
+      "favorite": "{{actor}} favorited your template \"{{title}}\"",
+      "fork": "{{actor}} forked your template \"{{title}}\""
+    },
+    "empty": {
+      "all": "No notifications yet — when someone likes, favorites, or forks your templates, you'll see it here.",
+      "unread": "You're all caught up.",
+      "dropdown": "No notifications yet"
+    },
+    "toast": {
+      "marked_read": "Notification marked as read",
+      "all_marked_read": "All notifications marked as read",
+      "deleted": "Notification deleted"
+    },
+    "confirm": {
+      "delete": "Delete this notification? This cannot be undone."
+    },
+    "error": {
+      "fetch": "Failed to load notifications.",
+      "mark": "Failed to mark as read.",
+      "delete": "Failed to delete notification.",
+      "retry": "Retry"
+    }
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   }
 }

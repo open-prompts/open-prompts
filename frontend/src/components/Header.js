@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { MenuIcon, MoonIcon, SunIcon, TranslateIcon, UserIcon, ChevronDownIcon } from './ui/Icons';
+import NotificationBell from './notifications/NotificationBell';
 import { logout } from '../store/authSlice';
 import './Header.scss';
 
@@ -111,6 +112,7 @@ const Header = ({ onMenuClick }) => {
           <TranslateIcon size={19} />
           <span>{isChinese ? t('template.en') : t('template.zh')}</span>
         </button>
+        {user && <NotificationBell />}
         {user ? (
           <div className="user-profile" ref={dropdownRef}>
             <button className="user-name-btn" onClick={toggleDropdown}>

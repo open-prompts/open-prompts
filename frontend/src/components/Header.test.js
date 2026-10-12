@@ -4,12 +4,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../store/authSlice';
+import notificationsReducer from '../store/notificationsSlice';
 import Header from './Header';
 
 // Helper to render with Redux
 const renderWithRedux = (component, { initialState } = {}) => {
   const store = configureStore({
-    reducer: { auth: authReducer },
+    reducer: { auth: authReducer, notifications: notificationsReducer },
     preloadedState: initialState,
   });
   return {

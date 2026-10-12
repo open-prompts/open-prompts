@@ -249,3 +249,35 @@ COMMENT ON COLUMN admin_audit_logs.reason IS 'Mandatory justification, 3-500 cha
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor_id ON admin_audit_logs(actor_id);
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_target_id ON admin_audit_logs(target_id);
+
+-- -----------------------------------------------------------------------------
+-- Table: notifications
+-- Description: Engagement notifications (like/favorite/fork) for template
+--              owners. Recipient is always the template owner; actor is the
+--              engaging user. Self-actions are suppressed in the service
+--              layer and enforced by the no_self_notify CHECK as a backstop.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipient_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    actor_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('like', 'favorite', 'fork')),
+    actor_display_name TEXT NOT NULL,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT no_self_notify CHECK (recipient_id <> actor_id)
+);
+
+COMMENT ON TABLE notifications IS 'Engagement notifications for template owners';
+COMMENT ON COLUMN notifications.recipient_id IS 'Template owner receiving the notification';
+COMMENT ON COLUMN notifications.actor_id IS 'User who liked/favorited/forked the template';
+COMMENT ON COLUMN notifications.template_id IS 'Template the event happened on (cascade-deleted with it)';
+COMMENT ON COLUMN notifications.type IS 'Event type: like | favorite | fork';
+COMMENT ON COLUMN notifications.actor_display_name IS 'Actor display name snapshot at event time';
+COMMENT ON COLUMN notifications.read_at IS 'NULL while unread';
+
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_unread
+    ON notifications (recipient_id) WHERE read_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_created
+    ON notifications (recipient_id, created_at DESC);

@@ -429,5 +429,49 @@
       "language": "语言",
       "theme": "主题"
     }
+  },
+  "notifications": {
+    "bell_aria": "通知，{{count}} 条未读",
+    "bell_aria_zero": "通知",
+    "title": "通知",
+    "mark_all_read": "全部已读",
+    "view_all": "查看全部",
+    "mark_read": "标为已读",
+    "delete": "删除",
+    "load_more": "加载更多",
+    "filter": {
+      "all": "全部（{{count}}）",
+      "unread": "未读（{{count}}）"
+    },
+    "event": {
+      "like": "{{actor}} 赞了你的模板\"{{title}}\"",
+      "favorite": "{{actor}} 收藏了你的模板\"{{title}}\"",
+      "fork": "{{actor}} fork 了你的模板\"{{title}}\""
+    },
+    "empty": {
+      "all": "还没有通知 —— 当有人点赞、收藏或 fork 你的模板时，会显示在这里。",
+      "unread": "你已全部看完。",
+      "dropdown": "还没有通知"
+    },
+    "toast": {
+      "marked_read": "通知已标为已读",
+      "all_marked_read": "全部通知已标为已读",
+      "deleted": "通知已删除"
+    },
+    "confirm": {
+      "delete": "删除这条通知？此操作不可撤销。"
+    },
+    "error": {
+      "fetch": "加载通知失败。",
+      "mark": "标记已读失败。",
+      "delete": "删除通知失败。",
+      "retry": "重试"
+    }
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前"
   }
 }

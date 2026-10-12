@@ -20,6 +20,7 @@ const UserDetailPage = lazy(() => import('./pages/admin/UserDetailPage'));
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'));
 const TemplateDetailPage = lazy(() => import('./pages/admin/TemplateDetailPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -49,6 +50,14 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/api-keys" element={<APIKeys />} />
             <Route path="/templates/:id" element={<TemplateDetails />} />
+            <Route
+              path="/notifications"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <NotificationsPage />
+                </Suspense>
+              }
+            />
             <Route
               path="/admin/login"
               element={

@@ -27,6 +27,9 @@ backend:
     adminBootstrapEmail: ""
     adminBootstrapPassword: ""
     adminSessionTtlMinutes: "30"
+    # Notification retention (days)
+    notificationReadRetentionDays: "90"
+    notificationRetentionDays: "180"
 
 frontend:
   replicaCount: 1
