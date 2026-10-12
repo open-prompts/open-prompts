@@ -1,3 +1,15 @@
+# [1.16.0](https://github.com/open-prompts/open-prompts/compare/v1.15.1...v1.16.0) (2026-10-12)
+
+
+### Features
+
+* **admin:** add admin user management system ([0a9498f](https://github.com/open-prompts/open-prompts/commit/0a9498fa4939b001271998e85b9111644a91e6fb))
+
+
+### Reverts
+
+* remove template monetization feature docs ([681cb5e](https://github.com/open-prompts/open-prompts/commit/681cb5e24f2eeacb394bef29e661ad8f2297839d))
+
 ## [1.15.1](https://github.com/open-prompts/open-prompts/compare/v1.15.0...v1.15.1) (2026-09-20)
 
 
