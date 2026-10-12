@@ -475,42 +475,40 @@
     "daysAgo": "{{count}} 天前"
   },
   "versioning": {
-    "versioning": {
-      "history": "历史",
-      "hide_history": "收起历史",
-      "panel_title": "版本历史",
-      "latest": "最新",
-      "no_note": "无说明",
-      "meta": "{{chars}} 字符 · {{lines}} 行 · {{prompts}} 条提示词",
-      "meta_no_usage": "{{chars}} 字符 · {{lines}} 行",
-      "single_version": "v1 是唯一的版本 —— 编辑模板即可创建更多。",
-      "load_more": "加载更多",
-      "compare": "比较",
-      "restore": "恢复",
-      "compare_title": "比较版本",
-      "version_a": "版本 A",
-      "version_b": "版本 B",
-      "swap": "交换",
-      "stats": "+{{added}} −{{removed}} 行",
-      "removed_line": "删除行",
-      "added_line": "新增行",
-      "copy_diff": "复制 diff",
-      "diff_fallback_notice": "Diff 视图不可用 —— 并排显示两个版本。",
-      "restore_title": "恢复版本",
-      "restore_body": "将 v{{version}} 恢复为新版本（v{{next}}）？当前内容会保留在历史中 —— 不会删除任何内容。新版本将带有说明 \"Restored from v{{version}}\"。",
-      "restore_confirm": "恢复 v{{version}}",
-      "note_label": "变更说明（可选）",
-      "note_placeholder": "例如：修复语气漂移",
-      "note_counter": "{{count}}/200",
-      "toast": {
-        "restored": "已恢复为 v{{version}}",
-        "diff_copied": "Diff 已复制到剪贴板"
-      },
-      "error": {
-        "fetch": "加载版本历史失败。",
-        "restore": "恢复版本失败。",
-        "retry": "重试"
-      }
+    "history": "历史",
+    "hide_history": "收起历史",
+    "panel_title": "版本历史",
+    "latest": "最新",
+    "no_note": "无说明",
+    "meta": "{{chars}} 字符 · {{lines}} 行 · {{prompts}} 条提示词",
+    "meta_no_usage": "{{chars}} 字符 · {{lines}} 行",
+    "single_version": "v1 是唯一的版本 —— 编辑模板即可创建更多。",
+    "load_more": "加载更多",
+    "compare": "比较",
+    "restore": "恢复",
+    "compare_title": "比较版本",
+    "version_a": "版本 A",
+    "version_b": "版本 B",
+    "swap": "交换",
+    "stats": "+{{added}} −{{removed}} 行",
+    "removed_line": "删除行",
+    "added_line": "新增行",
+    "copy_diff": "复制 diff",
+    "diff_fallback_notice": "Diff 视图不可用 —— 并排显示两个版本。",
+    "restore_title": "恢复版本",
+    "restore_body": "将 v{{version}} 恢复为新版本（v{{next}}）？当前内容会保留在历史中 —— 不会删除任何内容。新版本将带有说明 \"Restored from v{{version}}\"。",
+    "restore_confirm": "恢复 v{{version}}",
+    "note_label": "变更说明（可选）",
+    "note_placeholder": "例如：修复语气漂移",
+    "note_counter": "{{count}}/200",
+    "toast": {
+      "restored": "已恢复为 v{{version}}",
+      "diff_copied": "Diff 已复制到剪贴板"
+    },
+    "error": {
+      "fetch": "加载版本历史失败。",
+      "restore": "恢复版本失败。",
+      "retry": "重试"
     }
   }
 }
