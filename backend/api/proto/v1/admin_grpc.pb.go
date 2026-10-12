@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: admin.proto
+// source: api/proto/v1/admin.proto
 
 package v1
 
@@ -30,6 +30,8 @@ const (
 	AdminService_ListTemplates_FullMethodName       = "/v1.AdminService/ListTemplates"
 	AdminService_GetTemplate_FullMethodName         = "/v1.AdminService/GetTemplate"
 	AdminService_ListAuditLogs_FullMethodName       = "/v1.AdminService/ListAuditLogs"
+	AdminService_ListAdminComments_FullMethodName   = "/v1.AdminService/ListAdminComments"
+	AdminService_DeleteAdminComment_FullMethodName  = "/v1.AdminService/DeleteAdminComment"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -61,6 +63,10 @@ type AdminServiceClient interface {
 	GetTemplate(ctx context.Context, in *GetAdminTemplateRequest, opts ...grpc.CallOption) (*GetAdminTemplateResponse, error)
 	// ListAuditLogs returns the append-only audit trail.
 	ListAuditLogs(ctx context.Context, in *ListAuditLogsRequest, opts ...grpc.CallOption) (*ListAuditLogsResponse, error)
+	// ListAdminComments lists all comments platform-wide (moderation).
+	ListAdminComments(ctx context.Context, in *ListAdminCommentsRequest, opts ...grpc.CallOption) (*ListAdminCommentsResponse, error)
+	// DeleteAdminComment deletes any comment with a mandatory reason (audited).
+	DeleteAdminComment(ctx context.Context, in *DeleteAdminCommentRequest, opts ...grpc.CallOption) (*DeleteAdminCommentResponse, error)
 }
 
 type adminServiceClient struct {
@@ -181,6 +187,26 @@ func (c *adminServiceClient) ListAuditLogs(ctx context.Context, in *ListAuditLog
 	return out, nil
 }
 
+func (c *adminServiceClient) ListAdminComments(ctx context.Context, in *ListAdminCommentsRequest, opts ...grpc.CallOption) (*ListAdminCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAdminCommentsResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListAdminComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) DeleteAdminComment(ctx context.Context, in *DeleteAdminCommentRequest, opts ...grpc.CallOption) (*DeleteAdminCommentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteAdminCommentResponse)
+	err := c.cc.Invoke(ctx, AdminService_DeleteAdminComment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -210,6 +236,10 @@ type AdminServiceServer interface {
 	GetTemplate(context.Context, *GetAdminTemplateRequest) (*GetAdminTemplateResponse, error)
 	// ListAuditLogs returns the append-only audit trail.
 	ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error)
+	// ListAdminComments lists all comments platform-wide (moderation).
+	ListAdminComments(context.Context, *ListAdminCommentsRequest) (*ListAdminCommentsResponse, error)
+	// DeleteAdminComment deletes any comment with a mandatory reason (audited).
+	DeleteAdminComment(context.Context, *DeleteAdminCommentRequest) (*DeleteAdminCommentResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -252,6 +282,12 @@ func (UnimplementedAdminServiceServer) GetTemplate(context.Context, *GetAdminTem
 }
 func (UnimplementedAdminServiceServer) ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAuditLogs not implemented")
+}
+func (UnimplementedAdminServiceServer) ListAdminComments(context.Context, *ListAdminCommentsRequest) (*ListAdminCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAdminComments not implemented")
+}
+func (UnimplementedAdminServiceServer) DeleteAdminComment(context.Context, *DeleteAdminCommentRequest) (*DeleteAdminCommentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAdminComment not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -472,6 +508,42 @@ func _AdminService_ListAuditLogs_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_ListAdminComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAdminCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListAdminComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListAdminComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListAdminComments(ctx, req.(*ListAdminCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_DeleteAdminComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAdminCommentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).DeleteAdminComment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_DeleteAdminComment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).DeleteAdminComment(ctx, req.(*DeleteAdminCommentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -523,7 +595,15 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ListAuditLogs",
 			Handler:    _AdminService_ListAuditLogs_Handler,
 		},
+		{
+			MethodName: "ListAdminComments",
+			Handler:    _AdminService_ListAdminComments_Handler,
+		},
+		{
+			MethodName: "DeleteAdminComment",
+			Handler:    _AdminService_DeleteAdminComment_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "admin.proto",
+	Metadata: "api/proto/v1/admin.proto",
 }

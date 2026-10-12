@@ -41,6 +41,12 @@ service AdminService {
 
   // ListAuditLogs returns the append-only audit trail.
   rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+
+  // ListAdminComments lists all comments platform-wide (moderation).
+  rpc ListAdminComments(ListAdminCommentsRequest) returns (ListAdminCommentsResponse);
+
+  // DeleteAdminComment deletes any comment with a mandatory reason (audited).
+  rpc DeleteAdminComment(DeleteAdminCommentRequest) returns (DeleteAdminCommentResponse);
 }
 
 // ---- Auth ----
@@ -217,15 +223,15 @@ message AdminAuditLogEntry {
   string id = 1;
   string actor_id = 2;
   string actor_email = 3;
-  string action = 4;        // "ban" | "unban" | "role_change"
-  string target_type = 5;   // "user"
+  string action = 4;        // "ban" | "unban" | "role_change" | "delete_comment"
+  string target_type = 5;   // "user" | "comment"
   string target_id = 6;
   string reason = 7;
   google.protobuf.Timestamp created_at = 8;
 }
 
 message ListAuditLogsRequest {
-  string action = 1;    // "" | "ban" | "unban" | "role_change"
+  string action = 1;    // "" | "ban" | "unban" | "role_change" | "delete_comment"
   string actor = 2;     // matches actor_id or actor_email
   int32 page = 3;
   int32 per_page = 4;
@@ -236,4 +242,43 @@ message ListAuditLogsResponse {
   int64 total = 2;
   int32 page = 3;
   int32 per_page = 4;
+}
+
+// AdminCommentEntry is a comment with moderation context.
+message AdminCommentEntry {
+  string id = 1;
+  string template_id = 2;
+  string template_title = 3;
+  string template_owner_id = 4;
+  string template_owner_display_name = 5;
+  string user_id = 6;            // author id
+  string user_display_name = 7;  // author display name
+  string user_email = 8;         // author email (moderation only)
+  string content = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message ListAdminCommentsRequest {
+  string q = 1;          // free-text: matches content
+  string template_id = 2;
+  string user_id = 3;    // author filter
+  int32 page = 4;        // 1-based, default 1
+  int32 per_page = 5;    // default 20, max 100
+}
+
+message ListAdminCommentsResponse {
+  repeated AdminCommentEntry entries = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
+}
+
+message DeleteAdminCommentRequest {
+  string comment_id = 1;
+  string reason = 2;     // 3-500 chars, required
+}
+
+message DeleteAdminCommentResponse {
+  bool success = 1;
 }

@@ -98,5 +98,9 @@ export const getAdminTemplates = (params) => adminApi.get('/admin/templates', { 
 export const getAdminTemplate = (id) => adminApi.get(`/admin/templates/${id}`);
 // Audit
 export const getAdminAuditLogs = (params) => adminApi.get('/admin/audit-log', { params });
+// Comments
+export const getAdminComments = (params) => adminApi.get('/admin/comments', { params });
+export const deleteAdminComment = (id, reason) =>
+  adminApi.delete(`/admin/comments/${id}`, { data: { reason } });
 
 export default adminApi;

@@ -83,6 +83,18 @@ service PromptService {
 
   // ListTemplateVersions lists all versions of a template.
   rpc ListTemplateVersions(ListTemplateVersionsRequest) returns (ListTemplateVersionsResponse);
+
+  // ListComments lists comments for a template (visibility follows the template).
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+
+  // CreateComment posts a comment on a template (auth required).
+  rpc CreateComment(CreateCommentRequest) returns (Comment);
+
+  // UpdateComment edits the author's own comment within the edit window.
+  rpc UpdateComment(UpdateCommentRequest) returns (Comment);
+
+  // DeleteComment deletes a comment (author or template owner).
+  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
 }
 
 // Visibility defines who can see the template.
@@ -133,6 +145,8 @@ message Template {
   bool is_favorited = 15;
   // Language of the template (e.g. "en", "zh").
   string language = 16;
+  // Number of comments.
+  int32 comment_count = 17;
 }
 
 // TemplateVersion represents a specific version of a template's content.
@@ -528,5 +542,59 @@ message DeleteAPIKeyRequest {
 }
 
 message DeleteAPIKeyResponse {
+  bool success = 1;
+}
+
+// CommentAuthor is the public identity of a comment's author.
+message CommentAuthor {
+  string id = 1;
+  string display_name = 2;
+  string avatar = 3;
+}
+
+// Comment represents a single comment on a template.
+message Comment {
+  string id = 1;
+  string template_id = 2;
+  string content = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  // True when updated_at > created_at (edited marker).
+  bool is_edited = 6;
+  CommentAuthor author = 7;
+  // True when the comment was authored by the template owner.
+  bool is_owner = 8;
+  // True when the caller is the author (drives Edit/Delete affordances).
+  bool is_own = 9;
+}
+
+message ListCommentsRequest {
+  string template_id = 1;
+  int32 page = 2;       // 1-based, default 1
+  int32 page_size = 3;  // default 20, max 50
+}
+
+message ListCommentsResponse {
+  repeated Comment comments = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message CreateCommentRequest {
+  string template_id = 1;
+  string content = 2;   // 1-2000 chars after trim
+}
+
+message UpdateCommentRequest {
+  string comment_id = 1;
+  string content = 2;   // 1-2000 chars after trim
+}
+
+message DeleteCommentRequest {
+  string comment_id = 1;
+}
+
+message DeleteCommentResponse {
   bool success = 1;
 }

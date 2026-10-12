@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -44,6 +45,15 @@ type AuditFilters struct {
 	Offset int
 }
 
+// CommentFilters describes the admin comment moderation query parameters.
+type CommentFilters struct {
+	Search     string // ILIKE %s% over content (wildcards escaped)
+	TemplateID string // exact match
+	UserID     string // author exact match
+	Limit      int
+	Offset     int
+}
+
 // AdminRepository is the data-access interface for the admin console.
 type AdminRepository interface {
 	// Users
@@ -55,6 +65,9 @@ type AdminRepository interface {
 	// Templates (admin view: includes private, includes banned owners)
 	ListTemplates(ctx context.Context, f TemplateFilters) ([]*models.AdminTemplate, int64, error)
 	GetTemplateWithVersions(ctx context.Context, templateID string) (*models.AdminTemplate, []*models.AdminTemplateVersion, error)
+	// Comments (moderation)
+	ListComments(ctx context.Context, f CommentFilters) ([]*models.AdminComment, int64, error)
+	DeleteComment(ctx context.Context, id string) (bool, int64, error)
 	// Stats
 	GetStats(ctx context.Context) (*models.AdminStats, error)
 	ListRecentSignups(ctx context.Context, limit int) ([]*models.User, error)
@@ -505,4 +518,109 @@ LIMIT $2`
 		entries = append(entries, e)
 	}
 	return entries, nil
+}
+
+// ListComments returns a page of all comments (moderation view) plus the
+// total count for the filters. q matches content ILIKE with escaped
+// wildcards; template_id/user_id are exact matches.
+func (r *adminRepository) ListComments(ctx context.Context, f CommentFilters) ([]*models.AdminComment, int64, error) {
+	where := ` WHERE 1=1`
+	args := []interface{}{}
+	argID := 1
+
+	if f.Search != "" {
+		escaped := strings.ReplaceAll(f.Search, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, `%`, `\%`)
+		escaped = strings.ReplaceAll(escaped, `_`, `\_`)
+		where += fmt.Sprintf(` AND c.content ILIKE $%d ESCAPE '\'`, argID)
+		args = append(args, "%"+escaped+"%")
+		argID++
+	}
+	if f.TemplateID != "" {
+		where += fmt.Sprintf(` AND c.template_id::text = $%d`, argID)
+		args = append(args, f.TemplateID)
+		argID++
+	}
+	if f.UserID != "" {
+		where += fmt.Sprintf(` AND c.user_id = $%d`, argID)
+		args = append(args, f.UserID)
+		argID++
+	}
+
+	countQuery := `SELECT COUNT(*) FROM template_comments c` + where
+	var total int64
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count comments: %w", err)
+	}
+
+	query := `
+SELECT c.id, c.template_id, t.title, t.owner_id, COALESCE(o.display_name, ''),
+       c.user_id, COALESCE(u.display_name, ''), COALESCE(u.email, ''),
+       c.content, c.created_at, c.updated_at
+FROM template_comments c
+JOIN templates t ON t.id = c.template_id
+LEFT JOIN users o ON o.id = t.owner_id
+LEFT JOIN users u ON u.id = c.user_id` + where + `
+ORDER BY c.created_at DESC` + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argID, argID+1)
+	args = append(args, f.Limit, f.Offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list comments: %w", err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	var comments []*models.AdminComment
+	for rows.Next() {
+		c := &models.AdminComment{}
+		if err := rows.Scan(
+			&c.ID, &c.TemplateID, &c.TemplateTitle, &c.TemplateOwnerID, &c.OwnerDisplayName,
+			&c.UserID, &c.UserDisplayName, &c.UserEmail,
+			&c.Content, &c.CreatedAt, &c.UpdatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan comment: %w", err)
+		}
+		comments = append(comments, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows error: %w", err)
+	}
+
+	return comments, total, nil
+}
+
+// DeleteComment removes any comment (admin moderation) and recomputes the
+// template's comment_count in one transaction. Returns deleted=false when the
+// comment does not exist.
+func (r *adminRepository) DeleteComment(ctx context.Context, id string) (bool, int64, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, 0, fmt.Errorf("failed to begin delete tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var templateID string
+	err = tx.QueryRowContext(ctx,
+		`DELETE FROM template_comments WHERE id = $1 RETURNING template_id`, id,
+	).Scan(&templateID)
+	if err == sql.ErrNoRows {
+		return false, 0, nil
+	}
+	if err != nil {
+		return false, 0, fmt.Errorf("failed to delete comment: %w", err)
+	}
+
+	var count int64
+	if err = tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM template_comments WHERE template_id = $1`, templateID,
+	).Scan(&count); err != nil {
+		return false, 0, fmt.Errorf("failed to recount comments: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx,
+		`UPDATE templates SET comment_count = $1 WHERE id = $2`, count, templateID); err != nil {
+		return false, 0, fmt.Errorf("failed to update comment_count: %w", err)
+	}
+	return true, count, tx.Commit()
 }

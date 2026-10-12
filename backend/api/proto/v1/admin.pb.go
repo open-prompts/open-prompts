@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v3.21.12
-// source: admin.proto
+// source: api/proto/v1/admin.proto
 
 package v1
 
@@ -32,7 +32,7 @@ type AdminLoginRequest struct {
 
 func (x *AdminLoginRequest) Reset() {
 	*x = AdminLoginRequest{}
-	mi := &file_admin_proto_msgTypes[0]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *AdminLoginRequest) String() string {
 func (*AdminLoginRequest) ProtoMessage() {}
 
 func (x *AdminLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[0]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *AdminLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminLoginRequest.ProtoReflect.Descriptor instead.
 func (*AdminLoginRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{0}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *AdminLoginRequest) GetEmail() string {
@@ -84,7 +84,7 @@ type AdminLoginResponse struct {
 
 func (x *AdminLoginResponse) Reset() {
 	*x = AdminLoginResponse{}
-	mi := &file_admin_proto_msgTypes[1]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -96,7 +96,7 @@ func (x *AdminLoginResponse) String() string {
 func (*AdminLoginResponse) ProtoMessage() {}
 
 func (x *AdminLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[1]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -109,7 +109,7 @@ func (x *AdminLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminLoginResponse.ProtoReflect.Descriptor instead.
 func (*AdminLoginResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{1}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *AdminLoginResponse) GetToken() string {
@@ -134,7 +134,7 @@ type RefreshAdminSessionRequest struct {
 
 func (x *RefreshAdminSessionRequest) Reset() {
 	*x = RefreshAdminSessionRequest{}
-	mi := &file_admin_proto_msgTypes[2]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -146,7 +146,7 @@ func (x *RefreshAdminSessionRequest) String() string {
 func (*RefreshAdminSessionRequest) ProtoMessage() {}
 
 func (x *RefreshAdminSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[2]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -159,7 +159,7 @@ func (x *RefreshAdminSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshAdminSessionRequest.ProtoReflect.Descriptor instead.
 func (*RefreshAdminSessionRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{2}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{2}
 }
 
 type RefreshAdminSessionResponse struct {
@@ -171,7 +171,7 @@ type RefreshAdminSessionResponse struct {
 
 func (x *RefreshAdminSessionResponse) Reset() {
 	*x = RefreshAdminSessionResponse{}
-	mi := &file_admin_proto_msgTypes[3]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -183,7 +183,7 @@ func (x *RefreshAdminSessionResponse) String() string {
 func (*RefreshAdminSessionResponse) ProtoMessage() {}
 
 func (x *RefreshAdminSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[3]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -196,7 +196,7 @@ func (x *RefreshAdminSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshAdminSessionResponse.ProtoReflect.Descriptor instead.
 func (*RefreshAdminSessionResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{3}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RefreshAdminSessionResponse) GetToken() string {
@@ -214,7 +214,7 @@ type GetAdminStatsRequest struct {
 
 func (x *GetAdminStatsRequest) Reset() {
 	*x = GetAdminStatsRequest{}
-	mi := &file_admin_proto_msgTypes[4]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -226,7 +226,7 @@ func (x *GetAdminStatsRequest) String() string {
 func (*GetAdminStatsRequest) ProtoMessage() {}
 
 func (x *GetAdminStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[4]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -239,7 +239,7 @@ func (x *GetAdminStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAdminStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetAdminStatsRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{4}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{4}
 }
 
 type GetAdminStatsResponse struct {
@@ -258,7 +258,7 @@ type GetAdminStatsResponse struct {
 
 func (x *GetAdminStatsResponse) Reset() {
 	*x = GetAdminStatsResponse{}
-	mi := &file_admin_proto_msgTypes[5]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +270,7 @@ func (x *GetAdminStatsResponse) String() string {
 func (*GetAdminStatsResponse) ProtoMessage() {}
 
 func (x *GetAdminStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[5]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +283,7 @@ func (x *GetAdminStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAdminStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetAdminStatsResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{5}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetAdminStatsResponse) GetTotalUsers() int64 {
@@ -359,7 +359,7 @@ type AdminUserSummary struct {
 
 func (x *AdminUserSummary) Reset() {
 	*x = AdminUserSummary{}
-	mi := &file_admin_proto_msgTypes[6]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -371,7 +371,7 @@ func (x *AdminUserSummary) String() string {
 func (*AdminUserSummary) ProtoMessage() {}
 
 func (x *AdminUserSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[6]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -384,7 +384,7 @@ func (x *AdminUserSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminUserSummary.ProtoReflect.Descriptor instead.
 func (*AdminUserSummary) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{6}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *AdminUserSummary) GetId() string {
@@ -464,7 +464,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_admin_proto_msgTypes[7]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -476,7 +476,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[7]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -489,7 +489,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{7}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListUsersRequest) GetSearch() string {
@@ -546,7 +546,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_admin_proto_msgTypes[8]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -558,7 +558,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[8]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -571,7 +571,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{8}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListUsersResponse) GetUsers() []*AdminUserSummary {
@@ -611,7 +611,7 @@ type GetUserRequest struct {
 
 func (x *GetUserRequest) Reset() {
 	*x = GetUserRequest{}
-	mi := &file_admin_proto_msgTypes[9]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -623,7 +623,7 @@ func (x *GetUserRequest) String() string {
 func (*GetUserRequest) ProtoMessage() {}
 
 func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[9]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -636,7 +636,7 @@ func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
 func (*GetUserRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{9}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetUserRequest) GetId() string {
@@ -660,7 +660,7 @@ type GetUserResponse struct {
 
 func (x *GetUserResponse) Reset() {
 	*x = GetUserResponse{}
-	mi := &file_admin_proto_msgTypes[10]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -672,7 +672,7 @@ func (x *GetUserResponse) String() string {
 func (*GetUserResponse) ProtoMessage() {}
 
 func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[10]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -685,7 +685,7 @@ func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
 func (*GetUserResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{10}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetUserResponse) GetUser() *AdminUserSummary {
@@ -742,7 +742,7 @@ type UserStats struct {
 
 func (x *UserStats) Reset() {
 	*x = UserStats{}
-	mi := &file_admin_proto_msgTypes[11]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +754,7 @@ func (x *UserStats) String() string {
 func (*UserStats) ProtoMessage() {}
 
 func (x *UserStats) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[11]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -767,7 +767,7 @@ func (x *UserStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserStats.ProtoReflect.Descriptor instead.
 func (*UserStats) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{11}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UserStats) GetTemplates() int64 {
@@ -808,7 +808,7 @@ type OAuthIdentity struct {
 
 func (x *OAuthIdentity) Reset() {
 	*x = OAuthIdentity{}
-	mi := &file_admin_proto_msgTypes[12]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +820,7 @@ func (x *OAuthIdentity) String() string {
 func (*OAuthIdentity) ProtoMessage() {}
 
 func (x *OAuthIdentity) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[12]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +833,7 @@ func (x *OAuthIdentity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthIdentity.ProtoReflect.Descriptor instead.
 func (*OAuthIdentity) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{12}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *OAuthIdentity) GetProvider() string {
@@ -864,7 +864,7 @@ type AdminAPIKeySummary struct {
 
 func (x *AdminAPIKeySummary) Reset() {
 	*x = AdminAPIKeySummary{}
-	mi := &file_admin_proto_msgTypes[13]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -876,7 +876,7 @@ func (x *AdminAPIKeySummary) String() string {
 func (*AdminAPIKeySummary) ProtoMessage() {}
 
 func (x *AdminAPIKeySummary) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[13]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -889,7 +889,7 @@ func (x *AdminAPIKeySummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAPIKeySummary.ProtoReflect.Descriptor instead.
 func (*AdminAPIKeySummary) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{13}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AdminAPIKeySummary) GetId() string {
@@ -944,7 +944,7 @@ type BanUserRequest struct {
 
 func (x *BanUserRequest) Reset() {
 	*x = BanUserRequest{}
-	mi := &file_admin_proto_msgTypes[14]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -956,7 +956,7 @@ func (x *BanUserRequest) String() string {
 func (*BanUserRequest) ProtoMessage() {}
 
 func (x *BanUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[14]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -969,7 +969,7 @@ func (x *BanUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BanUserRequest.ProtoReflect.Descriptor instead.
 func (*BanUserRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{14}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *BanUserRequest) GetUserId() string {
@@ -996,7 +996,7 @@ type UnbanUserRequest struct {
 
 func (x *UnbanUserRequest) Reset() {
 	*x = UnbanUserRequest{}
-	mi := &file_admin_proto_msgTypes[15]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +1008,7 @@ func (x *UnbanUserRequest) String() string {
 func (*UnbanUserRequest) ProtoMessage() {}
 
 func (x *UnbanUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[15]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1021,7 +1021,7 @@ func (x *UnbanUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnbanUserRequest.ProtoReflect.Descriptor instead.
 func (*UnbanUserRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{15}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UnbanUserRequest) GetUserId() string {
@@ -1049,7 +1049,7 @@ type ChangeUserRoleRequest struct {
 
 func (x *ChangeUserRoleRequest) Reset() {
 	*x = ChangeUserRoleRequest{}
-	mi := &file_admin_proto_msgTypes[16]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1061,7 +1061,7 @@ func (x *ChangeUserRoleRequest) String() string {
 func (*ChangeUserRoleRequest) ProtoMessage() {}
 
 func (x *ChangeUserRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[16]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1074,7 +1074,7 @@ func (x *ChangeUserRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeUserRoleRequest.ProtoReflect.Descriptor instead.
 func (*ChangeUserRoleRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{16}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ChangeUserRoleRequest) GetUserId() string {
@@ -1107,7 +1107,7 @@ type UserActionResponse struct {
 
 func (x *UserActionResponse) Reset() {
 	*x = UserActionResponse{}
-	mi := &file_admin_proto_msgTypes[17]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1119,7 +1119,7 @@ func (x *UserActionResponse) String() string {
 func (*UserActionResponse) ProtoMessage() {}
 
 func (x *UserActionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[17]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1132,7 +1132,7 @@ func (x *UserActionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserActionResponse.ProtoReflect.Descriptor instead.
 func (*UserActionResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{17}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UserActionResponse) GetUser() *AdminUserSummary {
@@ -1162,7 +1162,7 @@ type AdminTemplateSummary struct {
 
 func (x *AdminTemplateSummary) Reset() {
 	*x = AdminTemplateSummary{}
-	mi := &file_admin_proto_msgTypes[18]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1174,7 +1174,7 @@ func (x *AdminTemplateSummary) String() string {
 func (*AdminTemplateSummary) ProtoMessage() {}
 
 func (x *AdminTemplateSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[18]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1187,7 +1187,7 @@ func (x *AdminTemplateSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminTemplateSummary.ProtoReflect.Descriptor instead.
 func (*AdminTemplateSummary) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{18}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AdminTemplateSummary) GetId() string {
@@ -1288,7 +1288,7 @@ type ListAdminTemplatesRequest struct {
 
 func (x *ListAdminTemplatesRequest) Reset() {
 	*x = ListAdminTemplatesRequest{}
-	mi := &file_admin_proto_msgTypes[19]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1300,7 +1300,7 @@ func (x *ListAdminTemplatesRequest) String() string {
 func (*ListAdminTemplatesRequest) ProtoMessage() {}
 
 func (x *ListAdminTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[19]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1313,7 +1313,7 @@ func (x *ListAdminTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAdminTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListAdminTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{19}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListAdminTemplatesRequest) GetSearch() string {
@@ -1370,7 +1370,7 @@ type ListAdminTemplatesResponse struct {
 
 func (x *ListAdminTemplatesResponse) Reset() {
 	*x = ListAdminTemplatesResponse{}
-	mi := &file_admin_proto_msgTypes[20]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1382,7 +1382,7 @@ func (x *ListAdminTemplatesResponse) String() string {
 func (*ListAdminTemplatesResponse) ProtoMessage() {}
 
 func (x *ListAdminTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[20]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1395,7 +1395,7 @@ func (x *ListAdminTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAdminTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListAdminTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{20}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListAdminTemplatesResponse) GetTemplates() []*AdminTemplateSummary {
@@ -1435,7 +1435,7 @@ type GetAdminTemplateRequest struct {
 
 func (x *GetAdminTemplateRequest) Reset() {
 	*x = GetAdminTemplateRequest{}
-	mi := &file_admin_proto_msgTypes[21]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1447,7 @@ func (x *GetAdminTemplateRequest) String() string {
 func (*GetAdminTemplateRequest) ProtoMessage() {}
 
 func (x *GetAdminTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[21]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1460,7 @@ func (x *GetAdminTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAdminTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetAdminTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{21}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetAdminTemplateRequest) GetId() string {
@@ -1481,7 +1481,7 @@ type GetAdminTemplateResponse struct {
 
 func (x *GetAdminTemplateResponse) Reset() {
 	*x = GetAdminTemplateResponse{}
-	mi := &file_admin_proto_msgTypes[22]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1493,7 +1493,7 @@ func (x *GetAdminTemplateResponse) String() string {
 func (*GetAdminTemplateResponse) ProtoMessage() {}
 
 func (x *GetAdminTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[22]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1506,7 +1506,7 @@ func (x *GetAdminTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAdminTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetAdminTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{22}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GetAdminTemplateResponse) GetTemplate() *AdminTemplateSummary {
@@ -1543,7 +1543,7 @@ type AdminTemplateVersion struct {
 
 func (x *AdminTemplateVersion) Reset() {
 	*x = AdminTemplateVersion{}
-	mi := &file_admin_proto_msgTypes[23]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1555,7 +1555,7 @@ func (x *AdminTemplateVersion) String() string {
 func (*AdminTemplateVersion) ProtoMessage() {}
 
 func (x *AdminTemplateVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[23]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1568,7 +1568,7 @@ func (x *AdminTemplateVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminTemplateVersion.ProtoReflect.Descriptor instead.
 func (*AdminTemplateVersion) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{23}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *AdminTemplateVersion) GetId() int32 {
@@ -1611,8 +1611,8 @@ type AdminAuditLogEntry struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ActorId       string                 `protobuf:"bytes,2,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
 	ActorEmail    string                 `protobuf:"bytes,3,opt,name=actor_email,json=actorEmail,proto3" json:"actor_email,omitempty"`
-	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`                           // "ban" | "unban" | "role_change"
-	TargetType    string                 `protobuf:"bytes,5,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"` // "user"
+	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`                           // "ban" | "unban" | "role_change" | "delete_comment"
+	TargetType    string                 `protobuf:"bytes,5,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"` // "user" | "comment"
 	TargetId      string                 `protobuf:"bytes,6,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
 	Reason        string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -1622,7 +1622,7 @@ type AdminAuditLogEntry struct {
 
 func (x *AdminAuditLogEntry) Reset() {
 	*x = AdminAuditLogEntry{}
-	mi := &file_admin_proto_msgTypes[24]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1634,7 +1634,7 @@ func (x *AdminAuditLogEntry) String() string {
 func (*AdminAuditLogEntry) ProtoMessage() {}
 
 func (x *AdminAuditLogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[24]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1647,7 +1647,7 @@ func (x *AdminAuditLogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAuditLogEntry.ProtoReflect.Descriptor instead.
 func (*AdminAuditLogEntry) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{24}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AdminAuditLogEntry) GetId() string {
@@ -1708,7 +1708,7 @@ func (x *AdminAuditLogEntry) GetCreatedAt() *timestamppb.Timestamp {
 
 type ListAuditLogsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Action        string                 `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"` // "" | "ban" | "unban" | "role_change"
+	Action        string                 `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"` // "" | "ban" | "unban" | "role_change" | "delete_comment"
 	Actor         string                 `protobuf:"bytes,2,opt,name=actor,proto3" json:"actor,omitempty"`   // matches actor_id or actor_email
 	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
 	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`
@@ -1718,7 +1718,7 @@ type ListAuditLogsRequest struct {
 
 func (x *ListAuditLogsRequest) Reset() {
 	*x = ListAuditLogsRequest{}
-	mi := &file_admin_proto_msgTypes[25]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1730,7 +1730,7 @@ func (x *ListAuditLogsRequest) String() string {
 func (*ListAuditLogsRequest) ProtoMessage() {}
 
 func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[25]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1743,7 +1743,7 @@ func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsRequest) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{25}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListAuditLogsRequest) GetAction() string {
@@ -1786,7 +1786,7 @@ type ListAuditLogsResponse struct {
 
 func (x *ListAuditLogsResponse) Reset() {
 	*x = ListAuditLogsResponse{}
-	mi := &file_admin_proto_msgTypes[26]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1798,7 +1798,7 @@ func (x *ListAuditLogsResponse) String() string {
 func (*ListAuditLogsResponse) ProtoMessage() {}
 
 func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_admin_proto_msgTypes[26]
+	mi := &file_api_proto_v1_admin_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1811,7 +1811,7 @@ func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsResponse) Descriptor() ([]byte, []int) {
-	return file_admin_proto_rawDescGZIP(), []int{26}
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListAuditLogsResponse) GetEntries() []*AdminAuditLogEntry {
@@ -1842,11 +1842,376 @@ func (x *ListAuditLogsResponse) GetPerPage() int32 {
 	return 0
 }
 
-var File_admin_proto protoreflect.FileDescriptor
+// AdminCommentEntry is a comment with moderation context.
+type AdminCommentEntry struct {
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Id                       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TemplateId               string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	TemplateTitle            string                 `protobuf:"bytes,3,opt,name=template_title,json=templateTitle,proto3" json:"template_title,omitempty"`
+	TemplateOwnerId          string                 `protobuf:"bytes,4,opt,name=template_owner_id,json=templateOwnerId,proto3" json:"template_owner_id,omitempty"`
+	TemplateOwnerDisplayName string                 `protobuf:"bytes,5,opt,name=template_owner_display_name,json=templateOwnerDisplayName,proto3" json:"template_owner_display_name,omitempty"`
+	UserId                   string                 `protobuf:"bytes,6,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                              // author id
+	UserDisplayName          string                 `protobuf:"bytes,7,opt,name=user_display_name,json=userDisplayName,proto3" json:"user_display_name,omitempty"` // author display name
+	UserEmail                string                 `protobuf:"bytes,8,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty"`                     // author email (moderation only)
+	Content                  string                 `protobuf:"bytes,9,opt,name=content,proto3" json:"content,omitempty"`
+	CreatedAt                *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
 
-const file_admin_proto_rawDesc = "" +
+func (x *AdminCommentEntry) Reset() {
+	*x = AdminCommentEntry{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdminCommentEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdminCommentEntry) ProtoMessage() {}
+
+func (x *AdminCommentEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdminCommentEntry.ProtoReflect.Descriptor instead.
+func (*AdminCommentEntry) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *AdminCommentEntry) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetTemplateTitle() string {
+	if x != nil {
+		return x.TemplateTitle
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetTemplateOwnerId() string {
+	if x != nil {
+		return x.TemplateOwnerId
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetTemplateOwnerDisplayName() string {
+	if x != nil {
+		return x.TemplateOwnerDisplayName
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetUserDisplayName() string {
+	if x != nil {
+		return x.UserDisplayName
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetUserEmail() string {
+	if x != nil {
+		return x.UserEmail
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *AdminCommentEntry) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AdminCommentEntry) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type ListAdminCommentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Q             string                 `protobuf:"bytes,1,opt,name=q,proto3" json:"q,omitempty"` // free-text: matches content
+	TemplateId    string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`     // author filter
+	Page          int32                  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`                      // 1-based, default 1
+	PerPage       int32                  `protobuf:"varint,5,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"` // default 20, max 100
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAdminCommentsRequest) Reset() {
+	*x = ListAdminCommentsRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAdminCommentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAdminCommentsRequest) ProtoMessage() {}
+
+func (x *ListAdminCommentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAdminCommentsRequest.ProtoReflect.Descriptor instead.
+func (*ListAdminCommentsRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListAdminCommentsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListAdminCommentsRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ListAdminCommentsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ListAdminCommentsRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListAdminCommentsRequest) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type ListAdminCommentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*AdminCommentEntry   `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAdminCommentsResponse) Reset() {
+	*x = ListAdminCommentsResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAdminCommentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAdminCommentsResponse) ProtoMessage() {}
+
+func (x *ListAdminCommentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAdminCommentsResponse.ProtoReflect.Descriptor instead.
+func (*ListAdminCommentsResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListAdminCommentsResponse) GetEntries() []*AdminCommentEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+func (x *ListAdminCommentsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *ListAdminCommentsResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListAdminCommentsResponse) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type DeleteAdminCommentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CommentId     string                 `protobuf:"bytes,1,opt,name=comment_id,json=commentId,proto3" json:"comment_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // 3-500 chars, required
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAdminCommentRequest) Reset() {
+	*x = DeleteAdminCommentRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAdminCommentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAdminCommentRequest) ProtoMessage() {}
+
+func (x *DeleteAdminCommentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAdminCommentRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAdminCommentRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *DeleteAdminCommentRequest) GetCommentId() string {
+	if x != nil {
+		return x.CommentId
+	}
+	return ""
+}
+
+func (x *DeleteAdminCommentRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type DeleteAdminCommentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAdminCommentResponse) Reset() {
+	*x = DeleteAdminCommentResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAdminCommentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAdminCommentResponse) ProtoMessage() {}
+
+func (x *DeleteAdminCommentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAdminCommentResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAdminCommentResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *DeleteAdminCommentResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+var File_api_proto_v1_admin_proto protoreflect.FileDescriptor
+
+const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\n" +
-	"\vadmin.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"E\n" +
+	"\x18api/proto/v1/admin.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"E\n" +
 	"\x11AdminLoginRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"T\n" +
@@ -2000,7 +2365,42 @@ const file_admin_proto_rawDesc = "" +
 	"\aentries\x18\x01 \x03(\v2\x16.v1.AdminAuditLogEntryR\aentries\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
-	"\bper_page\x18\x04 \x01(\x05R\aperPage2\xee\x05\n" +
+	"\bper_page\x18\x04 \x01(\x05R\aperPage\"\xca\x03\n" +
+	"\x11AdminCommentEntry\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12%\n" +
+	"\x0etemplate_title\x18\x03 \x01(\tR\rtemplateTitle\x12*\n" +
+	"\x11template_owner_id\x18\x04 \x01(\tR\x0ftemplateOwnerId\x12=\n" +
+	"\x1btemplate_owner_display_name\x18\x05 \x01(\tR\x18templateOwnerDisplayName\x12\x17\n" +
+	"\auser_id\x18\x06 \x01(\tR\x06userId\x12*\n" +
+	"\x11user_display_name\x18\a \x01(\tR\x0fuserDisplayName\x12\x1d\n" +
+	"\n" +
+	"user_email\x18\b \x01(\tR\tuserEmail\x12\x18\n" +
+	"\acontent\x18\t \x01(\tR\acontent\x129\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x91\x01\n" +
+	"\x18ListAdminCommentsRequest\x12\f\n" +
+	"\x01q\x18\x01 \x01(\tR\x01q\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04page\x18\x04 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x05 \x01(\x05R\aperPage\"\x91\x01\n" +
+	"\x19ListAdminCommentsResponse\x12/\n" +
+	"\aentries\x18\x01 \x03(\v2\x15.v1.AdminCommentEntryR\aentries\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x04 \x01(\x05R\aperPage\"R\n" +
+	"\x19DeleteAdminCommentRequest\x12\x1d\n" +
+	"\n" +
+	"comment_id\x18\x01 \x01(\tR\tcommentId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"6\n" +
+	"\x1aDeleteAdminCommentResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\x95\a\n" +
 	"\fAdminService\x12;\n" +
 	"\n" +
 	"AdminLogin\x12\x15.v1.AdminLoginRequest\x1a\x16.v1.AdminLoginResponse\x12V\n" +
@@ -2013,22 +2413,24 @@ const file_admin_proto_rawDesc = "" +
 	"\x0eChangeUserRole\x12\x19.v1.ChangeUserRoleRequest\x1a\x16.v1.UserActionResponse\x12N\n" +
 	"\rListTemplates\x12\x1d.v1.ListAdminTemplatesRequest\x1a\x1e.v1.ListAdminTemplatesResponse\x12H\n" +
 	"\vGetTemplate\x12\x1b.v1.GetAdminTemplateRequest\x1a\x1c.v1.GetAdminTemplateResponse\x12D\n" +
-	"\rListAuditLogs\x12\x18.v1.ListAuditLogsRequest\x1a\x19.v1.ListAuditLogsResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
+	"\rListAuditLogs\x12\x18.v1.ListAuditLogsRequest\x1a\x19.v1.ListAuditLogsResponse\x12P\n" +
+	"\x11ListAdminComments\x12\x1c.v1.ListAdminCommentsRequest\x1a\x1d.v1.ListAdminCommentsResponse\x12S\n" +
+	"\x12DeleteAdminComment\x12\x1d.v1.DeleteAdminCommentRequest\x1a\x1e.v1.DeleteAdminCommentResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
 
 var (
-	file_admin_proto_rawDescOnce sync.Once
-	file_admin_proto_rawDescData []byte
+	file_api_proto_v1_admin_proto_rawDescOnce sync.Once
+	file_api_proto_v1_admin_proto_rawDescData []byte
 )
 
-func file_admin_proto_rawDescGZIP() []byte {
-	file_admin_proto_rawDescOnce.Do(func() {
-		file_admin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_admin_proto_rawDesc), len(file_admin_proto_rawDesc)))
+func file_api_proto_v1_admin_proto_rawDescGZIP() []byte {
+	file_api_proto_v1_admin_proto_rawDescOnce.Do(func() {
+		file_api_proto_v1_admin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_api_proto_v1_admin_proto_rawDesc), len(file_api_proto_v1_admin_proto_rawDesc)))
 	})
-	return file_admin_proto_rawDescData
+	return file_api_proto_v1_admin_proto_rawDescData
 }
 
-var file_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
-var file_admin_proto_goTypes = []any{
+var file_api_proto_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_api_proto_v1_admin_proto_goTypes = []any{
 	(*AdminLoginRequest)(nil),           // 0: v1.AdminLoginRequest
 	(*AdminLoginResponse)(nil),          // 1: v1.AdminLoginResponse
 	(*RefreshAdminSessionRequest)(nil),  // 2: v1.RefreshAdminSessionRequest
@@ -2056,14 +2458,19 @@ var file_admin_proto_goTypes = []any{
 	(*AdminAuditLogEntry)(nil),          // 24: v1.AdminAuditLogEntry
 	(*ListAuditLogsRequest)(nil),        // 25: v1.ListAuditLogsRequest
 	(*ListAuditLogsResponse)(nil),       // 26: v1.ListAuditLogsResponse
-	(*timestamppb.Timestamp)(nil),       // 27: google.protobuf.Timestamp
+	(*AdminCommentEntry)(nil),           // 27: v1.AdminCommentEntry
+	(*ListAdminCommentsRequest)(nil),    // 28: v1.ListAdminCommentsRequest
+	(*ListAdminCommentsResponse)(nil),   // 29: v1.ListAdminCommentsResponse
+	(*DeleteAdminCommentRequest)(nil),   // 30: v1.DeleteAdminCommentRequest
+	(*DeleteAdminCommentResponse)(nil),  // 31: v1.DeleteAdminCommentResponse
+	(*timestamppb.Timestamp)(nil),       // 32: google.protobuf.Timestamp
 }
-var file_admin_proto_depIdxs = []int32{
+var file_api_proto_v1_admin_proto_depIdxs = []int32{
 	6,  // 0: v1.AdminLoginResponse.user:type_name -> v1.AdminUserSummary
 	6,  // 1: v1.GetAdminStatsResponse.recent_signups:type_name -> v1.AdminUserSummary
 	18, // 2: v1.GetAdminStatsResponse.recent_templates:type_name -> v1.AdminTemplateSummary
-	27, // 3: v1.AdminUserSummary.created_at:type_name -> google.protobuf.Timestamp
-	27, // 4: v1.AdminUserSummary.updated_at:type_name -> google.protobuf.Timestamp
+	32, // 3: v1.AdminUserSummary.created_at:type_name -> google.protobuf.Timestamp
+	32, // 4: v1.AdminUserSummary.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 5: v1.ListUsersResponse.users:type_name -> v1.AdminUserSummary
 	6,  // 6: v1.GetUserResponse.user:type_name -> v1.AdminUserSummary
 	11, // 7: v1.GetUserResponse.stats:type_name -> v1.UserStats
@@ -2071,67 +2478,74 @@ var file_admin_proto_depIdxs = []int32{
 	13, // 9: v1.GetUserResponse.api_keys:type_name -> v1.AdminAPIKeySummary
 	18, // 10: v1.GetUserResponse.templates:type_name -> v1.AdminTemplateSummary
 	24, // 11: v1.GetUserResponse.action_history:type_name -> v1.AdminAuditLogEntry
-	27, // 12: v1.OAuthIdentity.created_at:type_name -> google.protobuf.Timestamp
-	27, // 13: v1.AdminAPIKeySummary.created_at:type_name -> google.protobuf.Timestamp
-	27, // 14: v1.AdminAPIKeySummary.last_used_at:type_name -> google.protobuf.Timestamp
+	32, // 12: v1.OAuthIdentity.created_at:type_name -> google.protobuf.Timestamp
+	32, // 13: v1.AdminAPIKeySummary.created_at:type_name -> google.protobuf.Timestamp
+	32, // 14: v1.AdminAPIKeySummary.last_used_at:type_name -> google.protobuf.Timestamp
 	6,  // 15: v1.UserActionResponse.user:type_name -> v1.AdminUserSummary
-	27, // 16: v1.AdminTemplateSummary.created_at:type_name -> google.protobuf.Timestamp
-	27, // 17: v1.AdminTemplateSummary.updated_at:type_name -> google.protobuf.Timestamp
+	32, // 16: v1.AdminTemplateSummary.created_at:type_name -> google.protobuf.Timestamp
+	32, // 17: v1.AdminTemplateSummary.updated_at:type_name -> google.protobuf.Timestamp
 	18, // 18: v1.ListAdminTemplatesResponse.templates:type_name -> v1.AdminTemplateSummary
 	18, // 19: v1.GetAdminTemplateResponse.template:type_name -> v1.AdminTemplateSummary
 	23, // 20: v1.GetAdminTemplateResponse.versions:type_name -> v1.AdminTemplateVersion
-	27, // 21: v1.AdminTemplateVersion.created_at:type_name -> google.protobuf.Timestamp
-	27, // 22: v1.AdminAuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	32, // 21: v1.AdminTemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	32, // 22: v1.AdminAuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
 	24, // 23: v1.ListAuditLogsResponse.entries:type_name -> v1.AdminAuditLogEntry
-	0,  // 24: v1.AdminService.AdminLogin:input_type -> v1.AdminLoginRequest
-	2,  // 25: v1.AdminService.RefreshAdminSession:input_type -> v1.RefreshAdminSessionRequest
-	4,  // 26: v1.AdminService.GetAdminStats:input_type -> v1.GetAdminStatsRequest
-	7,  // 27: v1.AdminService.ListUsers:input_type -> v1.ListUsersRequest
-	9,  // 28: v1.AdminService.GetUser:input_type -> v1.GetUserRequest
-	14, // 29: v1.AdminService.BanUser:input_type -> v1.BanUserRequest
-	15, // 30: v1.AdminService.UnbanUser:input_type -> v1.UnbanUserRequest
-	16, // 31: v1.AdminService.ChangeUserRole:input_type -> v1.ChangeUserRoleRequest
-	19, // 32: v1.AdminService.ListTemplates:input_type -> v1.ListAdminTemplatesRequest
-	21, // 33: v1.AdminService.GetTemplate:input_type -> v1.GetAdminTemplateRequest
-	25, // 34: v1.AdminService.ListAuditLogs:input_type -> v1.ListAuditLogsRequest
-	1,  // 35: v1.AdminService.AdminLogin:output_type -> v1.AdminLoginResponse
-	3,  // 36: v1.AdminService.RefreshAdminSession:output_type -> v1.RefreshAdminSessionResponse
-	5,  // 37: v1.AdminService.GetAdminStats:output_type -> v1.GetAdminStatsResponse
-	8,  // 38: v1.AdminService.ListUsers:output_type -> v1.ListUsersResponse
-	10, // 39: v1.AdminService.GetUser:output_type -> v1.GetUserResponse
-	17, // 40: v1.AdminService.BanUser:output_type -> v1.UserActionResponse
-	17, // 41: v1.AdminService.UnbanUser:output_type -> v1.UserActionResponse
-	17, // 42: v1.AdminService.ChangeUserRole:output_type -> v1.UserActionResponse
-	20, // 43: v1.AdminService.ListTemplates:output_type -> v1.ListAdminTemplatesResponse
-	22, // 44: v1.AdminService.GetTemplate:output_type -> v1.GetAdminTemplateResponse
-	26, // 45: v1.AdminService.ListAuditLogs:output_type -> v1.ListAuditLogsResponse
-	35, // [35:46] is the sub-list for method output_type
-	24, // [24:35] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	32, // 24: v1.AdminCommentEntry.created_at:type_name -> google.protobuf.Timestamp
+	32, // 25: v1.AdminCommentEntry.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 26: v1.ListAdminCommentsResponse.entries:type_name -> v1.AdminCommentEntry
+	0,  // 27: v1.AdminService.AdminLogin:input_type -> v1.AdminLoginRequest
+	2,  // 28: v1.AdminService.RefreshAdminSession:input_type -> v1.RefreshAdminSessionRequest
+	4,  // 29: v1.AdminService.GetAdminStats:input_type -> v1.GetAdminStatsRequest
+	7,  // 30: v1.AdminService.ListUsers:input_type -> v1.ListUsersRequest
+	9,  // 31: v1.AdminService.GetUser:input_type -> v1.GetUserRequest
+	14, // 32: v1.AdminService.BanUser:input_type -> v1.BanUserRequest
+	15, // 33: v1.AdminService.UnbanUser:input_type -> v1.UnbanUserRequest
+	16, // 34: v1.AdminService.ChangeUserRole:input_type -> v1.ChangeUserRoleRequest
+	19, // 35: v1.AdminService.ListTemplates:input_type -> v1.ListAdminTemplatesRequest
+	21, // 36: v1.AdminService.GetTemplate:input_type -> v1.GetAdminTemplateRequest
+	25, // 37: v1.AdminService.ListAuditLogs:input_type -> v1.ListAuditLogsRequest
+	28, // 38: v1.AdminService.ListAdminComments:input_type -> v1.ListAdminCommentsRequest
+	30, // 39: v1.AdminService.DeleteAdminComment:input_type -> v1.DeleteAdminCommentRequest
+	1,  // 40: v1.AdminService.AdminLogin:output_type -> v1.AdminLoginResponse
+	3,  // 41: v1.AdminService.RefreshAdminSession:output_type -> v1.RefreshAdminSessionResponse
+	5,  // 42: v1.AdminService.GetAdminStats:output_type -> v1.GetAdminStatsResponse
+	8,  // 43: v1.AdminService.ListUsers:output_type -> v1.ListUsersResponse
+	10, // 44: v1.AdminService.GetUser:output_type -> v1.GetUserResponse
+	17, // 45: v1.AdminService.BanUser:output_type -> v1.UserActionResponse
+	17, // 46: v1.AdminService.UnbanUser:output_type -> v1.UserActionResponse
+	17, // 47: v1.AdminService.ChangeUserRole:output_type -> v1.UserActionResponse
+	20, // 48: v1.AdminService.ListTemplates:output_type -> v1.ListAdminTemplatesResponse
+	22, // 49: v1.AdminService.GetTemplate:output_type -> v1.GetAdminTemplateResponse
+	26, // 50: v1.AdminService.ListAuditLogs:output_type -> v1.ListAuditLogsResponse
+	29, // 51: v1.AdminService.ListAdminComments:output_type -> v1.ListAdminCommentsResponse
+	31, // 52: v1.AdminService.DeleteAdminComment:output_type -> v1.DeleteAdminCommentResponse
+	40, // [40:53] is the sub-list for method output_type
+	27, // [27:40] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
-func init() { file_admin_proto_init() }
-func file_admin_proto_init() {
-	if File_admin_proto != nil {
+func init() { file_api_proto_v1_admin_proto_init() }
+func file_api_proto_v1_admin_proto_init() {
+	if File_api_proto_v1_admin_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_admin_proto_rawDesc), len(file_admin_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_v1_admin_proto_rawDesc), len(file_api_proto_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_admin_proto_goTypes,
-		DependencyIndexes: file_admin_proto_depIdxs,
-		MessageInfos:      file_admin_proto_msgTypes,
+		GoTypes:           file_api_proto_v1_admin_proto_goTypes,
+		DependencyIndexes: file_api_proto_v1_admin_proto_depIdxs,
+		MessageInfos:      file_api_proto_v1_admin_proto_msgTypes,
 	}.Build()
-	File_admin_proto = out.File
-	file_admin_proto_goTypes = nil
-	file_admin_proto_depIdxs = nil
+	File_api_proto_v1_admin_proto = out.File
+	file_api_proto_v1_admin_proto_goTypes = nil
+	file_api_proto_v1_admin_proto_depIdxs = nil
 }

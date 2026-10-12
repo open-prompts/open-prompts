@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// retryAfterRegex extracts the seconds hint from rate-limit messages like
+// "rate limit exceeded, retry after 42 seconds".
+var retryAfterRegex = regexp.MustCompile(`retry after (\d+) seconds`)
 
 func writeError(w http.ResponseWriter, err error) {
 	zap.S().Errorf("Error handling request: %v", err)
@@ -56,6 +61,11 @@ func writeError(w http.ResponseWriter, err error) {
 		code = http.StatusServiceUnavailable
 	case codes.ResourceExhausted:
 		code = http.StatusTooManyRequests
+		// Generic rate-limit hint: parse trailing seconds from messages like
+		// "rate limit exceeded, retry after N seconds".
+		if matches := retryAfterRegex.FindStringSubmatch(st.Message()); matches != nil {
+			w.Header().Set("Retry-After", matches[1])
+		}
 	case codes.FailedPrecondition:
 		code = http.StatusConflict
 	default:
@@ -87,12 +97,11 @@ func main() {
 	templateVersionRepo := repository.NewTemplateVersionRepository(pgConn.DB)
 	templateAliasRepo := repository.NewTemplateAliasRepository(pgConn.DB)
 	notificationRepo := repository.NewNotificationRepository(pgConn.DB)
+	commentRepo := repository.NewCommentRepository(pgConn.DB)
 
 	// User repository is needed by the prompt service for notification
 	// actor lookups; construct it before the prompt service.
 	userRepo := repository.NewUserRepository(pgConn.DB)
-
-	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo, templateAliasRepo, notificationRepo, userRepo)
 
 	// Redis
 	redisAddr := os.Getenv("REDIS_ADDR")
@@ -103,6 +112,8 @@ func main() {
 	if err != nil {
 		zap.S().Fatalf("failed to connect to redis: %v", err)
 	}
+
+	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo, templateAliasRepo, notificationRepo, userRepo, commentRepo, redisClient)
 
 	// User Service
 	apiKeyRepo := repository.NewAPIKeyRepository(pgConn.DB)
@@ -659,6 +670,78 @@ func main() {
 			return
 		}
 
+		// /api/v1/templates/{template_id}/comments — GET (public read with
+		// optional auth) and POST (auth required).
+		if len(parts) == 2 && parts[1] == "comments" {
+			templateID := parts[0]
+			switch r.Method {
+			case http.MethodGet:
+				ctx := context.Background()
+				if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+					if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+						ctx = service.ContextWithUserID(ctx, userID)
+					}
+				}
+				page := 1
+				if v := r.URL.Query().Get("page"); v != "" {
+					if parsed, perr := strconv.Atoi(v); perr == nil && parsed > 0 {
+						page = parsed
+					}
+				}
+				size := 20
+				if v := r.URL.Query().Get("page_size"); v != "" {
+					if parsed, perr := strconv.Atoi(v); perr == nil && parsed > 0 {
+						size = parsed
+					}
+				}
+				req := &pb.ListCommentsRequest{TemplateId: templateID, Page: int32(page), PageSize: int32(size)}
+				resp, err := svc.ListComments(ctx, req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+				return
+			case http.MethodPost:
+				authHeader := r.Header.Get("Authorization")
+				if authHeader == "" {
+					http.Error(w, "Authorization header required", http.StatusUnauthorized)
+					return
+				}
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				ctx := service.ContextWithUserID(context.Background(), userID)
+
+				var body struct {
+					Content string `json:"content"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					http.Error(w, "Invalid request body", http.StatusBadRequest)
+					return
+				}
+				req := &pb.CreateCommentRequest{TemplateId: templateID, Content: body.Content}
+				resp, err := svc.CreateComment(ctx, req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+				return
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			ctx := context.Background()
@@ -1183,6 +1266,66 @@ func main() {
 		http.Error(w, "Not found", http.StatusNotFound)
 	})
 
+	// Comment Handlers — /api/v1/comments/{id} (PUT edit, DELETE author-or-owner)
+	http.HandleFunc("/api/v1/comments/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		commentID := strings.TrimPrefix(r.URL.Path, "/api/v1/comments/")
+		if commentID == "" || strings.Contains(commentID, "/") {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		switch r.Method {
+		case http.MethodPut:
+			var body struct {
+				Content string `json:"content"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "Invalid request body", http.StatusBadRequest)
+				return
+			}
+			resp, err := svc.UpdateComment(ctx, &pb.UpdateCommentRequest{CommentId: commentID, Content: body.Content})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case http.MethodDelete:
+			resp, err := svc.DeleteComment(ctx, &pb.DeleteCommentRequest{CommentId: commentID})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Prompt Handlers
 	http.HandleFunc("/api/v1/prompts", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -1590,6 +1733,87 @@ func main() {
 		}
 
 		resp, err := adminSvc.ListAuditLogs(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	// Admin Comment Moderation — /api/v1/admin/comments (GET list)
+	http.HandleFunc("/api/v1/admin/comments", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		req := &pb.ListAdminCommentsRequest{}
+		q := r.URL.Query()
+		req.Q = q.Get("q")
+		req.TemplateId = q.Get("template_id")
+		req.UserId = q.Get("user_id")
+		if v, err := strconv.Atoi(q.Get("page")); err == nil {
+			req.Page = int32(v)
+		}
+		if v, err := strconv.Atoi(q.Get("per_page")); err == nil {
+			req.PerPage = int32(v)
+		}
+
+		resp, err := adminSvc.ListAdminComments(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	// Admin Comment Moderation — /api/v1/admin/comments/{id} (DELETE with reason)
+	http.HandleFunc("/api/v1/admin/comments/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodDelete {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		commentID := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/comments/")
+		if commentID == "" || strings.Contains(commentID, "/") {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+
+		var body struct {
+			Reason string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		resp, err := adminSvc.DeleteAdminComment(ctx, &pb.DeleteAdminCommentRequest{CommentId: commentID, Reason: body.Reason})
 		if err != nil {
 			writeError(w, err)
 			return

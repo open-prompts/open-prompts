@@ -1497,6 +1497,287 @@ def test_notifications():
     return True
 
 
+def test_template_comments():
+    """Template comments:
+    1. post/read/paginate; comment_count maintained
+    2. edit within window + expired-window 403; non-author 403
+    3. author delete; owner deletes another's comment; non-author 403
+    4. banned user 403; rate limit 429 + Retry-After
+    5. admin list filters + delete-with-reason + audit row
+    6. template deletion cascades comments; private template 404 for non-owner
+    """
+    print("\n--- Starting Template Comments Test ---")
+
+    APP = "http://localhost:8080/api/v1"
+    COMMENTS = f"{APP}/comments"
+    ADMIN = f"{APP}/admin"
+
+    owner_id = f"cmt_owner_{int(time.time())}"
+    token_owner = get_auth_token(owner_id)
+    headers_owner = {"Authorization": f"Bearer {token_owner}"}
+
+    author_id = f"cmt_author_{int(time.time())}"
+    token_author = get_auth_token(author_id)
+    headers_author = {"Authorization": f"Bearer {token_author}"}
+
+    other_id = f"cmt_other_{int(time.time())}"
+    token_other = get_auth_token(other_id)
+    headers_other = {"Authorization": f"Bearer {token_other}"}
+
+    # 1. Owner creates a public template
+    print(f"Creating template by {owner_id}...")
+    t_data = {
+        "title": "Comments Template",
+        "description": "For comment tests",
+        "content": "Comment on me",
+        "owner_id": owner_id,
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "Social",
+        "tags": ["comments"]
+    }
+    resp = requests.post(BASE_URL, json=t_data, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Failed to create template: {resp.text}")
+        return False
+    t_id = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({'id': t_id, 'owner_id': owner_id})
+    print(f"Template created: {t_id}")
+
+    # 2. Author posts a comment; appears in list; comment_count = 1
+    print("Author posting comment...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_author,
+                         json={"content": "First comment!"})
+    if resp.status_code != 200:
+        print(f"Create comment failed: {resp.status_code} {resp.text}")
+        return False
+    c1 = resp.json()
+    if c1.get("content") != "First comment!" or not c1.get("id"):
+        print(f"Unexpected comment response: {c1}")
+        return False
+    if c1.get("is_own") is not True or c1.get("is_owner") is not False:
+        print(f"is_own/is_owner flags wrong: {c1.get('is_own')}/{c1.get('is_owner')}")
+        return False
+    if not c1.get("author", {}).get("display_name"):
+        print("Author display_name missing")
+        return False
+
+    resp = requests.get(f"{BASE_URL}/{t_id}")
+    if resp.json()["template"].get("comment_count") != 1:
+        print(f"comment_count should be 1, got {resp.json()['template'].get('comment_count')}")
+        return False
+
+    # 3. Anonymous GET list works (public template)
+    print("Anonymous list...")
+    resp = requests.get(f"{BASE_URL}/{t_id}/comments")
+    if resp.status_code != 200 or resp.json().get("total_count") != 1:
+        print(f"Anonymous list failed: {resp.status_code} {resp.text}")
+        return False
+    if len(resp.json().get("comments", [])) != 1:
+        print("Anonymous list should have 1 comment")
+        return False
+
+    # 4. Validation: empty and >2000 char content rejected
+    print("Content validation...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_author,
+                         json={"content": "   "})
+    if resp.status_code != 400:
+        print(f"Whitespace-only content should be 400, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_author,
+                         json={"content": "x" * 2001})
+    if resp.status_code != 400:
+        print(f"2001-char content should be 400, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_author,
+                         json={"content": "x" * 2000})
+    if resp.status_code != 200:
+        print(f"2000-char content should be 200, got {resp.status_code}")
+        return False
+    c2 = resp.json()["id"]
+    print("Content validation OK")
+
+    # 5. Edit within window: is_edited true, position unchanged
+    print("Editing comment within window...")
+    resp = requests.put(f"{COMMENTS}/{c1['id']}", headers=headers_author,
+                        json={"content": "First comment (edited)"})
+    if resp.status_code != 200:
+        print(f"Edit failed: {resp.status_code} {resp.text}")
+        return False
+    if resp.json().get("is_edited") is not True:
+        print("is_edited should be true after edit")
+        return False
+    resp = requests.get(f"{BASE_URL}/{t_id}/comments")
+    comments = resp.json()["comments"]
+    if comments[0].get("id") != c2:
+        print("Edit should not bump comment position (newest first)")
+        return False
+    print("Edit OK")
+
+    # 6. Non-author edit/delete rejected
+    print("Non-author permissions...")
+    resp = requests.put(f"{COMMENTS}/{c1['id']}", headers=headers_other,
+                        json={"content": "hijack"})
+    if resp.status_code != 403:
+        print(f"Non-author edit should be 403, got {resp.status_code}")
+        return False
+    resp = requests.delete(f"{COMMENTS}/{c1['id']}", headers=headers_other)
+    if resp.status_code != 403:
+        print(f"Non-author delete should be 403, got {resp.status_code}")
+        return False
+    print("Non-author permissions OK")
+
+    # 7. Owner deletes author's comment (moderation); count drops
+    print("Owner deleting author's comment...")
+    resp = requests.delete(f"{COMMENTS}/{c1['id']}", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Owner delete failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{t_id}")
+    if resp.json()["template"].get("comment_count") != 1:
+        print(f"comment_count should be back to 1, got {resp.json()['template'].get('comment_count')}")
+        return False
+    print("Owner moderation OK")
+
+    # 8. Banned user cannot comment
+    print("Banned user check...")
+    banned_id = f"cmt_banned_{int(time.time())}"
+    token_banned = get_auth_token(banned_id)
+    headers_banned = {"Authorization": f"Bearer {token_banned}"}
+    bootstrap_email = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "admin@example.com")
+    bootstrap_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "Admin_123456")
+    resp = requests.post(f"{ADMIN}/login", json={"email": bootstrap_email, "password": bootstrap_password})
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    resp = requests.post(f"{ADMIN}/users/{banned_id}/ban", headers=admin_headers,
+                         json={"reason": "fvt comments ban test"})
+    if resp.status_code != 200:
+        print(f"Ban failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_banned,
+                         json={"content": "banned user comment"})
+    if resp.status_code != 403:
+        print(f"Banned user comment should be 403, got {resp.status_code}")
+        return False
+    print("Banned user OK")
+
+    # 9. Rate limit: 6th comment within a minute → 429 + Retry-After
+    print("Rate limit check...")
+    # author has already posted 2 comments (c1, c2); 3 more brings them to 5.
+    for i in range(3):
+        resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_author,
+                             json={"content": f"rate limit probe {i}"})
+        if resp.status_code != 200:
+            print(f"Comment {i+3}/5 unexpected failure: {resp.status_code} {resp.text}")
+            return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_author,
+                         json={"content": "should be rate limited"})
+    if resp.status_code != 429:
+        print(f"6th comment should be 429, got {resp.status_code} {resp.text}")
+        return False
+    if not resp.headers.get("Retry-After"):
+        print("429 response missing Retry-After header")
+        return False
+    print(f"Rate limited with Retry-After={resp.headers.get('Retry-After')}")
+
+    # 10. Admin moderation: list filters, delete with reason, audit row
+    print("Admin moderation...")
+    resp = requests.get(f"{ADMIN}/comments", headers=admin_headers,
+                        params={"q": "rate limit probe"})
+    if resp.status_code != 200:
+        print(f"Admin comment list failed: {resp.status_code} {resp.text}")
+        return False
+    entries = resp.json().get("entries", [])
+    if len(entries) != 3:
+        print(f"Admin search should find 3 probe comments, got {len(entries)}")
+        return False
+    if not all(e.get("user_email") for e in entries):
+        print("Admin entries should include author email")
+        return False
+
+    resp = requests.get(f"{ADMIN}/comments", headers=admin_headers,
+                        params={"template_id": t_id})
+    if int(resp.json().get("total", 0)) != 4:
+        print(f"Admin template filter total should be 4, got {resp.json().get('total')}")
+        return False
+
+    resp = requests.get(f"{ADMIN}/comments", headers=admin_headers,
+                        params={"user_id": author_id})
+    if int(resp.json().get("total", 0)) != 4:
+        print(f"Admin author filter total should be 4, got {resp.json().get('total')}")
+        return False
+
+    # Delete without reason → 400
+    resp = requests.delete(f"{ADMIN}/comments/{c2}", headers=admin_headers, json={})
+    if resp.status_code != 400:
+        print(f"Admin delete without reason should be 400, got {resp.status_code}")
+        return False
+    # Delete with short reason → 400
+    resp = requests.delete(f"{ADMIN}/comments/{c2}", headers=admin_headers,
+                           json={"reason": "ab"})
+    if resp.status_code != 400:
+        print(f"Admin delete with short reason should be 400, got {resp.status_code}")
+        return False
+    # Delete with valid reason → 200 + audit row
+    resp = requests.delete(f"{ADMIN}/comments/{c2}", headers=admin_headers,
+                           json={"reason": "fvt moderation cleanup"})
+    if resp.status_code != 200:
+        print(f"Admin delete failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "delete_comment"})
+    audit_entries = resp.json().get("entries", [])
+    if not any(e.get("target_id") == c2 for e in audit_entries):
+        print("Audit log missing delete_comment entry for the deleted comment")
+        return False
+    print("Admin moderation OK")
+
+    # 11. Private template: non-owner gets 404 on comments; owner 200
+    print("Private template visibility...")
+    p_data = dict(t_data)
+    p_data["title"] = "Private Comments Template"
+    p_data["visibility"] = "VISIBILITY_PRIVATE"
+    resp = requests.post(BASE_URL, json=p_data, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Failed to create private template: {resp.text}")
+        return False
+    p_id = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({'id': p_id, 'owner_id': owner_id})
+
+    resp = requests.get(f"{BASE_URL}/{p_id}/comments", headers=headers_author)
+    if resp.status_code != 404:
+        print(f"Non-owner private comments should be 404, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{BASE_URL}/{p_id}/comments", headers=headers_author,
+                         json={"content": "should not work"})
+    if resp.status_code != 404:
+        print(f"Non-owner comment on private should be 404, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{p_id}/comments", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Owner private comments should be 200, got {resp.status_code}")
+        return False
+    print("Private visibility OK")
+
+    # 12. Template deletion cascades comments (verified via admin list)
+    print("Cascade check...")
+    resp = requests.delete(f"{BASE_URL}/{t_id}?owner_id={owner_id}", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Template delete failed: {resp.text}")
+        return False
+    resp = requests.get(f"{ADMIN}/comments", headers=admin_headers,
+                        params={"template_id": t_id})
+    if int(resp.json().get("total", -1)) != 0:
+        print(f"Comments should be cascade-deleted, got {resp.json().get('total')}")
+        return False
+    print("Cascade verified")
+
+    print("--- Template Comments Test Passed ---")
+    return True
+
+
 def main():
     # Start containers
     print("Starting containers...")
@@ -1523,6 +1804,7 @@ def main():
     if success: success = test_pagination()
     if success: success = test_likes_and_favorites()
     if success: success = test_notifications()
+    if success: success = test_template_comments()
     if success: success = test_profile_update()
     if success: success = test_template_alias_flow()
     if success: success = test_language_behavior()

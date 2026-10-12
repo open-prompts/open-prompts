@@ -21,6 +21,7 @@ type Template struct {
 	Language      string         `json:"language"`
 	LikeCount     int32          `json:"like_count"`
 	FavoriteCount int32          `json:"favorite_count"`
+	CommentCount  int32          `json:"comment_count"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 

@@ -645,7 +645,7 @@ func (s *AdminService) ListAuditLogs(ctx context.Context, req *pb.ListAuditLogsR
 		return nil, err
 	}
 
-	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" {
+	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" {
 		return nil, status.Error(codes.InvalidArgument, "invalid action filter")
 	}
 
@@ -734,4 +734,81 @@ func BootstrapAdmin(ctx context.Context, userRepo repository.UserRepository, ema
 	}
 	zap.S().Infof("Admin bootstrap: created admin account %s", email)
 	return nil
+}
+
+// ListAdminComments lists all comments platform-wide for moderation.
+func (s *AdminService) ListAdminComments(ctx context.Context, req *pb.ListAdminCommentsRequest) (*pb.ListAdminCommentsResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	entries, total, err := s.AdminRepo.ListComments(ctx, repository.CommentFilters{
+		Search:     strings.TrimSpace(req.Q),
+		TemplateID: strings.TrimSpace(req.TemplateId),
+		UserID:     strings.TrimSpace(req.UserId),
+		Limit:      perPage,
+		Offset:     (page - 1) * perPage,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list comments: %v", err)
+	}
+
+	resp := &pb.ListAdminCommentsResponse{
+		Entries: make([]*pb.AdminCommentEntry, 0, len(entries)),
+		Total:   total,
+		Page:    int32(page),
+		PerPage: int32(perPage),
+	}
+	for _, e := range entries {
+		resp.Entries = append(resp.Entries, &pb.AdminCommentEntry{
+			Id:                      e.ID,
+			TemplateId:              e.TemplateID,
+			TemplateTitle:           e.TemplateTitle,
+			TemplateOwnerId:         e.TemplateOwnerID,
+			TemplateOwnerDisplayName: e.OwnerDisplayName,
+			UserId:                  e.UserID,
+			UserDisplayName:         e.UserDisplayName,
+			UserEmail:               e.UserEmail,
+			Content:                 e.Content,
+			CreatedAt:               timestamppb.New(e.CreatedAt),
+			UpdatedAt:               timestamppb.New(e.UpdatedAt),
+		})
+	}
+	return resp, nil
+}
+
+// DeleteAdminComment deletes any comment with a mandatory reason (audited).
+func (s *AdminService) DeleteAdminComment(ctx context.Context, req *pb.DeleteAdminCommentRequest) (*pb.DeleteAdminCommentResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	if req.CommentId == "" {
+		return nil, status.Error(codes.InvalidArgument, "comment id is required")
+	}
+
+	deleted, _, err := s.AdminRepo.DeleteComment(ctx, req.CommentId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete comment: %v", err)
+	}
+	if !deleted {
+		return nil, status.Error(codes.NotFound, "comment not found")
+	}
+
+	s.writeAudit(ctx, actor, "delete_comment", "comment", req.CommentId, req.Reason)
+	return &pb.DeleteAdminCommentResponse{Success: true}, nil
 }

@@ -126,6 +126,19 @@ func (m *MockAdminRepository) ListAuditByTarget(ctx context.Context, targetID st
 	return args.Get(0).([]*models.AdminAuditLog), args.Error(1)
 }
 
+func (m *MockAdminRepository) ListComments(ctx context.Context, f repository.CommentFilters) ([]*models.AdminComment, int64, error) {
+	args := m.Called(ctx, f)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int64), args.Error(2)
+	}
+	return args.Get(0).([]*models.AdminComment), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockAdminRepository) DeleteComment(ctx context.Context, id string) (bool, int64, error) {
+	args := m.Called(ctx, id)
+	return args.Bool(0), args.Get(1).(int64), args.Error(2)
+}
+
 // MockAPIKeyLister is a mock implementation of service.APIKeyLister.
 type MockAPIKeyLister struct {
 	mock.Mock
@@ -622,6 +635,21 @@ func TestListAuditLogs(t *testing.T) {
 		expectAdminAuth(mockUser, makeAdminUser("admin_1"))
 		_, err := svc.ListAuditLogs(adminCtx("admin_1"), &pb.ListAuditLogsRequest{Action: "delete"})
 		assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	})
+
+	t.Run("DeleteCommentFilter", func(t *testing.T) {
+		svc, mockUser, mockAdmin, _, _ := newAdminTestService(t)
+		expectAdminAuth(mockUser, makeAdminUser("admin_1"))
+		mockAdmin.On("ListAuditLogs", mock.Anything, repository.AuditFilters{Action: "delete_comment", Limit: 20, Offset: 0}).Return([]*models.AdminAuditLog{
+			{ID: "a2", Action: "delete_comment", TargetType: "comment", TargetID: "c-1", Reason: "spam cleanup"},
+		}, int64(1), nil)
+
+		resp, err := svc.ListAuditLogs(adminCtx("admin_1"), &pb.ListAuditLogsRequest{Action: "delete_comment"})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), resp.Total)
+		assert.Len(t, resp.Entries, 1)
+		assert.Equal(t, "delete_comment", resp.Entries[0].Action)
+		assert.Equal(t, "comment", resp.Entries[0].TargetType)
 	})
 }
 

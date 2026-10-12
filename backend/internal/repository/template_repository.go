@@ -82,7 +82,7 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 	query := `
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
-			t.like_count, t.favorite_count, t.created_at, t.updated_at,
+			t.like_count, t.favorite_count, t.comment_count, t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
 		FROM templates t
@@ -93,7 +93,7 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 	var t models.Template
 	err := r.db.QueryRowContext(ctx, query, id, currentUserID).Scan(
 		&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
-		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CreatedAt, &t.UpdatedAt,
+		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount, &t.CreatedAt, &t.UpdatedAt,
 		&t.IsLiked, &t.IsFavorited,
 	)
 	if err != nil {
@@ -126,7 +126,7 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 	query := `
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
-			t.like_count, t.favorite_count, t.created_at, t.updated_at,
+			t.like_count, t.favorite_count, t.comment_count, t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
 		FROM templates t
@@ -195,7 +195,7 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 		var t models.Template
 		if err := rows.Scan(
 			&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
-			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CreatedAt, &t.UpdatedAt,
+			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount, &t.CreatedAt, &t.UpdatedAt,
 			&t.IsLiked, &t.IsFavorited,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan template: %w", err)

@@ -176,3 +176,20 @@ export const markAllNotificationsRead = () => {
 export const deleteNotification = (id) => {
   return api.delete(`/notifications/${id}`);
 };
+
+// API methods for Comments
+export const listTemplateComments = (templateId, params) => {
+  return api.get(`/templates/${templateId}/comments`, { params });
+};
+
+export const createTemplateComment = (templateId, content) => {
+  return api.post(`/templates/${templateId}/comments`, { content });
+};
+
+export const updateComment = (commentId, content) => {
+  return api.put(`/comments/${commentId}`, { content });
+};
+
+export const deleteComment = (commentId) => {
+  return api.delete(`/comments/${commentId}`);
+};

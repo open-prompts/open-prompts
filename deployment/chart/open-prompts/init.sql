@@ -281,3 +281,81 @@ CREATE INDEX IF NOT EXISTS idx_notifications_recipient_unread
     ON notifications (recipient_id) WHERE read_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_created
     ON notifications (recipient_id, created_at DESC);
+
+-- -----------------------------------------------------------------------------
+-- Feature: template-comments
+-- Description: Flat comment threads on templates. comment_count is maintained
+--              transactionally on insert/delete (like like_count).
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 2000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE template_comments IS 'Flat comments on templates (no threading)';
+COMMENT ON COLUMN template_comments.content IS 'Plain text, 1-2000 chars, rendered client-side with escaping only';
+
+CREATE INDEX IF NOT EXISTS idx_template_comments_template_created
+    ON template_comments (template_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_template_comments_user_id ON template_comments (user_id);
+
+-- Denormalized counter (same pattern as like_count / favorite_count).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='comment_count') THEN
+        ALTER TABLE templates ADD COLUMN comment_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN templates.comment_count IS 'Number of comments (maintained transactionally)';
+    END IF;
+END $$;
+
+-- Widen admin_audit_logs CHECKs for delete_comment / comment targets.
+-- CHECK constraints cannot be ALTERed; guard on pg_constraint so the block is
+-- idempotent: only drop+re-add when the live definition lacks the new value.
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_action_check';
+    IF def IS NOT NULL AND def NOT LIKE '%delete_comment%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_action_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_action_check
+            CHECK (action IN ('ban', 'unban', 'role_change', 'delete_comment'));
+    END IF;
+END $$;
+
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_target_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%comment%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_target_type_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_target_type_check
+            CHECK (target_type IN ('user', 'comment'));
+    END IF;
+END $$;
+
+-- Widen notifications.type CHECK for the 'comment' engagement type
+-- (notifications landed first; same pg_constraint-guarded pattern).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%comment%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment'));
+    END IF;
+END $$;

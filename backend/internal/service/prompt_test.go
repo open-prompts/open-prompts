@@ -173,7 +173,7 @@ func TestCreatePrompt(t *testing.T) {
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
 	mockAliasRepo := &MockTemplateAliasRepository{}
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil)
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil, nil, nil)
 
 	t.Run("Success", func(t *testing.T) {
 		req := &pb.CreatePromptRequest{
@@ -206,7 +206,7 @@ func TestGetPrompt(t *testing.T) {
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
 	mockAliasRepo := &MockTemplateAliasRepository{}
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil)
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil, nil, nil)
 
 	t.Run("Success", func(t *testing.T) {
 		prompt := &models.Prompt{
@@ -230,7 +230,7 @@ func TestDeletePrompt(t *testing.T) {
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
 	mockAliasRepo := &MockTemplateAliasRepository{}
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil)
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil, nil, nil)
 
 	t.Run("Success", func(t *testing.T) {
 		prompt := &models.Prompt{ID: "p_1", OwnerID: "user_1"}
@@ -257,7 +257,7 @@ func TestListCategories(t *testing.T) {
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
 	mockAliasRepo := &MockTemplateAliasRepository{}
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil)
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil, nil, nil)
 
 	t.Run("Success", func(t *testing.T) {
 		stats := []*models.CategoryStat{
@@ -280,7 +280,7 @@ func TestListTags(t *testing.T) {
 	mockVersionRepo := new(MockTemplateVersionRepository)
 
 	mockAliasRepo := &MockTemplateAliasRepository{}
-	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil)
+	svc := NewPromptService(mockPromptRepo, mockTemplateRepo, mockVersionRepo, mockAliasRepo, nil, nil, nil, nil)
 
 	t.Run("Success", func(t *testing.T) {
 		stats := []*models.TagStat{
@@ -318,7 +318,7 @@ func TestToggleLikeNotificationHook(t *testing.T) {
 				return liked, 1, nil
 			},
 		}
-		return NewPromptService(nil, mockTemplateRepo, nil, nil, notifRepo, userRepo)
+		return NewPromptService(nil, mockTemplateRepo, nil, nil, notifRepo, userRepo, nil, nil)
 	}
 
 	tpl := &models.Template{ID: "t1", OwnerID: "owner_1", Title: "Template"}
@@ -455,7 +455,7 @@ func TestToggleFavoriteNotificationHook(t *testing.T) {
 				return true, 1, nil
 			},
 		}
-		svc := NewPromptService(nil, mockTemplateRepo, nil, nil, notifRepo, userRepo)
+		svc := NewPromptService(nil, mockTemplateRepo, nil, nil, notifRepo, userRepo, nil, nil)
 		resp, err := svc.ToggleFavoriteTemplate(
 			ContextWithUserID(context.Background(), "actor_1"),
 			&pb.ToggleFavoriteRequest{TemplateId: "t1"},
@@ -475,7 +475,7 @@ func TestToggleFavoriteNotificationHook(t *testing.T) {
 				return false, 0, nil
 			},
 		}
-		svc := NewPromptService(nil, mockTemplateRepo, nil, nil, notifRepo, userRepo)
+		svc := NewPromptService(nil, mockTemplateRepo, nil, nil, notifRepo, userRepo, nil, nil)
 		resp, err := svc.ToggleFavoriteTemplate(
 			ContextWithUserID(context.Background(), "actor_1"),
 			&pb.ToggleFavoriteRequest{TemplateId: "t1"},
@@ -507,7 +507,7 @@ func TestForkNotificationHook(t *testing.T) {
 		}
 		mockVersionRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.TemplateVersion")).Return(nil)
 
-		svc := NewPromptService(nil, mockTemplateRepo, mockVersionRepo, nil, notifRepo, userRepo)
+		svc := NewPromptService(nil, mockTemplateRepo, mockVersionRepo, nil, notifRepo, userRepo, nil, nil)
 		_, err := svc.ForkTemplate(
 			ContextWithUserID(context.Background(), "actor_1"),
 			"t1",

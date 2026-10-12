@@ -29,6 +29,8 @@ type PromptService struct {
 	TemplateAliasRepo   repository.TemplateAliasRepository
 	NotificationRepo    repository.NotificationRepository
 	UserRepo            repository.UserRepository
+	CommentRepo         repository.CommentRepository
+	Redis               RedisStore
 }
 
 func NewPromptService(
@@ -38,6 +40,8 @@ func NewPromptService(
 	templateAliasRepo repository.TemplateAliasRepository,
 	notificationRepo repository.NotificationRepository,
 	userRepo repository.UserRepository,
+	commentRepo repository.CommentRepository,
+	redis RedisStore,
 ) *PromptService {
 	return &PromptService{
 		PromptRepo:          promptRepo,
@@ -46,6 +50,8 @@ func NewPromptService(
 		TemplateAliasRepo:   templateAliasRepo,
 		NotificationRepo:    notificationRepo,
 		UserRepo:            userRepo,
+		CommentRepo:         commentRepo,
+		Redis:               redis,
 	}
 }
 
@@ -857,6 +863,7 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
 		LikeCount:     m.LikeCount,
 		FavoriteCount: m.FavoriteCount,
+		CommentCount:  m.CommentCount,
 		IsLiked:       m.IsLiked,
 		IsFavorited:   m.IsFavorited,
 		Language:      m.Language,
