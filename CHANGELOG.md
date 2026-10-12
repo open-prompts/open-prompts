@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/open-prompts/open-prompts/compare/v1.18.0...v1.19.0) (2026-10-12)
+
+
+### Features
+
+* **versioning:** add template change notes, version history panel and restore ([c9c5de0](https://github.com/open-prompts/open-prompts/commit/c9c5de04f998fc8c3539b3e649ca5e81b6308ac8))
+
 # [1.18.0](https://github.com/open-prompts/open-prompts/compare/v1.17.0...v1.18.0) (2026-10-12)
 
 
