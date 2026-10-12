@@ -31,12 +31,12 @@ func NewTemplateVersionRepository(db *sql.DB) TemplateVersionRepository {
 func (r *templateVersionRepository) Create(ctx context.Context, v *models.TemplateVersion) error {
 	zap.S().Infof("TemplateVersionRepository.Create: templateID=%s version=%s", v.TemplateID, v.Version)
 	query := `
-		INSERT INTO template_versions (template_id, version, content, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO template_versions (template_id, version, content, change_note, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		v.TemplateID, v.Version, v.Content, v.CreatedAt,
+		v.TemplateID, v.Version, v.Content, v.ChangeNote, v.CreatedAt,
 	).Scan(&v.ID)
 
 	if err != nil {
@@ -49,7 +49,7 @@ func (r *templateVersionRepository) Create(ctx context.Context, v *models.Templa
 func (r *templateVersionRepository) GetLatest(ctx context.Context, templateID string) (*models.TemplateVersion, error) {
 	zap.S().Infof("TemplateVersionRepository.GetLatest: templateID=%s", templateID)
 	query := `
-		SELECT id, template_id, version, content, created_at
+		SELECT id, template_id, version, content, change_note, created_at
 		FROM template_versions
 		WHERE template_id = $1
 		ORDER BY version DESC
@@ -57,7 +57,7 @@ func (r *templateVersionRepository) GetLatest(ctx context.Context, templateID st
 	`
 	var v models.TemplateVersion
 	err := r.db.QueryRowContext(ctx, query, templateID).Scan(
-		&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.CreatedAt,
+		&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.ChangeNote, &v.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest version: %w", err)
@@ -65,14 +65,18 @@ func (r *templateVersionRepository) GetLatest(ctx context.Context, templateID st
 	return &v, nil
 }
 
-// List retrieves all versions for a template.
+// List retrieves all versions for a template, newest first, with the
+// number of prompts pinned to each version (LEFT JOIN + COUNT).
 func (r *templateVersionRepository) List(ctx context.Context, limit, offset int, templateID string) ([]*models.TemplateVersion, error) {
 	zap.S().Infof("TemplateVersionRepository.List: templateID=%s limit=%d offset=%d", templateID, limit, offset)
 	query := `
-		SELECT id, template_id, version, content, created_at
-		FROM template_versions
-		WHERE template_id = $1
-		ORDER BY version DESC
+		SELECT tv.id, tv.template_id, tv.version, tv.content, tv.change_note, tv.created_at,
+		       COUNT(p.id) AS prompt_count
+		FROM template_versions tv
+		LEFT JOIN prompts p ON p.version_id = tv.id
+		WHERE tv.template_id = $1
+		GROUP BY tv.id
+		ORDER BY tv.version DESC
 		LIMIT $2 OFFSET $3
 	`
 	rows, err := r.db.QueryContext(ctx, query, templateID, limit, offset)
@@ -87,7 +91,7 @@ func (r *templateVersionRepository) List(ctx context.Context, limit, offset int,
 	for rows.Next() {
 		var v models.TemplateVersion
 		if err := rows.Scan(
-			&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.CreatedAt,
+			&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.ChangeNote, &v.CreatedAt, &v.PromptCount,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan template version: %w", err)
 		}
@@ -103,13 +107,13 @@ func (r *templateVersionRepository) List(ctx context.Context, limit, offset int,
 // Get retrieves a specific version by its ID.
 func (r *templateVersionRepository) Get(ctx context.Context, id int32) (*models.TemplateVersion, error) {
 	query := `
-SELECT id, template_id, version, content, created_at
+SELECT id, template_id, version, content, change_note, created_at
 FROM template_versions
 WHERE id = $1
 `
 	var v models.TemplateVersion
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.CreatedAt,
+		&v.ID, &v.TemplateID, &v.Version, &v.Content, &v.ChangeNote, &v.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get template version: %w", err)

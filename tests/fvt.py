@@ -1799,6 +1799,7 @@ def main():
     if success: success = test_auth()
     if success: success = test_prompt_lifecycle()
     if success: success = test_version_and_prompt()
+    if success: success = test_template_versioning()
     if success: success = test_stats()
     if success: success = test_tag_filtering()
     if success: success = test_pagination()
@@ -1918,6 +1919,150 @@ def test_language_behavior():
     print("Categories/tags aggregation passed.")
 
     print("--- Language Behavior Test Passed ---")
+    return True
+
+def test_template_versioning():
+    """Template versioning UX: change notes, prompt usage counts, restore flow."""
+    print("--- Starting Template Versioning Test ---")
+    owner_id = f"user_ver_{int(time.time())}"
+    token = get_auth_token(owner_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Create template (v1, no note)
+    print("1. Creating Template (v1)...")
+    create_payload = {
+        "owner_id": owner_id,
+        "title": "Versioning Test Template",
+        "description": "Testing change notes and restore",
+        "visibility": "VISIBILITY_PUBLIC",
+        "type": "TEMPLATE_TYPE_USER",
+        "content": "Version one content"
+    }
+    resp = requests.post(BASE_URL, json=create_payload, headers=headers)
+    assert resp.status_code == 200, f"Create failed: {resp.status_code} - {resp.text}"
+    data = resp.json()
+    template_id = data.get("template", {}).get("id")
+    v1_id = data.get("version", {}).get("id")
+    CREATED_TEMPLATES.append({"id": template_id, "owner_id": owner_id})
+    print(f"Created Template ID: {template_id}, v1 ID: {v1_id}")
+
+    # 2. Update with change_note -> new version carries the note
+    print("2. Updating with change_note (creating v2)...")
+    update_payload = {
+        "template_id": template_id,
+        "owner_id": owner_id,
+        "title": "Versioning Test Template",
+        "description": "Testing change notes and restore",
+        "visibility": "VISIBILITY_PUBLIC",
+        "content": "Version two content",
+        "change_note": "first revision"
+    }
+    resp = requests.put(f"{BASE_URL}/{template_id}", json=update_payload, headers=headers)
+    assert resp.status_code == 200, f"Update failed: {resp.status_code} - {resp.text}"
+    v2 = resp.json().get("new_version", {})
+    assert v2.get("version") == 2, f"Expected v2, got {v2}"
+    assert v2.get("change_note") == "first revision", f"change_note mismatch: {v2}"
+    print(f"v2 created with change_note: {v2.get('change_note')}")
+
+    # 3. List versions -> change_note + prompt_count present
+    print("3. Listing versions (checking change_note + prompt_count)...")
+    resp = requests.get(f"{BASE_URL}/{template_id}/versions", headers=headers)
+    assert resp.status_code == 200, f"List versions failed: {resp.status_code} - {resp.text}"
+    versions = resp.json().get("versions", [])
+    assert len(versions) == 2, f"Expected 2 versions, got {len(versions)}"
+    # Newest first
+    assert versions[0].get("version") == 2 and versions[1].get("version") == 1, f"Order wrong: {versions}"
+    assert versions[0].get("change_note") == "first revision"
+    assert versions[1].get("change_note") == "", f"v1 note should be empty: {versions[1]}"
+    assert versions[0].get("prompt_count") == 0, f"v2 prompt_count should be 0: {versions[0]}"
+    assert versions[1].get("prompt_count") == 0, f"v1 prompt_count should be 0: {versions[1]}"
+    print("change_note + prompt_count present on both versions.")
+
+    # 4. Create 2 prompts pinned to v1 -> v1 prompt_count == 2
+    print("4. Creating 2 prompts pinned to v1...")
+    for i in range(2):
+        prompt_payload = {
+            "template_id": template_id,
+            "version_id": v1_id,
+            "owner_id": owner_id,
+            "variables": {}
+        }
+        resp = requests.post(PROMPT_URL, json=prompt_payload, headers=headers)
+        assert resp.status_code == 200, f"Create prompt failed: {resp.status_code} - {resp.text}"
+        CREATED_PROMPTS.append({"id": resp.json().get("prompt", {}).get("id"), "owner_id": owner_id})
+    resp = requests.get(f"{BASE_URL}/{template_id}/versions", headers=headers)
+    assert resp.status_code == 200, resp.text
+    versions = resp.json().get("versions", [])
+    v1 = next(v for v in versions if v.get("version") == 1)
+    v2 = next(v for v in versions if v.get("version") == 2)
+    assert v1.get("prompt_count") == 2, f"v1 prompt_count expected 2, got {v1.get('prompt_count')}"
+    assert v2.get("prompt_count") == 0, f"v2 prompt_count expected 0, got {v2.get('prompt_count')}"
+    print(f"v1 prompt_count == 2, v2 prompt_count == 0. Correct.")
+
+    # 5. Note > 200 chars -> 400
+    print("5. Updating with 201-char change_note (expect 400)...")
+    long_note = "x" * 201
+    resp = requests.put(f"{BASE_URL}/{template_id}", json={
+        "template_id": template_id, "owner_id": owner_id,
+        "title": "Versioning Test Template", "visibility": "VISIBILITY_PUBLIC",
+        "content": "Version three content", "change_note": long_note
+    }, headers=headers)
+    assert resp.status_code == 400, f"Expected 400 for long note, got {resp.status_code}: {resp.text}"
+    print("201-char note correctly rejected with 400.")
+
+    # 6. Unchanged content + note -> no new version, note not stored
+    print("6. Updating with unchanged content + note (no new version)...")
+    resp = requests.put(f"{BASE_URL}/{template_id}", json={
+        "template_id": template_id, "owner_id": owner_id,
+        "title": "Versioning Test Template", "visibility": "VISIBILITY_PUBLIC",
+        "content": "Version two content", "change_note": "should be ignored"
+    }, headers=headers)
+    assert resp.status_code == 200, resp.text
+    resp = requests.get(f"{BASE_URL}/{template_id}/versions", headers=headers)
+    versions = resp.json().get("versions", [])
+    assert len(versions) == 2, f"Expected still 2 versions, got {len(versions)}"
+    v2 = next(v for v in versions if v.get("version") == 2)
+    assert v2.get("change_note") == "first revision", f"Note must not be overwritten: {v2}"
+    print("Unchanged content: no new version, note not stored.")
+
+    # 7. Restore: PUT v1's content + canonical note -> new v3
+    print("7. Restoring v1 content as new version...")
+    resp = requests.put(f"{BASE_URL}/{template_id}", json={
+        "template_id": template_id, "owner_id": owner_id,
+        "title": "Versioning Test Template", "visibility": "VISIBILITY_PUBLIC",
+        "content": "Version one content", "change_note": "Restored from v1"
+    }, headers=headers)
+    assert resp.status_code == 200, resp.text
+    v3 = resp.json().get("new_version", {})
+    assert v3.get("version") == 3, f"Expected v3, got {v3}"
+    assert v3.get("change_note") == "Restored from v1", f"Restore note mismatch: {v3}"
+
+    # All 3 versions intact (append-only)
+    resp = requests.get(f"{BASE_URL}/{template_id}/versions", headers=headers)
+    versions = resp.json().get("versions", [])
+    assert len(versions) == 3, f"Expected 3 versions, got {len(versions)}"
+    assert [v.get("version") for v in versions] == [3, 2, 1], f"Order wrong: {versions}"
+
+    # 'latest' alias resolves to v3
+    resp = requests.get(f"{BASE_URL}/{template_id}/aliases/latest", headers=headers)
+    assert resp.status_code == 200, f"Alias fetch failed: {resp.status_code} - {resp.text}"
+    assert resp.json().get("id") == v3.get("id"), f"latest alias should point to v3: {resp.json()}"
+    print("Restore created v3 with canonical note; history append-only; latest alias moved.")
+
+    # 8. Backwards compat: update without change_note still works
+    print("8. Updating without change_note (backwards compat)...")
+    resp = requests.put(f"{BASE_URL}/{template_id}", json={
+        "template_id": template_id, "owner_id": owner_id,
+        "title": "Versioning Test Template", "visibility": "VISIBILITY_PUBLIC",
+        "content": "Version four content"
+    }, headers=headers)
+    assert resp.status_code == 200, resp.text
+    v4 = resp.json().get("new_version", {})
+    assert v4.get("version") == 4, f"Expected v4, got {v4}"
+    assert v4.get("change_note") == "", f"v4 note should be empty: {v4}"
+    print("Update without change_note works; note empty.")
+
+    print("--- Template Versioning Test Passed ---")
     return True
 
 def test_template_alias_flow():

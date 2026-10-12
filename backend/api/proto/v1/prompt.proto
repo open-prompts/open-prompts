@@ -161,6 +161,11 @@ message TemplateVersion {
   string content = 4;
   // Timestamp when this version was created.
   google.protobuf.Timestamp created_at = 5;
+  // Optional user-provided change note (empty string when NULL).
+  string change_note = 6;
+  // Number of prompts pinned to this version (populated by
+  // ListTemplateVersions; 0 elsewhere and to be ignored).
+  int32 prompt_count = 7;
 }
 
 // ListTemplateVersionsRequest is the request message for ListTemplateVersions.
@@ -228,6 +233,9 @@ message UpdateTemplateRequest {
   string content = 8;
   // Language of the template.
   string language = 9;
+  // Optional change note for the new version (max 200 chars).
+  // Ignored when content is unchanged (no version is created).
+  string change_note = 10;
 }
 
 // UpdateTemplateResponse is the response message for UpdateTemplate.

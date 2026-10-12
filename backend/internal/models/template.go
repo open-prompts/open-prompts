@@ -33,11 +33,13 @@ type Template struct {
 // TemplateVersion represents a version of a template.
 // It maps to the "template_versions" table.
 type TemplateVersion struct {
-	ID         int32     `json:"id"`
-	TemplateID string    `json:"template_id"`
-	Version    int32     `json:"version"`
-	Content    string    `json:"content"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID         int32          `json:"id"`
+	TemplateID string         `json:"template_id"`
+	Version    int32          `json:"version"`
+	Content    string         `json:"content"`
+	ChangeNote sql.NullString `json:"change_note"` // NULL-able; empty string in proto
+	CreatedAt  time.Time      `json:"created_at"`
+	PromptCount int           `json:"prompt_count"` // computed at read time, not stored
 }
 
 // TemplateAlias represents an alias pointing to a specific template version.

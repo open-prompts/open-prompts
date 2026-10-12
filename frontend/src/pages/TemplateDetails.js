@@ -20,6 +20,10 @@ import { HeartIcon, StarIcon } from '../components/ui/Icons';
 import { useNotification } from '../context/NotificationContext';
 import Layout from '../components/Layout';
 import TemplateAliasManager from '../components/TemplateAliasManager';
+import VersionHistoryPanel from '../components/VersionHistoryPanel';
+import DiffModal from '../components/DiffModal';
+import RestoreConfirmModal from '../components/RestoreConfirmModal';
+import ChangeNoteInput from '../components/ChangeNoteInput';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
 
@@ -53,6 +57,16 @@ const TemplateDetails = () => {
   // Editor state
   const [editContent, setEditContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [editNote, setEditNote] = useState('');
+
+  // Version history state
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyPageToken, setHistoryPageToken] = useState('');
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [diffState, setDiffState] = useState(null); // { aId, bId } while modal open
+  const [restoreTarget, setRestoreTarget] = useState(null); // version being restored
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Generator state
   const [variableValues, setVariableValues] = useState({});
@@ -79,6 +93,25 @@ const TemplateDetails = () => {
 
   const { addNotification } = useNotification();
 
+  // Fetch the first page of versions (server-truthful numbering after writes).
+  const fetchVersionsFirstPage = async () => {
+    setHistoryLoading(true);
+    setHistoryError(false);
+    try {
+      const verRes = await listTemplateVersions(id, { page_size: 20 });
+      const list = verRes.data.versions || [];
+      setVersions(list);
+      setHistoryPageToken(verRes.data.next_page_token || '');
+      return list;
+    } catch (error) {
+      console.error('Failed to load version history', error);
+      setHistoryError(true);
+      return null;
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
@@ -86,12 +119,13 @@ const TemplateDetails = () => {
       try {
         const [tplRes, verRes, pmtRes] = await Promise.all([
           getTemplate(id),
-          listTemplateVersions(id, { page_size: 100 }), // Fetch enough versions
+          listTemplateVersions(id, { page_size: 20 }),
           user ? listPrompts({ template_id: id, owner_id: user.id }) : Promise.resolve({ data: { prompts: [] } })
         ]);
 
         setTemplate(tplRes.data.template);
         setVersions(verRes.data.versions || []);
+        setHistoryPageToken(verRes.data.next_page_token || '');
         setPrompts(pmtRes.data.prompts || []);
 
         setIsLiked(tplRes.data.template.is_liked || false);
@@ -263,7 +297,8 @@ const TemplateDetails = () => {
         visibility: template.visibility,
         category: template.category,
         tags: template.tags,
-        content: editContent
+        content: editContent,
+        change_note: editNote
       };
       // Ensure language is preserved when saving content
       if (template && template.language) {
@@ -272,10 +307,15 @@ const TemplateDetails = () => {
 
       const res = await updateTemplate(template.id, updateData);
 
-      // Update local state with new version
+      // Refresh from server so numbering and Latest badge stay truthful
+      const list = await fetchVersionsFirstPage();
       const newVersion = res.data.new_version;
-      setVersions([newVersion, ...versions]);
-      setSelectedVersionId(newVersion.id);
+      if (newVersion) {
+        setSelectedVersionId(newVersion.id);
+      } else if (list && list.length > 0) {
+        setSelectedVersionId(list[0].id);
+      }
+      setEditNote('');
       setIsEditing(false);
       addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_details.success_update') });
     } catch (error) {
@@ -283,6 +323,74 @@ const TemplateDetails = () => {
       addNotification({ kind: 'error', title: t('common.error'), subtitle: t('template_details.error_update') });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Version history: load next page (append)
+  const handleLoadMoreVersions = async () => {
+    if (!historyPageToken) return;
+    setHistoryLoading(true);
+    try {
+      const res = await listTemplateVersions(id, { page_size: 20, page_token: historyPageToken });
+      setVersions((prev) => [...prev, ...(res.data.versions || [])]);
+      setHistoryPageToken(res.data.next_page_token || '');
+    } catch (error) {
+      console.error('Failed to load more versions', error);
+      addNotification({ kind: 'error', title: t('common.error'), subtitle: t('versioning.error.fetch') });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Version history: select a version (single source of truth)
+  const handleSelectVersion = (version) => {
+    setSelectedVersionId(version.id);
+    setEditContent(version.content);
+  };
+
+  // Restore flow: confirm modal -> PUT old content + canonical note
+  const handleRestoreConfirm = async () => {
+    if (!restoreTarget) return;
+    setIsRestoring(true);
+    try {
+      const updateData = {
+        template_id: template.id,
+        owner_id: template.owner_id,
+        title: template.title,
+        description: template.description,
+        visibility: template.visibility,
+        category: template.category,
+        tags: template.tags,
+        content: restoreTarget.content,
+        change_note: `Restored from v${restoreTarget.version}`
+      };
+      if (template && template.language) {
+        updateData.language = template.language;
+      }
+      const res = await updateTemplate(template.id, updateData);
+      const newVersion = res.data.new_version;
+
+      const list = await fetchVersionsFirstPage();
+      if (newVersion) {
+        setSelectedVersionId(newVersion.id);
+        setEditContent(newVersion.content);
+      } else if (list && list.length > 0) {
+        setSelectedVersionId(list[0].id);
+        setEditContent(list[0].content);
+      }
+      setRestoreTarget(null);
+      addNotification({
+        kind: 'success',
+        title: t('common.success'),
+        subtitle: newVersion
+          ? t('versioning.toast.restored', { version: newVersion.version })
+          : t('template_details.success_update')
+      });
+    } catch (error) {
+      console.error('Failed to restore version', error);
+      addNotification({ kind: 'error', title: t('common.error'), subtitle: t('versioning.error.restore') });
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -756,15 +864,44 @@ const TemplateDetails = () => {
                   options={versions}
                   value={selectedVersionId}
                   onChange={(vId) => {
-                    setSelectedVersionId(vId);
                     const version = versions.find(v => v.id === vId);
-                    if (version) setEditContent(version.content);
+                    if (version) handleSelectVersion(version);
                   }}
                   disabled={isEditing}
                 />
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm history-toggle"
+                  aria-expanded={isHistoryOpen}
+                  onClick={() => setIsHistoryOpen((s) => !s)}
+                >
+                  {isHistoryOpen ? t('versioning.hide_history') : t('versioning.history')}
+                </button>
               </div>
 
-              {isEditing ? (
+              {isHistoryOpen ? (
+                <VersionHistoryPanel
+                  versions={versions}
+                  loading={historyLoading}
+                  error={historyError}
+                  selectedVersionId={selectedVersionId}
+                  isOwner={isOwner}
+                  hasMore={!!historyPageToken}
+                  onLoadMore={handleLoadMoreVersions}
+                  onSelect={handleSelectVersion}
+                  onCompare={(version) => {
+                    const selected = versions.find(v => v.id === selectedVersionId);
+                    const other = selected && selected.id !== version.id ? selected : versions.find(v => v.id !== version.id);
+                    setDiffState({
+                      aId: other ? other.id : version.id,
+                      bId: version.id
+                    });
+                  }}
+                  onRestore={(version) => setRestoreTarget(version)}
+                  onRetry={fetchVersionsFirstPage}
+                  onClose={() => setIsHistoryOpen(false)}
+                />
+              ) : isEditing ? (
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
@@ -778,6 +915,7 @@ const TemplateDetails = () => {
               <div className="actions">
                 {isEditing ? (
                     <>
+                        <ChangeNoteInput value={editNote} onChange={setEditNote} disabled={isSaving} />
                         <button className="cancel-btn" onClick={() => setIsEditing(false)} disabled={isSaving}>{t('common.cancel')}</button>
                     <button className="save-btn" onClick={handleSaveContent} disabled={isSaveNewVersionDisabled}>
                       {isSaving ? t('common.saving') : t('template_details.save_new_version')}
@@ -785,7 +923,7 @@ const TemplateDetails = () => {
                     </>
                 ) : (
                     user && user.id === template.owner_id && (
-                        <button className="edit-btn" onClick={() => setIsEditing(true)}>{t('template_details.edit_template')}</button>
+                        <button className="edit-btn" onClick={() => { setEditNote(''); setIsEditing(true); }}>{t('template_details.edit_template')}</button>
                     )
                 )}
               </div>
@@ -1001,6 +1139,25 @@ print(prompt)`}
       >
         <p className="modal-confirm-text">{t('template_details.fork_template_confirm')}</p>
       </Modal>
+
+      <DiffModal
+        key={diffState ? `${diffState.aId}-${diffState.bId}` : 'closed'}
+        open={!!diffState}
+        versions={versions}
+        initialAId={diffState?.aId}
+        initialBId={diffState?.bId}
+        onClose={() => setDiffState(null)}
+        onCopy={() => addNotification({ kind: 'success', title: t('common.success'), subtitle: t('versioning.toast.diff_copied') })}
+      />
+
+      <RestoreConfirmModal
+        open={!!restoreTarget}
+        version={restoreTarget}
+        nextVersion={restoreTarget ? (versions[0]?.version || 0) + 1 : 0}
+        inFlight={isRestoring}
+        onCancel={() => setRestoreTarget(null)}
+        onConfirm={handleRestoreConfirm}
+      />
     </Layout>
   );
 };

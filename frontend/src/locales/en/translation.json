@@ -473,5 +473,44 @@
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago"
+  },
+  "versioning": {
+    "versioning": {
+      "history": "History",
+      "hide_history": "Hide history",
+      "panel_title": "Version history",
+      "latest": "Latest",
+      "no_note": "No note",
+      "meta": "{{chars}} chars · {{lines}} lines · {{prompts}} prompts",
+      "meta_no_usage": "{{chars}} chars · {{lines}} lines",
+      "single_version": "v1 is the only version — edit the template to create more.",
+      "load_more": "Load more",
+      "compare": "Compare",
+      "restore": "Restore",
+      "compare_title": "Compare versions",
+      "version_a": "Version A",
+      "version_b": "Version B",
+      "swap": "Swap",
+      "stats": "+{{added}} −{{removed}} lines",
+      "removed_line": "removed line",
+      "added_line": "added line",
+      "copy_diff": "Copy diff",
+      "diff_fallback_notice": "Diff view is unavailable — showing both versions side by side.",
+      "restore_title": "Restore version",
+      "restore_body": "Restore v{{version}} as a new version (v{{next}})? Your current content stays in the history — nothing is deleted. The new version gets the note \"Restored from v{{version}}\".",
+      "restore_confirm": "Restore v{{version}}",
+      "note_label": "Change note (optional)",
+      "note_placeholder": "e.g., Fixed tone drift",
+      "note_counter": "{{count}}/200",
+      "toast": {
+        "restored": "Version restored as v{{version}}",
+        "diff_copied": "Diff copied to clipboard"
+      },
+      "error": {
+        "fetch": "Failed to load version history.",
+        "restore": "Failed to restore version.",
+        "retry": "Retry"
+      }
+    }
   }
 }

@@ -227,6 +227,9 @@ func (s *PromptService) ForkTemplate(ctx context.Context, templateID string) (*p
 // UpdateTemplate updates an existing template.
 func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTemplateRequest) (*pb.UpdateTemplateResponse, error) {
 	zap.S().Infof("PromptService.UpdateTemplate: template_id=%s", req.TemplateId)
+	if len(req.ChangeNote) > 200 {
+		return nil, status.Errorf(codes.InvalidArgument, "change_note must be at most 200 characters")
+	}
 	// Get existing template
 	template, err := s.TemplateRepo.Get(ctx, req.TemplateId, "")
 	if err != nil {
@@ -299,6 +302,7 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 		TemplateID: template.ID,
 		Version:    int32(newVersionNum),
 		Content:    req.Content,
+		ChangeNote: sql.NullString{String: req.ChangeNote, Valid: req.ChangeNote != ""},
 		CreatedAt:  time.Now(),
 	}
 
@@ -874,12 +878,18 @@ func (s *PromptService) versionModelToProto(m *models.TemplateVersion) *pb.Templ
 	if m == nil {
 		return nil
 	}
+	changeNote := ""
+	if m.ChangeNote.Valid {
+		changeNote = m.ChangeNote.String
+	}
 	return &pb.TemplateVersion{
-		Id:         m.ID,
-		TemplateId: m.TemplateID,
-		Version:    m.Version,
-		Content:    m.Content,
-		CreatedAt:  timestamppb.New(m.CreatedAt),
+		Id:          m.ID,
+		TemplateId:  m.TemplateID,
+		Version:     m.Version,
+		Content:     m.Content,
+		ChangeNote:  changeNote,
+		PromptCount: int32(m.PromptCount),
+		CreatedAt:   timestamppb.New(m.CreatedAt),
 	}
 }
 

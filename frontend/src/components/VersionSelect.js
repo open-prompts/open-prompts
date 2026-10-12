@@ -104,6 +104,9 @@ const VersionSelect = ({ options = [], value, onChange, disabled = false, render
             >
               <div className="option-main">v{opt.version}</div>
               <div className="option-sub">{opt.created_at ? new Date(opt.created_at).toLocaleString(i18n.language) : ''}</div>
+              {opt.change_note ? (
+                <div className="option-sub option-note">{opt.change_note.length > 40 ? `${opt.change_note.slice(0, 40)}…` : opt.change_note}</div>
+              ) : null}
             </li>
           ))}
         </ul>

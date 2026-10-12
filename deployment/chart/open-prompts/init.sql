@@ -359,3 +359,18 @@ BEGIN
             CHECK (type IN ('like', 'favorite', 'fork', 'comment'));
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Template versioning UX: change notes + prompt usage counts
+-- -----------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='template_versions' AND column_name='change_note') THEN
+        ALTER TABLE template_versions ADD COLUMN change_note TEXT;
+        COMMENT ON COLUMN template_versions.change_note IS 'Optional user-provided change note (max 200 chars, enforced in service layer)';
+    END IF;
+END $$;
+
+-- Supports the prompt_count LEFT JOIN in ListTemplateVersions
+CREATE INDEX IF NOT EXISTS idx_prompts_version_id ON prompts(version_id);

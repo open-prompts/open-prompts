@@ -324,7 +324,12 @@ type TemplateVersion struct {
 	// The actual prompt content with placeholders (e.g., $$).
 	Content string `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
 	// Timestamp when this version was created.
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Optional user-provided change note (empty string when NULL).
+	ChangeNote string `protobuf:"bytes,6,opt,name=change_note,json=changeNote,proto3" json:"change_note,omitempty"`
+	// Number of prompts pinned to this version (populated by
+	// ListTemplateVersions; 0 elsewhere and to be ignored).
+	PromptCount   int32 `protobuf:"varint,7,opt,name=prompt_count,json=promptCount,proto3" json:"prompt_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -392,6 +397,20 @@ func (x *TemplateVersion) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *TemplateVersion) GetChangeNote() string {
+	if x != nil {
+		return x.ChangeNote
+	}
+	return ""
+}
+
+func (x *TemplateVersion) GetPromptCount() int32 {
+	if x != nil {
+		return x.PromptCount
+	}
+	return 0
 }
 
 // ListTemplateVersionsRequest is the request message for ListTemplateVersions.
@@ -785,7 +804,10 @@ type UpdateTemplateRequest struct {
 	// New content, which triggers a new version creation.
 	Content string `protobuf:"bytes,8,opt,name=content,proto3" json:"content,omitempty"`
 	// Language of the template.
-	Language      string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
+	Language string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
+	// Optional change note for the new version (max 200 chars).
+	// Ignored when content is unchanged (no version is created).
+	ChangeNote    string `protobuf:"bytes,10,opt,name=change_note,json=changeNote,proto3" json:"change_note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -879,6 +901,13 @@ func (x *UpdateTemplateRequest) GetContent() string {
 func (x *UpdateTemplateRequest) GetLanguage() string {
 	if x != nil {
 		return x.Language
+	}
+	return ""
+}
+
+func (x *UpdateTemplateRequest) GetChangeNote() string {
+	if x != nil {
+		return x.ChangeNote
 	}
 	return ""
 }
@@ -4193,7 +4222,7 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\bis_liked\x18\x0e \x01(\bR\aisLiked\x12!\n" +
 	"\fis_favorited\x18\x0f \x01(\bR\visFavorited\x12\x1a\n" +
 	"\blanguage\x18\x10 \x01(\tR\blanguage\x12#\n" +
-	"\rcomment_count\x18\x11 \x01(\x05R\fcommentCount\"\xb1\x01\n" +
+	"\rcomment_count\x18\x11 \x01(\x05R\fcommentCount\"\xf5\x01\n" +
 	"\x0fTemplateVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -4201,7 +4230,10 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\aversion\x18\x03 \x01(\x05R\aversion\x12\x18\n" +
 	"\acontent\x18\x04 \x01(\tR\acontent\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"z\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1f\n" +
+	"\vchange_note\x18\x06 \x01(\tR\n" +
+	"changeNote\x12!\n" +
+	"\fprompt_count\x18\a \x01(\x05R\vpromptCount\"z\n" +
 	"\x1bListTemplateVersionsRequest\x12\x1f\n" +
 	"\vtemplate_id\x18\x01 \x01(\tR\n" +
 	"templateId\x12\x1b\n" +
@@ -4239,7 +4271,7 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\blanguage\x18\t \x01(\tR\blanguage\"q\n" +
 	"\x16CreateTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x12-\n" +
-	"\aversion\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\aversion\"\xa1\x02\n" +
+	"\aversion\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\aversion\"\xc2\x02\n" +
 	"\x15UpdateTemplateRequest\x12\x1f\n" +
 	"\vtemplate_id\x18\x01 \x01(\tR\n" +
 	"templateId\x12\x19\n" +
@@ -4252,7 +4284,10 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x04tags\x18\x06 \x03(\tR\x04tags\x12\x1a\n" +
 	"\bcategory\x18\a \x01(\tR\bcategory\x12\x18\n" +
 	"\acontent\x18\b \x01(\tR\acontent\x12\x1a\n" +
-	"\blanguage\x18\t \x01(\tR\blanguage\"x\n" +
+	"\blanguage\x18\t \x01(\tR\blanguage\x12\x1f\n" +
+	"\vchange_note\x18\n" +
+	" \x01(\tR\n" +
+	"changeNote\"x\n" +
 	"\x16UpdateTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x124\n" +
 	"\vnew_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\n" +

@@ -51,6 +51,7 @@ type MockTemplateRepository struct {
 	GetFunc            func(ctx context.Context, id string, currentUserID string) (*models.Template, error)
 	ToggleLikeFunc     func(ctx context.Context, userID, templateID string) (bool, int32, error)
 	ToggleFavoriteFunc func(ctx context.Context, userID, templateID string) (bool, int32, error)
+	UpdateFunc         func(ctx context.Context, t *models.Template) error
 }
 
 func (m *MockTemplateRepository) Create(ctx context.Context, t *models.Template) error { return nil }
@@ -63,7 +64,12 @@ func (m *MockTemplateRepository) Get(ctx context.Context, id string, currentUser
 func (m *MockTemplateRepository) List(ctx context.Context, l, o int, f map[string]interface{}) ([]*models.Template, error) {
 	return nil, nil
 }
-func (m *MockTemplateRepository) Update(ctx context.Context, t *models.Template) error { return nil }
+func (m *MockTemplateRepository) Update(ctx context.Context, t *models.Template) error {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, t)
+	}
+	return nil
+}
 func (m *MockTemplateRepository) Delete(ctx context.Context, id string) error          { return nil }
 func (m *MockTemplateRepository) ToggleLike(ctx context.Context, userID, templateID string) (bool, int32, error) {
 	if m.ToggleLikeFunc != nil {
@@ -148,9 +154,13 @@ func (m *MockTemplateAliasRepository) Upsert(ctx context.Context, alias *models.
 type MockTemplateVersionRepository struct {
 	mock.Mock
 	GetLatestFunc func(ctx context.Context, tid string) (*models.TemplateVersion, error)
+	CreateFunc    func(ctx context.Context, v *models.TemplateVersion) error
 }
 
 func (m *MockTemplateVersionRepository) Create(ctx context.Context, v *models.TemplateVersion) error {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, v)
+	}
 	return nil
 }
 func (m *MockTemplateVersionRepository) GetLatest(ctx context.Context, tid string) (*models.TemplateVersion, error) {
