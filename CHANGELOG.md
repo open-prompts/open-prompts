@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/open-prompts/open-prompts/compare/v1.19.1...v1.20.0) (2026-10-13)
+
+
+### Features
+
+* **security:** enforce server-side authz on template and prompt mutations ([895aaf4](https://github.com/open-prompts/open-prompts/commit/895aaf4fbd6fd554dd6bc8cad4bbf3a90e20eed9))
+
 ## [1.19.1](https://github.com/open-prompts/open-prompts/compare/v1.19.0...v1.19.1) (2026-10-12)
 
 
