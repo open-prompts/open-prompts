@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	pb "open-prompts/backend/api/proto/v1"
 	"open-prompts/backend/internal/models"
 	"open-prompts/backend/internal/repository"
@@ -200,7 +203,7 @@ func TestCreatePrompt(t *testing.T) {
 			Content: "content with ${var1}",
 		}, nil)
 
-		resp, err := svc.CreatePrompt(context.Background(), req)
+		resp, err := svc.CreatePrompt(ContextWithUserID(context.Background(), "user_1"), req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, req.OwnerId, resp.Prompt.OwnerId)
@@ -247,7 +250,7 @@ func TestDeletePrompt(t *testing.T) {
 		mockPromptRepo.On("Get", mock.Anything, "p_1").Return(prompt, nil)
 		mockPromptRepo.On("Delete", mock.Anything, "p_1").Return(nil)
 
-		resp, err := svc.DeletePrompt(context.Background(), &pb.DeletePromptRequest{Id: "p_1", OwnerId: "user_1"})
+		resp, err := svc.DeletePrompt(ContextWithUserID(context.Background(), "user_1"), &pb.DeletePromptRequest{Id: "p_1", OwnerId: "user_1"})
 		assert.NoError(t, err)
 		assert.True(t, resp.Success)
 	})
@@ -256,8 +259,27 @@ func TestDeletePrompt(t *testing.T) {
 		prompt := &models.Prompt{ID: "p_1", OwnerID: "user_1"}
 		mockPromptRepo.On("Get", mock.Anything, "p_1").Return(prompt, nil)
 
-		_, err := svc.DeletePrompt(context.Background(), &pb.DeletePromptRequest{Id: "p_1", OwnerId: "user_2"})
+		_, err := svc.DeletePrompt(ContextWithUserID(context.Background(), "user_2"), &pb.DeletePromptRequest{Id: "p_1", OwnerId: "user_2"})
 		assert.Error(t, err)
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		prompt := &models.Prompt{ID: "p_1", OwnerID: "user_1"}
+		mockPromptRepo.On("Get", mock.Anything, "p_1").Return(prompt, nil)
+
+		_, err := svc.DeletePrompt(context.Background(), &pb.DeletePromptRequest{Id: "p_1", OwnerId: "user_1"})
+		assert.Error(t, err)
+	})
+
+	t.Run("AdminOverride", func(t *testing.T) {
+		prompt := &models.Prompt{ID: "p_1", OwnerID: "user_1"}
+		mockPromptRepo.On("Get", mock.Anything, "p_1").Return(prompt, nil)
+		mockPromptRepo.On("Delete", mock.Anything, "p_1").Return(nil)
+
+		ctx := ContextWithUserRole(ContextWithUserID(context.Background(), "admin_1"), "admin")
+		resp, err := svc.DeletePrompt(ctx, &pb.DeletePromptRequest{Id: "p_1"})
+		assert.NoError(t, err)
+		assert.True(t, resp.Success)
 	})
 }
 
@@ -525,5 +547,123 @@ func TestForkNotificationHook(t *testing.T) {
 		assert.NoError(t, err)
 		notifRepo.AssertExpectations(t)
 		userRepo.AssertExpectations(t)
+	})
+}
+
+func TestTemplateMutationAuthz(t *testing.T) {
+	mockTemplateRepo := new(MockTemplateRepository)
+	svc := NewPromptService(new(MockPromptRepository), mockTemplateRepo, new(MockTemplateVersionRepository), &MockTemplateAliasRepository{}, nil, nil, nil, nil)
+
+	t.Run("UpdateTemplateNonOwner", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		_, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "user_2"), &pb.UpdateTemplateRequest{TemplateId: "t_1"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+	})
+
+	t.Run("UpdateTemplateUnauthenticated", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		_, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{TemplateId: "t_1"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.Unauthenticated, status.Code(err))
+	})
+
+	t.Run("UpdateTemplateAdminOverride", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		mockTemplateRepo.UpdateFunc = func(ctx context.Context, tpl *models.Template) error {
+			return nil
+		}
+		ctx := ContextWithUserRole(ContextWithUserID(context.Background(), "admin_1"), "admin")
+		_, err := svc.UpdateTemplate(ctx, &pb.UpdateTemplateRequest{TemplateId: "t_1", Content: "c"})
+		assert.NoError(t, err)
+	})
+
+	t.Run("DeleteTemplateNonOwner", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		_, err := svc.DeleteTemplate(ContextWithUserID(context.Background(), "user_2"), &pb.DeleteTemplateRequest{Id: "t_1"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+	})
+}
+
+func TestAliasMutationAuthz(t *testing.T) {
+	mockTemplateRepo := new(MockTemplateRepository)
+	aliasRepo := &MockTemplateAliasRepository{}
+	svc := NewPromptService(new(MockPromptRepository), mockTemplateRepo, new(MockTemplateVersionRepository), aliasRepo, nil, nil, nil, nil)
+
+	t.Run("CreateAliasNonOwner", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		_, err := svc.CreateAlias(ContextWithUserID(context.Background(), "user_2"), &pb.CreateAliasRequest{TemplateId: "t_1", AliasName: "a"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+	})
+
+	t.Run("CreateAliasUnauthenticated", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		_, err := svc.CreateAlias(context.Background(), &pb.CreateAliasRequest{TemplateId: "t_1", AliasName: "a"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.Unauthenticated, status.Code(err))
+	})
+
+	t.Run("CreateAliasMissingTemplate", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return nil, nil
+		}
+		_, err := svc.CreateAlias(ContextWithUserID(context.Background(), "owner_1"), &pb.CreateAliasRequest{TemplateId: "missing", AliasName: "a"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.NotFound, status.Code(err))
+	})
+
+	t.Run("UpdateAliasOwner", func(t *testing.T) {
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{ID: "t_1", OwnerID: "owner_1"}, nil
+		}
+		aliasRepo.UpdateFunc = func(ctx context.Context, alias *models.TemplateAlias) error {
+			return nil
+		}
+		_, err := svc.UpdateAlias(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateAliasRequest{TemplateId: "t_1", AliasName: "a", VersionId: 2})
+		assert.NoError(t, err)
+	})
+}
+
+func TestListPromptsAuthz(t *testing.T) {
+	mockPromptRepo := new(MockPromptRepository)
+	svc := NewPromptService(mockPromptRepo, new(MockTemplateRepository), new(MockTemplateVersionRepository), &MockTemplateAliasRepository{}, nil, nil, nil, nil)
+
+	t.Run("OwnerListOwnPrompts", func(t *testing.T) {
+		mockPromptRepo.On("List", mock.Anything, 10, 0, map[string]interface{}{"owner_id": "user_1"}).Return([]*models.Prompt{}, nil).Once()
+		_, err := svc.ListPrompts(ContextWithUserID(context.Background(), "user_1"), &pb.ListPromptsRequest{OwnerId: "user_1"})
+		assert.NoError(t, err)
+	})
+
+	t.Run("NonOwnerList", func(t *testing.T) {
+		_, err := svc.ListPrompts(ContextWithUserID(context.Background(), "user_2"), &pb.ListPromptsRequest{OwnerId: "user_1"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+	})
+
+	t.Run("AnonymousListWithOwner", func(t *testing.T) {
+		_, err := svc.ListPrompts(context.Background(), &pb.ListPromptsRequest{OwnerId: "user_1"})
+		assert.Error(t, err)
+		assert.Equal(t, codes.Unauthenticated, status.Code(err))
+	})
+
+	t.Run("AdminListAny", func(t *testing.T) {
+		mockPromptRepo.On("List", mock.Anything, 10, 0, map[string]interface{}{"owner_id": "user_1"}).Return([]*models.Prompt{}, nil).Once()
+		ctx := ContextWithUserRole(ContextWithUserID(context.Background(), "admin_1"), "admin")
+		_, err := svc.ListPrompts(ctx, &pb.ListPromptsRequest{OwnerId: "user_1"})
+		assert.NoError(t, err)
 	})
 }

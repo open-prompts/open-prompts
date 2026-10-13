@@ -53,7 +53,7 @@ func TestUpdateTemplateChangeNote(t *testing.T) {
 	t.Run("NotePersistedOnContentChange", func(t *testing.T) {
 		var created *models.TemplateVersion
 		svc := newVersioningTestService(t, latest, &created)
-		resp, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{
+		resp, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateTemplateRequest{
 			TemplateId: "t1",
 			OwnerId:    "owner_1",
 			Content:    "new content",
@@ -71,7 +71,7 @@ func TestUpdateTemplateChangeNote(t *testing.T) {
 		var created *models.TemplateVersion
 		svc := newVersioningTestService(t, latest, &created)
 		note := strings.Repeat("x", 200)
-		_, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{
+		_, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateTemplateRequest{
 			TemplateId: "t1",
 			OwnerId:    "owner_1",
 			Content:    "new content",
@@ -85,7 +85,7 @@ func TestUpdateTemplateChangeNote(t *testing.T) {
 		var created *models.TemplateVersion
 		svc := newVersioningTestService(t, latest, &created)
 		note := strings.Repeat("x", 201)
-		_, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{
+		_, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateTemplateRequest{
 			TemplateId: "t1",
 			OwnerId:    "owner_1",
 			Content:    "new content",
@@ -103,7 +103,7 @@ func TestUpdateTemplateChangeNote(t *testing.T) {
 			ChangeNote: sql.NullString{String: "original note", Valid: true},
 		}
 		svc := newVersioningTestService(t, latestWithNote, &created)
-		resp, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{
+		resp, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateTemplateRequest{
 			TemplateId: "t1",
 			OwnerId:    "owner_1",
 			Content:    "same content",
@@ -118,7 +118,7 @@ func TestUpdateTemplateChangeNote(t *testing.T) {
 	t.Run("EmptyNoteStoredAsNull", func(t *testing.T) {
 		var created *models.TemplateVersion
 		svc := newVersioningTestService(t, latest, &created)
-		_, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{
+		_, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateTemplateRequest{
 			TemplateId: "t1",
 			OwnerId:    "owner_1",
 			Content:    "new content",
@@ -133,7 +133,7 @@ func TestUpdateTemplateChangeNote(t *testing.T) {
 		latestV2 := &models.TemplateVersion{ID: 2, TemplateID: "t1", Version: 2, Content: "version two content"}
 		var created *models.TemplateVersion
 		svc := newVersioningTestService(t, latestV2, &created)
-		_, err := svc.UpdateTemplate(context.Background(), &pb.UpdateTemplateRequest{
+		_, err := svc.UpdateTemplate(ContextWithUserID(context.Background(), "owner_1"), &pb.UpdateTemplateRequest{
 			TemplateId: "t1",
 			OwnerId:    "owner_1",
 			Content:    "old content", // v1's content

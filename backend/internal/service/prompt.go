@@ -236,9 +236,9 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
 
-	// AuthZ
-	if req.OwnerId != "" && template.OwnerID != req.OwnerId {
-		return nil, status.Errorf(codes.PermissionDenied, "not authorized")
+	// AuthZ: derive the caller from context; never trust client-supplied owner_id.
+	if err := authorizeOwnerOrAdmin(ctx, template.OwnerID); err != nil {
+		return nil, err
 	}
 
 	// Update fields
@@ -574,8 +574,8 @@ func (s *PromptService) DeleteTemplate(ctx context.Context, req *pb.DeleteTempla
 		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
 
-	if req.OwnerId != "" && template.OwnerID != req.OwnerId {
-		return nil, status.Errorf(codes.PermissionDenied, "not authorized")
+	if err := authorizeOwnerOrAdmin(ctx, template.OwnerID); err != nil {
+		return nil, err
 	}
 
 	if err := s.TemplateRepo.Delete(ctx, req.Id); err != nil {
@@ -705,9 +705,13 @@ func (s *PromptService) ListTags(ctx context.Context, req *pb.ListTagsRequest) (
 
 func (s *PromptService) CreatePrompt(ctx context.Context, req *pb.CreatePromptRequest) (*pb.CreatePromptResponse, error) {
 	zap.S().Infof("PromptService.CreatePrompt: template_id=%s owner_id=%s", req.TemplateId, req.OwnerId)
-	if req.OwnerId == "" {
-		return nil, status.Error(codes.InvalidArgument, "owner_id is required")
+	// Defense-in-depth: derive the owner from the authenticated context rather
+	// than trusting the client-supplied owner_id.
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
+	req.OwnerId = userID
 
 	variables := req.Variables
 	if variables == nil {
@@ -753,6 +757,18 @@ func (s *PromptService) GetPrompt(ctx context.Context, req *pb.GetPromptRequest)
 
 func (s *PromptService) ListPrompts(ctx context.Context, req *pb.ListPromptsRequest) (*pb.ListPromptsResponse, error) {
 	zap.S().Infof("PromptService.ListPrompts: owner_id=%s template_id=%s page_size=%d", req.OwnerId, req.TemplateId, req.PageSize)
+	// AuthZ: listing another user's prompts (which contain private variable
+	// values) requires authentication and must be limited to the caller's own
+	// prompts (or an admin).
+	if req.OwnerId != "" {
+		userID, err := GetUserIDFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if req.OwnerId != userID && GetUserRoleFromContext(ctx) != "admin" {
+			return nil, status.Errorf(codes.PermissionDenied, "not authorized")
+		}
+	}
 	limit := int(req.PageSize)
 	if limit <= 0 {
 		limit = 10
@@ -833,8 +849,8 @@ func (s *PromptService) DeletePrompt(ctx context.Context, req *pb.DeletePromptRe
 		return nil, status.Errorf(codes.NotFound, "prompt not found")
 	}
 
-	if req.OwnerId != "" && prompt.OwnerID != req.OwnerId {
-		return nil, status.Errorf(codes.PermissionDenied, "not authorized")
+	if err := authorizeOwnerOrAdmin(ctx, prompt.OwnerID); err != nil {
+		return nil, err
 	}
 
 	if err := s.PromptRepo.Delete(ctx, req.Id); err != nil {
@@ -934,7 +950,33 @@ func (s *PromptService) aliasModelToProto(m *models.TemplateAlias) *pb.Alias {
 	}
 }
 
+// authorizeOwnerOrAdmin verifies the caller (from context) is the owner of the
+// resource or an admin. It never trusts client-supplied owner identifiers.
+func authorizeOwnerOrAdmin(ctx context.Context, ownerID string) error {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if userID != ownerID && GetUserRoleFromContext(ctx) != "admin" {
+		return status.Errorf(codes.PermissionDenied, "not authorized")
+	}
+	return nil
+}
+
+// authorizeAliasMutation verifies the caller owns the template an alias
+// operation targets (or is an admin).
+func (s *PromptService) authorizeAliasMutation(ctx context.Context, templateID string) error {
+	template, err := s.TemplateRepo.Get(ctx, templateID, "")
+	if err != nil || template == nil {
+		return status.Errorf(codes.NotFound, "template not found")
+	}
+	return authorizeOwnerOrAdmin(ctx, template.OwnerID)
+}
+
 func (s *PromptService) CreateAlias(ctx context.Context, req *pb.CreateAliasRequest) (*pb.Alias, error) {
+	if err := s.authorizeAliasMutation(ctx, req.TemplateId); err != nil {
+		return nil, err
+	}
 	alias := &models.TemplateAlias{
 		TemplateID: req.TemplateId,
 		AliasName:  req.AliasName,
@@ -947,6 +989,9 @@ func (s *PromptService) CreateAlias(ctx context.Context, req *pb.CreateAliasRequ
 }
 
 func (s *PromptService) UpdateAlias(ctx context.Context, req *pb.UpdateAliasRequest) (*pb.Alias, error) {
+	if err := s.authorizeAliasMutation(ctx, req.TemplateId); err != nil {
+		return nil, err
+	}
 	alias := &models.TemplateAlias{
 		TemplateID: req.TemplateId,
 		AliasName:  req.AliasName,
@@ -1001,6 +1046,9 @@ func (s *PromptService) ListAliases(ctx context.Context, req *pb.ListAliasesRequ
 }
 
 func (s *PromptService) DeleteAlias(ctx context.Context, req *pb.DeleteAliasRequest) (*pb.DeletePromptResponse, error) {
+	if err := s.authorizeAliasMutation(ctx, req.TemplateId); err != nil {
+		return nil, err
+	}
 	if err := s.TemplateAliasRepo.Delete(ctx, req.TemplateId, req.AliasName); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete alias: %v", err)
 	}

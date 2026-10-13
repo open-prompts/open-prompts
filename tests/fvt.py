@@ -377,7 +377,7 @@ def test_prompt_lifecycle():
         return False
 
     # 5. List Prompts (User 1)
-    resp = requests.get(f"http://localhost:8080/api/v1/prompts?owner_id={user1_id}")
+    resp = requests.get(f"http://localhost:8080/api/v1/prompts?owner_id={user1_id}", headers=headers)
     if resp.status_code != 200:
         print(f"List Prompts failed: {resp.status_code} - {resp.text}")
         return False
@@ -659,7 +659,7 @@ def test_version_and_prompt():
 
     # 6. Delete Prompt
     print("6. Deleting Prompt...")
-    resp = requests.delete(f"{PROMPT_URL}/{prompt_id}?owner_id={owner_id}")
+    resp = requests.delete(f"{PROMPT_URL}/{prompt_id}", headers=headers)
     if resp.status_code != 200:
         print(f"Delete Prompt failed: {resp.status_code} - {resp.text}")
         return False
@@ -1787,6 +1787,142 @@ def test_template_comments():
     return True
 
 
+def test_security_authz():
+    """IDOR regression tests: cross-user mutations must be rejected."""
+    print("=== Testing Security AuthZ (IDOR) ===")
+
+    # Two distinct users
+    token_a = get_auth_token("sec_user_a")
+    token_b = get_auth_token("sec_user_b")
+    if not token_a or not token_b:
+        print("Failed to obtain tokens")
+        return False
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+
+    # User A creates a template
+    resp = requests.post(f"{BASE_URL}", headers=headers_a, json={
+        "name": "Sec Test Template",
+        "content": "Hello ${name}",
+        "description": "authz test",
+        "visibility": "private",
+    })
+    if resp.status_code != 200:
+        print(f"Setup: create template failed: {resp.status_code} - {resp.text}")
+        return False
+    tpl_data = resp.json()
+    template_id = tpl_data["template"]["id"]
+    version_id = tpl_data.get("version", {}).get("id")
+
+    # 1. Non-owner update -> 403
+    resp = requests.put(f"{BASE_URL}/{template_id}", headers=headers_b, json={
+        "content": "hacked content",
+    })
+    if resp.status_code != 403:
+        print(f"FAIL: non-owner update returned {resp.status_code}, expected 403")
+        return False
+    print("PASS: non-owner template update -> 403")
+
+    # 2. Non-owner delete -> 403
+    resp = requests.delete(f"{BASE_URL}/{template_id}", headers=headers_b)
+    if resp.status_code != 403:
+        print(f"FAIL: non-owner delete returned {resp.status_code}, expected 403")
+        return False
+    print("PASS: non-owner template delete -> 403")
+
+    # 3. Anonymous update -> 401
+    resp = requests.put(f"{BASE_URL}/{template_id}", json={"content": "anon"})
+    if resp.status_code != 401:
+        print(f"FAIL: anonymous update returned {resp.status_code}, expected 401")
+        return False
+    print("PASS: anonymous template update -> 401")
+
+    # 4. Non-owner alias mutation -> 403
+    resp = requests.post(f"{BASE_URL}/{template_id}/aliases", headers=headers_b, json={
+        "alias_name": "sec-alias",
+        "version_id": 1,
+    })
+    if resp.status_code != 403:
+        print(f"FAIL: non-owner alias create returned {resp.status_code}, expected 403")
+        return False
+    print("PASS: non-owner alias create -> 403")
+
+    # 5. Anonymous alias mutation -> 401
+    resp = requests.post(f"{BASE_URL}/{template_id}/aliases", json={
+        "alias_name": "sec-alias-anon",
+        "version_id": 1,
+    })
+    if resp.status_code != 401:
+        print(f"FAIL: anonymous alias create returned {resp.status_code}, expected 401")
+        return False
+    print("PASS: anonymous alias create -> 401")
+
+    # 6. Anonymous prompt create -> 401
+    resp = requests.post(f"http://localhost:8080/api/v1/prompts", json={
+        "template_id": template_id,
+        "version_id": 1,
+        "variables": {"name": "x"},
+    })
+    if resp.status_code != 401:
+        print(f"FAIL: anonymous prompt create returned {resp.status_code}, expected 401")
+        return False
+    print("PASS: anonymous prompt create -> 401")
+
+    # 7. Owner creates a prompt; non-owner delete -> 403
+    resp = requests.post(f"http://localhost:8080/api/v1/prompts", headers=headers_a, json={
+        "template_id": template_id,
+        "version_id": version_id,
+        "variables": {"name": "x"},
+    })
+    if resp.status_code != 200:
+        print(f"Setup: create prompt failed: {resp.status_code} - {resp.text}")
+        return False
+    prompt_id = resp.json()["prompt"]["id"]
+
+    resp = requests.delete(f"http://localhost:8080/api/v1/prompts/{prompt_id}", headers=headers_b)
+    if resp.status_code != 403:
+        print(f"FAIL: non-owner prompt delete returned {resp.status_code}, expected 403")
+        return False
+    print("PASS: non-owner prompt delete -> 403")
+
+    # 8. Anonymous prompt delete -> 401
+    resp = requests.delete(f"http://localhost:8080/api/v1/prompts/{prompt_id}")
+    if resp.status_code != 401:
+        print(f"FAIL: anonymous prompt delete returned {resp.status_code}, expected 401")
+        return False
+    print("PASS: anonymous prompt delete -> 401")
+
+    # 9. Non-owner lists another user's prompts -> 403
+    resp = requests.get(f"http://localhost:8080/api/v1/prompts?owner_id=sec_user_a", headers=headers_b)
+    if resp.status_code != 403:
+        print(f"FAIL: non-owner prompt list returned {resp.status_code}, expected 403")
+        return False
+    print("PASS: non-owner prompt list -> 403")
+
+    # 10. Anonymous lists prompts with owner_id -> 401
+    resp = requests.get(f"http://localhost:8080/api/v1/prompts?owner_id=sec_user_a")
+    if resp.status_code != 401:
+        print(f"FAIL: anonymous prompt list returned {resp.status_code}, expected 401")
+        return False
+    print("PASS: anonymous prompt list -> 401")
+
+    # 11. Owner can still update own template
+    resp = requests.put(f"{BASE_URL}/{template_id}", headers=headers_a, json={
+        "content": "owner updated",
+    })
+    if resp.status_code != 200:
+        print(f"FAIL: owner update returned {resp.status_code}, expected 200")
+        return False
+    print("PASS: owner template update -> 200")
+
+    # Cleanup: owner deletes template and prompt
+    requests.delete(f"http://localhost:8080/api/v1/prompts/{prompt_id}", headers=headers_a)
+    requests.delete(f"{BASE_URL}/{template_id}", headers=headers_a)
+
+    print("=== Security AuthZ tests passed ===")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -1827,6 +1963,7 @@ def main():
     if success: success = test_template_alias_flow()
     if success: success = test_language_behavior()
     if success: success = test_admin_user_management()
+    if success: success = test_security_authz()
 
     # Cleanup is handled by atexit
 

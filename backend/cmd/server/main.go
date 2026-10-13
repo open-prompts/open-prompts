@@ -1338,6 +1338,19 @@ func main() {
 
 		switch r.Method {
 		case http.MethodGet:
+			// Optional auth: propagate identity so the service can enforce
+			// owner-only access when owner_id is specified.
+			ctx := context.Background()
+			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+				if err != nil {
+					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					return
+				}
+				ctx = service.ContextWithUserID(ctx, userID)
+			}
+
 			q := r.URL.Query()
 			req := &pb.ListPromptsRequest{
 				OwnerId:    q.Get("owner_id"),
@@ -1350,7 +1363,7 @@ func main() {
 			}
 			req.PageToken = q.Get("page_token")
 
-			resp, err := svc.ListPrompts(context.Background(), req)
+			resp, err := svc.ListPrompts(ctx, req)
 			if err != nil {
 				writeError(w, err)
 				return
@@ -1360,6 +1373,19 @@ func main() {
 			_, _ = w.Write(b)
 
 		case http.MethodPost:
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, "Failed to read body", http.StatusBadRequest)
@@ -1374,7 +1400,9 @@ func main() {
 			}
 
 			templateID, _ := payload["template_id"].(string)
-			ownerID, _ := payload["owner_id"].(string)
+			// Owner is derived from the authenticated token; the payload
+			// owner_id is ignored to prevent spoofing.
+			ownerID := userID
 
 			var versionID int32
 			if v, ok := payload["version_id"]; ok {
@@ -1425,7 +1453,7 @@ func main() {
 				Content:    rendered,
 			}
 
-			if err := promptRepo.Create(context.Background(), prompt); err != nil {
+			if err := promptRepo.Create(ctx, prompt); err != nil {
 				writeError(w, status.Errorf(codes.Internal, "failed to create prompt: %v", err))
 				return
 			}
@@ -1478,9 +1506,21 @@ func main() {
 			_, _ = w.Write(b)
 
 		case http.MethodDelete:
-			ownerID := r.URL.Query().Get("owner_id")
-			req := &pb.DeletePromptRequest{Id: id, OwnerId: ownerID}
-			resp, err := svc.DeletePrompt(context.Background(), req)
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+
+			req := &pb.DeletePromptRequest{Id: id}
+			resp, err := svc.DeletePrompt(ctx, req)
 			if err != nil {
 				writeError(w, err)
 				return
