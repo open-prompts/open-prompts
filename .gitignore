@@ -40,3 +40,4 @@ deployment/.env
 .github/prompts/
 .shared/
 .env
+.github/agents/PIPELINE.md
