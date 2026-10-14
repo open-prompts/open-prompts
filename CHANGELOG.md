@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/open-prompts/open-prompts/compare/v1.20.0...v1.21.0) (2026-10-14)
+
+
+### Features
+
+* **search:** add template keyword search, sorting and result counts ([22c4873](https://github.com/open-prompts/open-prompts/commit/22c487340e8c0647766a6126a5e1925c6a97a37f))
+
 # [1.20.0](https://github.com/open-prompts/open-prompts/compare/v1.19.1...v1.20.0) (2026-10-13)
 
 
