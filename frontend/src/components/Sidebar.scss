@@ -97,6 +97,22 @@
   color: #fff;
 }
 
+.tag-cloud .tag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tag-cloud .tag-toggle input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+}
+
 .no-tags {
   font-size: 13px;
   color: var(--text-3);

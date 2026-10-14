@@ -340,10 +340,32 @@ func (s *PromptService) GetTemplate(ctx context.Context, req *pb.GetTemplateRequ
 	}, nil
 }
 
+// normalizeKeyword trims, collapses internal whitespace, and caps at 100
+// runes (not bytes — CJK-safe). Empty result means "no keyword filter".
+func normalizeKeyword(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len([]rune(s)) > 100 {
+		s = string([]rune(s)[:100])
+	}
+	return s
+}
+
+// normalizeSort returns a whitelisted sort value; anything else -> "newest".
+func normalizeSort(s string) string {
+	switch s {
+	case "newest", "most_liked", "most_favorited", "trending":
+		return s
+	default:
+		return "newest"
+	}
+}
+
 // ListTemplates retrieves a list of templates.
 func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplatesRequest) (*pb.ListTemplatesResponse, error) {
 	userID, _ := GetUserIDFromContext(ctx)
-	zap.S().Infof("PromptService.ListTemplates: page_size=%d page_token=%s owner_id=%s visibility=%s user_id=%s", req.PageSize, req.PageToken, req.OwnerId, req.Visibility, userID)
+	keyword := normalizeKeyword(req.Keyword)
+	sort := normalizeSort(req.Sort)
+	zap.S().Infof("PromptService.ListTemplates: page_size=%d page_token=%s owner_id=%s visibility=%s user_id=%s keyword_len=%d sort=%s", req.PageSize, req.PageToken, req.OwnerId, req.Visibility, userID, len(keyword), sort)
 
 	limit := int(req.PageSize)
 	if limit <= 0 {
@@ -378,6 +400,32 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		return pbTemplates, nextToken, nil
 	}
 
+	// count runs a COUNT query with the same filters (minus keys the
+	// condition builder ignores). Only called on the first page of a query.
+	count := func(filters map[string]interface{}) int32 {
+		countFilters := make(map[string]interface{}, len(filters))
+		for k, v := range filters {
+			if k == "current_user_id" {
+				continue
+			}
+			countFilters[k] = v
+		}
+		n, err := s.TemplateRepo.CountTemplates(ctx, countFilters)
+		if err != nil {
+			zap.S().Warnf("ListTemplates.count: error counting templates: %v", err)
+			return 0
+		}
+		return n
+	}
+
+	// applySearch adds keyword/sort filters shared by all list paths.
+	applySearch := func(filters map[string]interface{}) {
+		if keyword != "" {
+			filters["keyword"] = keyword
+		}
+		filters["sort"] = sort
+	}
+
 	// SPECIAL HANDLING: My Likes / My Favorites (Treat as single stream)
 	if userID != "" && (req.MyLikes || req.MyFavorites) {
 		offset := 0
@@ -400,12 +448,17 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		if len(req.Tags) > 0 {
 			filters["tags"] = req.Tags
 		}
+		applySearch(filters)
 
 		templates, nextToken, err := fetch(limit, offset, filters)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to list templates: %v", err)
 		}
-		return &pb.ListTemplatesResponse{Templates: templates, NextPageToken: nextToken}, nil
+		var totalCount int32
+		if req.PageToken == "" {
+			totalCount = count(filters)
+		}
+		return &pb.ListTemplatesResponse{Templates: templates, NextPageToken: nextToken, TotalCount: totalCount}, nil
 	}
 
 	// 1. No Token: Return Public Only
@@ -428,12 +481,17 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		if req.OwnerId != "" {
 			filters["owner_id"] = req.OwnerId
 		}
+		applySearch(filters)
 
 		templates, nextToken, err := fetch(limit, offset, filters)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to list templates: %v", err)
 		}
-		return &pb.ListTemplatesResponse{Templates: templates, NextPageToken: nextToken}, nil
+		var totalCount int32
+		if req.PageToken == "" {
+			totalCount = count(filters)
+		}
+		return &pb.ListTemplatesResponse{Templates: templates, NextPageToken: nextToken, TotalCount: totalCount}, nil
 	}
 
 	// 2. Token Present
@@ -467,12 +525,17 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		if len(req.Tags) > 0 {
 			filters["tags"] = req.Tags
 		}
+		applySearch(filters)
 
 		templates, nextToken, err := fetch(limit, offset, filters)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to list templates: %v", err)
 		}
-		return &pb.ListTemplatesResponse{Templates: templates, NextPageToken: nextToken}, nil
+		var totalCount int32
+		if req.PageToken == "" {
+			totalCount = count(filters)
+		}
+		return &pb.ListTemplatesResponse{Templates: templates, NextPageToken: nextToken, TotalCount: totalCount}, nil
 	}
 
 	// 3. Token Present AND Visibility Unspecified -> Mixed View
@@ -514,6 +577,7 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 	if req.OwnerId != "" {
 		publicFilters["owner_id"] = req.OwnerId
 	}
+	applySearch(publicFilters)
 
 	publicTemplates, nextPublicToken, err := fetch(limit, publicOffset, publicFilters)
 	if err != nil {
@@ -531,6 +595,7 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 	if len(req.Tags) > 0 {
 		privateFilters["tags"] = req.Tags
 	}
+	applySearch(privateFilters)
 	// If request owner_id is specified and is NOT me, I shouldn't see private?
 	// But "Mixed" implies "My Private + All Public".
 	// If I filter by "Alice", I see Alice's Public. Do I see My Private? No, unless I am Alice.
@@ -559,11 +624,21 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 	// Or we return separate tokens?
 	// Proto: next_page_token (2), private_next_page_token (4).
 
+	var totalCount, privateTotalCount int32
+	if req.PageToken == "" {
+		totalCount = count(publicFilters)
+		if shouldFetchPrivate {
+			privateTotalCount = count(privateFilters)
+		}
+	}
+
 	return &pb.ListTemplatesResponse{
 		Templates:            publicTemplates,
 		NextPageToken:        nextPublicToken,
 		PrivateTemplates:     privateTemplates,
 		PrivateNextPageToken: nextPrivateToken,
+		TotalCount:           totalCount,
+		PrivateTotalCount:    privateTotalCount,
 	}, nil
 }
 

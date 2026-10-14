@@ -79,6 +79,37 @@
     "public_prompts": "Public Prompts",
     "no_results": "No templates found."
   },
+  "search": {
+    "placeholder": "Search prompts…",
+    "clear": "Clear",
+    "sort": {
+      "label": "Sort",
+      "newest": "Newest",
+      "most_liked": "Most Liked",
+      "most_favorited": "Most Favorited",
+      "trending": "Trending"
+    },
+    "chips": {
+      "clear_all": "Clear all",
+      "remove_filter": "Remove filter: {{label}}"
+    },
+    "results_count": "{{count}} template",
+    "results_count_other": "{{count}} templates",
+    "suggestions": {
+      "category": "Category",
+      "tag": "Tag",
+      "none": "No suggestions"
+    },
+    "empty": {
+      "title": "No results for \"{{keyword}}\"",
+      "body": "Try different keywords or clear filters.",
+      "clear_all": "Clear all filters"
+    },
+    "error": {
+      "fetch": "Search failed. Please try again.",
+      "retry": "Retry"
+    }
+  },
   "dashboard": {
     "title": "Explore Templates",
     "my_templates": "My Templates",

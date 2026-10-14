@@ -1083,7 +1083,13 @@ type ListTemplatesRequest struct {
 	// Filter by user favorites.
 	MyFavorites bool `protobuf:"varint,8,opt,name=my_favorites,json=myFavorites,proto3" json:"my_favorites,omitempty"`
 	// Filter by language.
-	Language      string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
+	Language string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
+	// Free-text keyword; matched case-insensitively against title,
+	// description, category, tags, and latest-version content.
+	Keyword string `protobuf:"bytes,10,opt,name=keyword,proto3" json:"keyword,omitempty"`
+	// Sort order: newest (default) | most_liked | most_favorited | trending.
+	// Invalid values fall back to newest server-side.
+	Sort          string `protobuf:"bytes,11,opt,name=sort,proto3" json:"sort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1181,6 +1187,20 @@ func (x *ListTemplatesRequest) GetLanguage() string {
 	return ""
 }
 
+func (x *ListTemplatesRequest) GetKeyword() string {
+	if x != nil {
+		return x.Keyword
+	}
+	return ""
+}
+
+func (x *ListTemplatesRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
 // ListTemplatesResponse is the response message for ListTemplates.
 type ListTemplatesResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
@@ -1188,8 +1208,12 @@ type ListTemplatesResponse struct {
 	NextPageToken        string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"` // Used for public pagination when mixed
 	PrivateTemplates     []*Template            `protobuf:"bytes,3,rep,name=private_templates,json=privateTemplates,proto3" json:"private_templates,omitempty"`
 	PrivateNextPageToken string                 `protobuf:"bytes,4,opt,name=private_next_page_token,json=privateNextPageToken,proto3" json:"private_next_page_token,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Total matches in the public/single stream for the current filters.
+	TotalCount int32 `protobuf:"varint,5,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	// Total matches in the private stream (mixed view only; else 0).
+	PrivateTotalCount int32 `protobuf:"varint,6,opt,name=private_total_count,json=privateTotalCount,proto3" json:"private_total_count,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListTemplatesResponse) Reset() {
@@ -1248,6 +1272,20 @@ func (x *ListTemplatesResponse) GetPrivateNextPageToken() string {
 		return x.PrivateNextPageToken
 	}
 	return ""
+}
+
+func (x *ListTemplatesResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *ListTemplatesResponse) GetPrivateTotalCount() int32 {
+	if x != nil {
+		return x.PrivateTotalCount
+	}
+	return 0
 }
 
 // DeleteTemplateRequest is the request message for DeleteTemplate.
@@ -4296,7 +4334,7 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"{\n" +
 	"\x13GetTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x12:\n" +
-	"\x0elatest_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\rlatestVersion\"\xa7\x02\n" +
+	"\x0elatest_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\rlatestVersion\"\xd5\x02\n" +
 	"\x14ListTemplatesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -4309,12 +4347,18 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x04tags\x18\x06 \x03(\tR\x04tags\x12\x19\n" +
 	"\bmy_likes\x18\a \x01(\bR\amyLikes\x12!\n" +
 	"\fmy_favorites\x18\b \x01(\bR\vmyFavorites\x12\x1a\n" +
-	"\blanguage\x18\t \x01(\tR\blanguage\"\xdd\x01\n" +
+	"\blanguage\x18\t \x01(\tR\blanguage\x12\x18\n" +
+	"\akeyword\x18\n" +
+	" \x01(\tR\akeyword\x12\x12\n" +
+	"\x04sort\x18\v \x01(\tR\x04sort\"\xae\x02\n" +
 	"\x15ListTemplatesResponse\x12*\n" +
 	"\ttemplates\x18\x01 \x03(\v2\f.v1.TemplateR\ttemplates\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x129\n" +
 	"\x11private_templates\x18\x03 \x03(\v2\f.v1.TemplateR\x10privateTemplates\x125\n" +
-	"\x17private_next_page_token\x18\x04 \x01(\tR\x14privateNextPageToken\"B\n" +
+	"\x17private_next_page_token\x18\x04 \x01(\tR\x14privateNextPageToken\x12\x1f\n" +
+	"\vtotal_count\x18\x05 \x01(\x05R\n" +
+	"totalCount\x12.\n" +
+	"\x13private_total_count\x18\x06 \x01(\x05R\x11privateTotalCount\"B\n" +
 	"\x15DeleteTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\"2\n" +

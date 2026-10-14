@@ -52,9 +52,11 @@ func (m *MockPromptRepository) Delete(ctx context.Context, id string) error {
 type MockTemplateRepository struct {
 	mock.Mock
 	GetFunc            func(ctx context.Context, id string, currentUserID string) (*models.Template, error)
+	ListFunc           func(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Template, error)
 	ToggleLikeFunc     func(ctx context.Context, userID, templateID string) (bool, int32, error)
 	ToggleFavoriteFunc func(ctx context.Context, userID, templateID string) (bool, int32, error)
 	UpdateFunc         func(ctx context.Context, t *models.Template) error
+	CountTemplatesFunc func(ctx context.Context, filters map[string]interface{}) (int32, error)
 }
 
 func (m *MockTemplateRepository) Create(ctx context.Context, t *models.Template) error { return nil }
@@ -65,6 +67,9 @@ func (m *MockTemplateRepository) Get(ctx context.Context, id string, currentUser
 	return nil, nil
 }
 func (m *MockTemplateRepository) List(ctx context.Context, l, o int, f map[string]interface{}) ([]*models.Template, error) {
+	if m.ListFunc != nil {
+		return m.ListFunc(ctx, l, o, f)
+	}
 	return nil, nil
 }
 func (m *MockTemplateRepository) Update(ctx context.Context, t *models.Template) error {
@@ -99,6 +104,12 @@ func (m *MockTemplateRepository) ListTags(ctx context.Context, filters map[strin
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]*models.TagStat), args.Error(1)
+}
+func (m *MockTemplateRepository) CountTemplates(ctx context.Context, filters map[string]interface{}) (int32, error) {
+	if m.CountTemplatesFunc != nil {
+		return m.CountTemplatesFunc(ctx, filters)
+	}
+	return 0, nil
 }
 
 // MockTemplateVersionRepository

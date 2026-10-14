@@ -79,6 +79,37 @@
     "public_prompts": "公开提示词",
     "no_results": "未找到模板"
   },
+  "search": {
+    "placeholder": "搜索提示词…",
+    "clear": "清除",
+    "sort": {
+      "label": "排序",
+      "newest": "最新",
+      "most_liked": "最多点赞",
+      "most_favorited": "最多收藏",
+      "trending": "趋势"
+    },
+    "chips": {
+      "clear_all": "全部清除",
+      "remove_filter": "移除筛选：{{label}}"
+    },
+    "results_count": "{{count}} 个模板",
+    "results_count_other": "{{count}} 个模板",
+    "suggestions": {
+      "category": "分类",
+      "tag": "标签",
+      "none": "暂无建议"
+    },
+    "empty": {
+      "title": "没有找到 \"{{keyword}}\" 的结果",
+      "body": "试试其他关键词或清除筛选。",
+      "clear_all": "清除全部筛选"
+    },
+    "error": {
+      "fetch": "搜索失败，请重试。",
+      "retry": "重试"
+    }
+  },
   "dashboard": {
     "title": "探索模板",
     "my_templates": "我的模板",

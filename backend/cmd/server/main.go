@@ -320,6 +320,11 @@ func main() {
 			if v := q.Get("my_favorites"); v == "true" {
 				req.MyFavorites = true
 			}
+			req.Keyword = q.Get("keyword")
+			if req.Keyword == "" {
+				req.Keyword = q.Get("q") // alias
+			}
+			req.Sort = q.Get("sort")
 
 			resp, err := svc.ListTemplates(ctx, req)
 			if err != nil {

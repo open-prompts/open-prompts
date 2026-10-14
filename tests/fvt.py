@@ -1923,6 +1923,291 @@ def test_security_authz():
     return True
 
 
+def test_template_search_filtering():
+    """Template search & filtering:
+    1. keyword matches title/description/category/tag/latest content (not old versions)
+    2. CJK substring; multi-word phrase; LIKE metacharacters literal
+    3. multi-tag AND; sorts most_liked/most_favorited/trending
+    4. total_count / private_total_count; pagination preserves filters
+    5. anonymous never sees private; mixed view includes own private
+    6. sort=bogus -> newest; whitespace keyword = no filter; long keyword truncated
+    7. my_likes + keyword combine
+    """
+    print("\n--- Starting Template Search & Filtering Test ---")
+
+    ts = int(time.time())
+    owner_id = f"sf_owner_{ts}"
+    token = get_auth_token(owner_id)
+    headers = {"Authorization": f"Bearer {token}"}
+    bob_id = f"sf_bob_{ts}"
+    token_bob = get_auth_token(bob_id)
+    headers_bob = {"Authorization": f"Bearer {token_bob}"}
+
+    def create(title, description, content, category, tags, visibility="VISIBILITY_PUBLIC"):
+        payload = {
+            "owner_id": owner_id,
+            "title": title,
+            "description": description,
+            "content": content,
+            "visibility": visibility,
+            "category": category,
+            "tags": tags,
+        }
+        resp = requests.post(BASE_URL, json=payload, headers=headers)
+        assert resp.status_code == 200, f"create failed: {resp.status_code} {resp.text}"
+        t_id = resp.json()["template"]["id"]
+        CREATED_TEMPLATES.append({"id": t_id, "owner_id": owner_id})
+        return t_id
+
+    # --- Fixtures ---
+    # 1. Email marketing (title match, phrase, tag)
+    t_email = create(
+        "Email Marketing Master",
+        "Boost your campaigns",
+        "Write compelling emails",
+        "Marketing",
+        ["email", "campaign"],
+    )
+    # 2. CJK title
+    t_cjk = create(
+        "邮件营销助手",
+        "Chinese email helper",
+        "写一封营销邮件",
+        "Marketing",
+        ["cjk"],
+    )
+    # 3. Only description contains the phrase
+    t_desc = create(
+        "Newsletter Tool",
+        "email marketing playbook inside",
+        "Draft newsletters",
+        "Writing",
+        ["email"],
+    )
+    # 4. Old version contains marker, latest does not
+    t_versioned = create(
+        "Versioned Doc",
+        "has an old version",
+        "OLDMARKER original content",
+        "Writing",
+        ["docs"],
+    )
+    resp = requests.put(
+        f"{BASE_URL}/{t_versioned}",
+        json={
+            "template_id": t_versioned,
+            "owner_id": owner_id,
+            "title": "Versioned Doc",
+            "description": "has an old version",
+            "visibility": "VISIBILITY_PUBLIC",
+            "content": "rewritten without the marker",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200, f"update failed: {resp.text}"
+    # 5. LIKE metacharacter literal "100%"
+    t_percent = create(
+        "Discount 100% Off",
+        "literal percent",
+        "save big",
+        "Sales",
+        ["promo"],
+    )
+    # 6. Underscore literal
+    t_underscore = create(
+        "snake_case helper",
+        "literal underscore",
+        "format text",
+        "Writing",
+        ["format"],
+    )
+    # 7. Multi-tag AND target: has both alpha and beta
+    t_both_tags = create(
+        "Tagged Both",
+        "alpha and beta",
+        "multi tag",
+        "Writing",
+        ["alpha", "beta"],
+    )
+    # 8. Only alpha
+    t_one_tag = create(
+        "Tagged One",
+        "alpha only",
+        "single tag",
+        "Writing",
+        ["alpha"],
+    )
+    # 9. Private template (mixed view test)
+    t_private = create(
+        "Private Email Notes",
+        "secret email marketing notes",
+        "internal only",
+        "Marketing",
+        ["email"],
+        visibility="VISIBILITY_PRIVATE",
+    )
+    # 10. Sort fixtures
+    t_liked = create(
+        "Most Liked Item",
+        "gets many likes",
+        "like me",
+        "Sales",
+        ["sorttest"],
+    )
+    t_faved = create(
+        "Most Faved Item",
+        "gets many favorites",
+        "fav me",
+        "Sales",
+        ["sorttest"],
+    )
+
+    # Bob likes/favorites to seed counts
+    for _ in range(3):
+        requests.post(f"{BASE_URL}/{t_liked}/like", headers=headers_bob)
+    for _ in range(2):
+        requests.post(f"{BASE_URL}/{t_faved}/favorite", headers=headers_bob)
+    # Bob also likes the email template once (trending signal, recent)
+    requests.post(f"{BASE_URL}/{t_email}/like", headers=headers_bob)
+
+    def search(params, hdrs=None):
+        resp = requests.get(BASE_URL, params=params, headers=hdrs)
+        assert resp.status_code == 200, f"search failed {resp.status_code}: {resp.text}"
+        return resp.json()
+
+    def ids_of(data):
+        return [t["id"] for t in data.get("templates", [])]
+
+    # --- 1. Keyword field coverage ---
+    print("1. Keyword field coverage...")
+    data = search({"keyword": "master"})
+    assert t_email in ids_of(data), "title match failed"
+    # description match
+    data = search({"keyword": "playbook"})
+    assert t_desc in ids_of(data), "description match failed"
+    # category match
+    data = search({"keyword": "Sales"})
+    assert t_liked in ids_of(data) and t_faved in ids_of(data), "category match failed"
+    # tag match
+    data = search({"keyword": "campaign"})
+    assert t_email in ids_of(data), "tag match failed"
+    # latest-version content match
+    data = search({"keyword": "rewritten"})
+    assert t_versioned in ids_of(data), "latest content match failed"
+    # old-version-only marker must NOT match
+    data = search({"keyword": "OLDMARKER"})
+    assert t_versioned not in ids_of(data), "old version content must not match"
+    print("   PASS")
+
+    # --- 2. CJK substring ---
+    print("2. CJK substring...")
+    data = search({"keyword": "邮件营销"})
+    assert t_cjk in ids_of(data), "CJK match failed"
+    print("   PASS")
+
+    # --- 3. Multi-word phrase ---
+    print("3. Multi-word phrase...")
+    data = search({"keyword": "email marketing"})
+    got = ids_of(data)
+    assert t_email in got, "phrase should match title"
+    assert t_desc in got, "phrase should match description"
+    assert t_private not in got, "anonymous must not see private"
+    print("   PASS")
+
+    # --- 4. LIKE metacharacters ---
+    print("4. LIKE metacharacters...")
+    data = search({"keyword": "100%"})
+    got = ids_of(data)
+    assert t_percent in got, "literal 100% should match"
+    # A template with "100x" would not match; ensure no false positives via broad check
+    data = search({"keyword": "snake_case"})
+    assert t_underscore in ids_of(data), "literal underscore should match"
+    print("   PASS")
+
+    # --- 5. Multi-tag AND ---
+    print("5. Multi-tag AND...")
+    data = search({"tags": ["alpha", "beta"]})
+    got = ids_of(data)
+    assert t_both_tags in got, "both-tags template missing"
+    assert t_one_tag not in got, "single-tag template must not match AND"
+    print("   PASS")
+
+    # --- 6. Sorts ---
+    print("6. Sorts...")
+    data = search({"keyword": "sorttest", "sort": "most_liked"})
+    got = ids_of(data)
+    assert got.index(t_liked) < got.index(t_faved), "most_liked order wrong"
+    data = search({"keyword": "sorttest", "sort": "most_favorited"})
+    got = ids_of(data)
+    assert got.index(t_faved) < got.index(t_liked), "most_favorited order wrong"
+    # trending: both have recent engagement; verify 200 and both present
+    data = search({"keyword": "sorttest", "sort": "trending"})
+    got = ids_of(data)
+    assert t_liked in got and t_faved in got, "trending missing items"
+    # bogus sort -> 200 with newest
+    data = search({"keyword": "sorttest", "sort": "bogus"})
+    assert len(ids_of(data)) == 2, "bogus sort should still return results"
+    print("   PASS")
+
+    # --- 7. total_count + pagination ---
+    print("7. total_count and pagination...")
+    data = search({"keyword": "email", "page_size": 2, "sort": "most_liked"})
+    total = data.get("total_count")
+    assert isinstance(total, int) and total >= 3, f"total_count wrong: {total}"
+    # paginate with the SAME keyword+sort (changing sort between pages would
+    # legitimately reorder the stream and invalidate the offset)
+    token2 = data.get("next_page_token", "")
+    assert token2, "expected next page token"
+    data2 = search({"keyword": "email", "page_size": 2, "page_token": token2, "sort": "most_liked"})
+    assert data2.get("total_count") == 0 or data2.get("total_count") == total, (
+        "subsequent pages should not recount (0) or keep same count"
+    )
+    all_ids = ids_of(data) + ids_of(data2)
+    assert t_email in all_ids, "pagination lost keyword filter"
+    # page 2 must not repeat page 1 rows (offset semantics)
+    page1_ids = ids_of(data)
+    assert not set(page1_ids) & set(ids_of(data2)), "page 2 repeated page 1 rows"
+    print("   PASS")
+
+    # --- 8. Anonymous vs mixed private ---
+    print("8. Private visibility...")
+    data = search({"keyword": "secret email marketing"})
+    assert t_private not in ids_of(data), "anonymous must not see private"
+    # logged-in mixed view: own private matches
+    data = search({"keyword": "secret email marketing"}, hdrs=headers)
+    priv_ids = [t["id"] for t in data.get("private_templates", [])]
+    assert t_private in priv_ids, "mixed view should include own private match"
+    assert data.get("private_total_count", 0) >= 1, "private_total_count should be set"
+    print("   PASS")
+
+    # --- 9. Whitespace keyword / long keyword ---
+    print("9. Whitespace and long keyword...")
+    data = search({"keyword": "   "})
+    assert len(ids_of(data)) > 0, "whitespace keyword = no filter, should return results"
+    # 101-rune keyword truncated to 100 (CJK): should not error
+    long_kw = "好" * 101
+    resp = requests.get(BASE_URL, params={"keyword": long_kw})
+    assert resp.status_code == 200, "long keyword should be truncated, not error"
+    print("   PASS")
+
+    # --- 10. my_likes + keyword ---
+    print("10. my_likes + keyword...")
+    data = search({"my_likes": "true", "keyword": "master"}, hdrs=headers_bob)
+    got = ids_of(data)
+    assert t_email in got, "bob liked the email template; keyword should match it"
+    assert t_liked not in got, "liked template without keyword match must be excluded"
+    print("   PASS")
+
+    # --- 11. q alias ---
+    print("11. q alias...")
+    data = search({"q": "playbook"})
+    assert t_desc in ids_of(data), "q alias should work like keyword"
+    print("   PASS")
+
+    print("--- Template Search & Filtering Test PASSED ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -1964,6 +2249,7 @@ def main():
     if success: success = test_language_behavior()
     if success: success = test_admin_user_management()
     if success: success = test_security_authz()
+    if success: success = test_template_search_filtering()
 
     # Cleanup is handled by atexit
 

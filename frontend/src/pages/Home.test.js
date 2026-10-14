@@ -12,6 +12,8 @@ import * as api from '../services/api';
 jest.mock('../services/api', () => ({
   ...jest.requireActual('../services/api'),
   getTemplates: jest.fn(),
+  getCategories: jest.fn().mockResolvedValue({ data: { categories: [] } }),
+  getTags: jest.fn().mockResolvedValue({ data: { tags: [] } }),
 }));
 
 // Mock child components to keep the test focused on Home's data fetching

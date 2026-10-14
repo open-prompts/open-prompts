@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"open-prompts/backend/internal/models"
 
@@ -21,6 +22,7 @@ type TemplateRepository interface {
 	ListTags(ctx context.Context, filters map[string]interface{}) ([]*models.TagStat, error)
 	ToggleLike(ctx context.Context, userID, templateID string) (bool, int32, error)
 	ToggleFavorite(ctx context.Context, userID, templateID string) (bool, int32, error)
+	CountTemplates(ctx context.Context, filters map[string]interface{}) (int32, error)
 }
 
 // templateRepository implements TemplateRepository.
@@ -116,26 +118,55 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 	return &t, nil
 }
 
-// List retrieves a list of templates based on filters and pagination.
-func (r *templateRepository) List(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Template, error) {
-	currentUserID := ""
-	if val, ok := filters["current_user_id"]; ok {
-		currentUserID = val.(string)
-	}
+// trendingWindow is the trailing window for the "trending" sort
+// (likes + favorites). Deliberately a server-side constant, not tunable.
+// Expressed as a Postgres interval literal because a bare numeric bind
+// parameter is interpreted in seconds and 7d of nanoseconds overflows it.
+const trendingWindow = "7 days"
 
-	query := `
-		SELECT
-			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
-			t.like_count, t.favorite_count, t.comment_count, t.created_at, t.updated_at,
-			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
-			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
-		FROM templates t
-		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $1
-		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $1
-		WHERE 1=1
+// escapeLike backslash-escapes LIKE metacharacters (\, %, _) so user input
+// is always matched literally inside an ILIKE pattern.
+func escapeLike(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return r.Replace(s)
+}
+
+// templateOrderBy maps a whitelisted sort value to a hardcoded ORDER BY
+// clause. User input never reaches SQL text — anything unrecognized falls
+// back to the default newest ordering.
+func templateOrderBy(sort string) string {
+	switch sort {
+	case "most_liked":
+		return " ORDER BY t.like_count DESC, t.created_at DESC"
+	case "most_favorited":
+		return " ORDER BY t.favorite_count DESC, t.created_at DESC"
+	case "trending":
+		return " ORDER BY (COALESCE(el.cnt, 0) + COALESCE(ef.cnt, 0)) DESC, t.created_at DESC"
+	default: // "newest" and any invalid value
+		return " ORDER BY t.created_at DESC"
+	}
+}
+
+// trendingJoins returns the derived-table joins backing the trending sort.
+// They are only appended when the sort is trending so every other query
+// stays byte-identical to the pre-feature form.
+func trendingJoins() string {
+	return `
+		LEFT JOIN (SELECT template_id, COUNT(*) AS cnt FROM template_likes
+		           WHERE created_at > now() - $%d::interval
+		           GROUP BY template_id) el ON el.template_id = t.id
+		LEFT JOIN (SELECT template_id, COUNT(*) AS cnt FROM template_favorites
+		           WHERE created_at > now() - $%d::interval
+		           GROUP BY template_id) ef ON ef.template_id = t.id
 	`
-	args := []interface{}{currentUserID}
-	argID := 2
+}
+
+// buildTemplateConditions assembles the shared WHERE conditions (and the
+// trending FROM joins) from the filters map. List and CountTemplates both
+// call it so counts can never diverge from results. It returns the SQL
+// fragment, the extended args slice, and the next placeholder id.
+func buildTemplateConditions(filters map[string]interface{}, args []interface{}, argID int) (string, []interface{}, int) {
+	query := ""
 
 	if val, ok := filters["visibility"]; ok && val != "" {
 		query += fmt.Sprintf(" AND t.visibility = $%d", argID)
@@ -176,8 +207,75 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 	if val, ok := filters["visibility"]; !ok || val == "" || val == "public" {
 		query += " AND NOT EXISTS (SELECT 1 FROM users bu WHERE bu.id = t.owner_id AND bu.status = 'banned')"
 	}
+	// Keyword: case-insensitive phrase match across title, description,
+	// category, individual tag values, and latest-version content. The
+	// pattern is a bound parameter with LIKE metacharacters escaped.
+	if kw, ok := filters["keyword"].(string); ok && kw != "" {
+		pattern := "%" + escapeLike(kw) + "%"
+		// All five ILIKE references share a single placeholder, so the
+		// pattern is bound once.
+		query += fmt.Sprintf(`
+			AND (
+				t.title ILIKE $%d
+				OR t.description ILIKE $%d
+				OR t.category ILIKE $%d
+				OR EXISTS (SELECT 1 FROM unnest(t.tags) AS tg WHERE tg ILIKE $%d)
+				OR EXISTS (SELECT 1 FROM template_versions tv
+				           WHERE tv.id = (SELECT tv2.id FROM template_versions tv2
+				                          WHERE tv2.template_id = t.id
+				                          ORDER BY tv2.version DESC LIMIT 1)
+				             AND tv.content ILIKE $%d)
+			)`, argID, argID, argID, argID, argID)
+		args = append(args, pattern)
+		argID++
+	}
+	return query, args, argID
+}
 
-	query += fmt.Sprintf(" ORDER BY t.created_at DESC LIMIT $%d OFFSET $%d", argID, argID+1)
+// templateFromClause returns the FROM clause (with viewer LEFT JOINs and,
+// for the trending sort, the windowed engagement joins). The trending
+// interval is a bound parameter appended to args; the next placeholder id
+// is returned.
+func templateFromClause(sort string, args []interface{}, argID int) (string, []interface{}, int) {
+	from := `
+		FROM templates t
+		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $1
+		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $1
+	`
+	if sort == "trending" {
+		from += fmt.Sprintf(trendingJoins(), argID, argID+1)
+		args = append(args, trendingWindow, trendingWindow)
+		argID += 2
+	}
+	return from, args, argID
+}
+
+// List retrieves a list of templates based on filters and pagination.
+func (r *templateRepository) List(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Template, error) {
+	currentUserID := ""
+	if val, ok := filters["current_user_id"]; ok {
+		currentUserID = val.(string)
+	}
+	sort, _ := filters["sort"].(string)
+
+	query := `
+		SELECT
+			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
+			t.like_count, t.favorite_count, t.comment_count, t.created_at, t.updated_at,
+			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
+			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
+	`
+	args := []interface{}{currentUserID}
+	argID := 2
+
+	from, args, argID := templateFromClause(sort, args, argID)
+	query += from + " WHERE 1=1"
+
+	conditions, args, argID := buildTemplateConditions(filters, args, argID)
+	query += conditions
+
+	query += templateOrderBy(sort)
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argID, argID+1)
 	args = append(args, limit, offset)
 
 	// fmt.Printf("List Query: %s, Args: %v\n", query, args)
@@ -208,6 +306,33 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 	}
 
 	return templates, nil
+}
+
+// CountTemplates returns the total number of templates matching the given
+// filters, using the exact same condition builder as List so counts and
+// results can never diverge.
+func (r *templateRepository) CountTemplates(ctx context.Context, filters map[string]interface{}) (int32, error) {
+	currentUserID := ""
+	if val, ok := filters["current_user_id"]; ok {
+		currentUserID = val.(string)
+	}
+	sort, _ := filters["sort"].(string)
+
+	query := `SELECT COUNT(*)`
+	args := []interface{}{currentUserID}
+	argID := 2
+
+	from, args, argID := templateFromClause(sort, args, argID)
+	query += from + " WHERE 1=1"
+
+	conditions, args, _ := buildTemplateConditions(filters, args, argID)
+	query += conditions
+
+	var count int32
+	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count templates: %w", err)
+	}
+	return count, nil
 }
 
 // ListCategories retrieves all categories and their template counts.

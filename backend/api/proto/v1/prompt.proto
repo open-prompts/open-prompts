@@ -275,6 +275,12 @@ message ListTemplatesRequest {
   bool my_favorites = 8;
   // Filter by language.
   string language = 9;
+  // Free-text keyword; matched case-insensitively against title,
+  // description, category, tags, and latest-version content.
+  string keyword = 10;
+  // Sort order: newest (default) | most_liked | most_favorited | trending.
+  // Invalid values fall back to newest server-side.
+  string sort = 11;
 }
 
 // ListTemplatesResponse is the response message for ListTemplates.
@@ -283,6 +289,10 @@ message ListTemplatesResponse {
   string next_page_token = 2; // Used for public pagination when mixed
   repeated Template private_templates = 3;
   string private_next_page_token = 4;
+  // Total matches in the public/single stream for the current filters.
+  int32 total_count = 5;
+  // Total matches in the private stream (mixed view only; else 0).
+  int32 private_total_count = 6;
 }
 
 // DeleteTemplateRequest is the request message for DeleteTemplate.

@@ -25,7 +25,8 @@ const Layout = ({
   showSidebar = true,
   showCreateButton = true,
   onCreateSuccess,
-  availableTags
+  availableTags,
+  categories
 }) => {
   const { t } = useTranslation();
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -65,6 +66,7 @@ const Layout = ({
               onFilterChange={onFilterChange}
               currentFilters={currentFilters}
               availableTags={availableTags}
+              categories={categories}
               mobileOpen={mobileSidebarOpen}
               onClose={() => setMobileSidebarOpen(false)}
             />

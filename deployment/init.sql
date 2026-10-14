@@ -374,3 +374,12 @@ END $$;
 
 -- Supports the prompt_count LEFT JOIN in ListTemplateVersions
 CREATE INDEX IF NOT EXISTS idx_prompts_version_id ON prompts(version_id);
+
+-- -----------------------------------------------------------------------------
+-- Template search & filtering: performance indexes for trending sort
+-- (7-day engagement window derived-table joins).
+-- -----------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_template_likes_template_created
+    ON template_likes(template_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_template_favorites_template_created
+    ON template_favorites(template_id, created_at);

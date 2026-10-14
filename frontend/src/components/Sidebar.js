@@ -12,8 +12,9 @@ import './Sidebar.scss';
  * @param {Function} props.onFilterChange - Callback when a filter is selected
  * @param {Object} props.currentFilters - Current active filters
  * @param {Array} props.availableTags - Tags to display (overrides fetching)
+ * @param {Array} props.categories - Shared taxonomy categories (overrides fetching)
  */
-const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, onClose }) => {
+const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sharedCategories, mobileOpen, onClose }) => {
   const { t } = useTranslation();
   const { addNotification } = useNotification();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
@@ -29,7 +30,11 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
   };
 
   useEffect(() => {
-    // Fetch categories and tags on mount
+    // Fetch categories and tags on mount unless shared taxonomy data is provided.
+    if (sharedCategories) {
+      setCategories(sharedCategories);
+      return undefined;
+    }
     const fetchData = async () => {
       // Note: no language filter on purpose — categories and tags are shared
       // across UI languages. The backend still supports an explicit language
@@ -49,7 +54,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
       }
     };
     fetchData();
-  }, [availableTags, addNotification, t]); // Re-run if availableTags changes. Language switch intentionally does not refetch.
+  }, [sharedCategories, availableTags, addNotification, t]); // Re-run if shared data changes. Language switch intentionally does not refetch.
 
   // Use availableTags if present, otherwise fetched tags.
   const displayedTags = availableTags || tags;
@@ -73,8 +78,12 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
 
   const handleTagClick = (tag) => {
     handleSelection(() => {
+        const currentTags = currentFilters?.tags || [];
+        const nextTags = currentTags.includes(tag)
+          ? currentTags.filter((tg) => tg !== tag)
+          : [...currentTags, tag];
         onFilterChange({
-            tags: [tag],
+            tags: nextTags,
             my_likes: false,
             my_favorites: false
         });
@@ -189,15 +198,24 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, mobileOpen, on
       <div className="sidebar-section">
         <h3>{t('create_template.label_tags')}</h3>
         <div className="tag-cloud">
-          {displayedTags.map((tag) => (
-            <span
-              key={tag.name}
-              className={`tag ${isActive('tag', tag.name) ? 'active' : ''}`}
-              onClick={() => handleTagClick(tag.name)}
-            >
-              {tag.name} <small>{tag.count > 0 ? `(${tag.count})` : ''}</small>
-            </span>
-          ))}
+          {displayedTags.map((tag) => {
+            const active = isActive('tag', tag.name);
+            return (
+              <label
+                key={tag.name}
+                className={`tag tag-toggle ${active ? 'active' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => handleTagClick(tag.name)}
+                  aria-label={tag.name}
+                />
+                <span className="tag-name">{tag.name}</span>
+                <small>{tag.count > 0 ? `(${tag.count})` : ''}</small>
+              </label>
+            );
+          })}
           {displayedTags.length === 0 && <span className="no-tags">{t('sidebar.no_tags')}</span>}
         </div>
       </div>

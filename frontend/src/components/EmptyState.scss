@@ -1,0 +1,37 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+
+.empty-state-body {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+.empty-state-clear {
+  margin-top: 8px;
+  padding: 8px 18px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--t);
+
+  &:hover {
+    background: var(--accent-hover);
+  }
+}
