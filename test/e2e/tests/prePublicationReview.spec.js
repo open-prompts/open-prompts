@@ -577,15 +577,7 @@ describe('Pre-publication review', function () {
       .assert.textContains('.home-review-status', 'REJECTED');
   });
 
-  // SKIPPED — Issue #1 (product bug, commit a46c24c): the gateway handler
-  // for GET /api/v1/templates/{id}/versions (backend/cmd/server/main.go:613)
-  // calls ListTemplateVersions with context.Background() and never resolves
-  // the Authorization header, so the owner of an in_review template gets a
-  // 404 from /versions. TemplateDetails fetches template + versions in one
-  // Promise.all, so the whole page falls back to .not-found and the owner
-  // banner never renders. Re-enable when the /versions handler forwards the
-  // authenticated user id (like the GET /templates/{id} handler does).
-  it.skip('shows the owner banner and moderation badge on TemplateDetails and PromptCard', function (browser) {
+  it('shows the owner banner and moderation badge on TemplateDetails and PromptCard', function (browser) {
     browser
       .url(`${browser.launch_url}/templates/${fx.gated.id}`)
       .waitForElementVisible('.review-owner-banner--in-review', 20000)
