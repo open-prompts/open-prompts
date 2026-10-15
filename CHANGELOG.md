@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/open-prompts/open-prompts/compare/v1.22.0...v1.22.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **review:** resolve auth context in template versions handler ([7a0cf5a](https://github.com/open-prompts/open-prompts/commit/7a0cf5ac8cf17d89ff41fa7b11f66287796b1897))
+
 # [1.22.0](https://github.com/open-prompts/open-prompts/compare/v1.21.0...v1.22.0) (2026-10-15)
 
 
