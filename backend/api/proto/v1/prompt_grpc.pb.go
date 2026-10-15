@@ -33,6 +33,13 @@ const (
 	UserService_CreateAPIKey_FullMethodName         = "/v1.UserService/CreateAPIKey"
 	UserService_ListAPIKeys_FullMethodName          = "/v1.UserService/ListAPIKeys"
 	UserService_DeleteAPIKey_FullMethodName         = "/v1.UserService/DeleteAPIKey"
+	UserService_FollowUser_FullMethodName           = "/v1.UserService/FollowUser"
+	UserService_UnfollowUser_FullMethodName         = "/v1.UserService/UnfollowUser"
+	UserService_GetCreatorProfile_FullMethodName    = "/v1.UserService/GetCreatorProfile"
+	UserService_ListFollowers_FullMethodName        = "/v1.UserService/ListFollowers"
+	UserService_ListFollowing_FullMethodName        = "/v1.UserService/ListFollowing"
+	UserService_GetFollowingFeed_FullMethodName     = "/v1.UserService/GetFollowingFeed"
+	UserService_ListTopCreators_FullMethodName      = "/v1.UserService/ListTopCreators"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -63,6 +70,14 @@ type UserServiceClient interface {
 	CreateAPIKey(ctx context.Context, in *CreateAPIKeyRequest, opts ...grpc.CallOption) (*CreateAPIKeyResponse, error)
 	ListAPIKeys(ctx context.Context, in *ListAPIKeysRequest, opts ...grpc.CallOption) (*ListAPIKeysResponse, error)
 	DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRequest, opts ...grpc.CallOption) (*DeleteAPIKeyResponse, error)
+	// Follow RPCs
+	FollowUser(ctx context.Context, in *FollowUserRequest, opts ...grpc.CallOption) (*FollowUserResponse, error)
+	UnfollowUser(ctx context.Context, in *FollowUserRequest, opts ...grpc.CallOption) (*FollowUserResponse, error)
+	GetCreatorProfile(ctx context.Context, in *GetCreatorProfileRequest, opts ...grpc.CallOption) (*GetCreatorProfileResponse, error)
+	ListFollowers(ctx context.Context, in *ListUserRelationsRequest, opts ...grpc.CallOption) (*ListUserRelationsResponse, error)
+	ListFollowing(ctx context.Context, in *ListUserRelationsRequest, opts ...grpc.CallOption) (*ListUserRelationsResponse, error)
+	GetFollowingFeed(ctx context.Context, in *GetFollowingFeedRequest, opts ...grpc.CallOption) (*GetFollowingFeedResponse, error)
+	ListTopCreators(ctx context.Context, in *ListTopCreatorsRequest, opts ...grpc.CallOption) (*ListTopCreatorsResponse, error)
 }
 
 type userServiceClient struct {
@@ -213,6 +228,76 @@ func (c *userServiceClient) DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRe
 	return out, nil
 }
 
+func (c *userServiceClient) FollowUser(ctx context.Context, in *FollowUserRequest, opts ...grpc.CallOption) (*FollowUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FollowUserResponse)
+	err := c.cc.Invoke(ctx, UserService_FollowUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) UnfollowUser(ctx context.Context, in *FollowUserRequest, opts ...grpc.CallOption) (*FollowUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FollowUserResponse)
+	err := c.cc.Invoke(ctx, UserService_UnfollowUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetCreatorProfile(ctx context.Context, in *GetCreatorProfileRequest, opts ...grpc.CallOption) (*GetCreatorProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreatorProfileResponse)
+	err := c.cc.Invoke(ctx, UserService_GetCreatorProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListFollowers(ctx context.Context, in *ListUserRelationsRequest, opts ...grpc.CallOption) (*ListUserRelationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUserRelationsResponse)
+	err := c.cc.Invoke(ctx, UserService_ListFollowers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListFollowing(ctx context.Context, in *ListUserRelationsRequest, opts ...grpc.CallOption) (*ListUserRelationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUserRelationsResponse)
+	err := c.cc.Invoke(ctx, UserService_ListFollowing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetFollowingFeed(ctx context.Context, in *GetFollowingFeedRequest, opts ...grpc.CallOption) (*GetFollowingFeedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFollowingFeedResponse)
+	err := c.cc.Invoke(ctx, UserService_GetFollowingFeed_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListTopCreators(ctx context.Context, in *ListTopCreatorsRequest, opts ...grpc.CallOption) (*ListTopCreatorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTopCreatorsResponse)
+	err := c.cc.Invoke(ctx, UserService_ListTopCreators_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -241,6 +326,14 @@ type UserServiceServer interface {
 	CreateAPIKey(context.Context, *CreateAPIKeyRequest) (*CreateAPIKeyResponse, error)
 	ListAPIKeys(context.Context, *ListAPIKeysRequest) (*ListAPIKeysResponse, error)
 	DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*DeleteAPIKeyResponse, error)
+	// Follow RPCs
+	FollowUser(context.Context, *FollowUserRequest) (*FollowUserResponse, error)
+	UnfollowUser(context.Context, *FollowUserRequest) (*FollowUserResponse, error)
+	GetCreatorProfile(context.Context, *GetCreatorProfileRequest) (*GetCreatorProfileResponse, error)
+	ListFollowers(context.Context, *ListUserRelationsRequest) (*ListUserRelationsResponse, error)
+	ListFollowing(context.Context, *ListUserRelationsRequest) (*ListUserRelationsResponse, error)
+	GetFollowingFeed(context.Context, *GetFollowingFeedRequest) (*GetFollowingFeedResponse, error)
+	ListTopCreators(context.Context, *ListTopCreatorsRequest) (*ListTopCreatorsResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -292,6 +385,27 @@ func (UnimplementedUserServiceServer) ListAPIKeys(context.Context, *ListAPIKeysR
 }
 func (UnimplementedUserServiceServer) DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*DeleteAPIKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAPIKey not implemented")
+}
+func (UnimplementedUserServiceServer) FollowUser(context.Context, *FollowUserRequest) (*FollowUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FollowUser not implemented")
+}
+func (UnimplementedUserServiceServer) UnfollowUser(context.Context, *FollowUserRequest) (*FollowUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnfollowUser not implemented")
+}
+func (UnimplementedUserServiceServer) GetCreatorProfile(context.Context, *GetCreatorProfileRequest) (*GetCreatorProfileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCreatorProfile not implemented")
+}
+func (UnimplementedUserServiceServer) ListFollowers(context.Context, *ListUserRelationsRequest) (*ListUserRelationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListFollowers not implemented")
+}
+func (UnimplementedUserServiceServer) ListFollowing(context.Context, *ListUserRelationsRequest) (*ListUserRelationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListFollowing not implemented")
+}
+func (UnimplementedUserServiceServer) GetFollowingFeed(context.Context, *GetFollowingFeedRequest) (*GetFollowingFeedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFollowingFeed not implemented")
+}
+func (UnimplementedUserServiceServer) ListTopCreators(context.Context, *ListTopCreatorsRequest) (*ListTopCreatorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTopCreators not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -566,6 +680,132 @@ func _UserService_DeleteAPIKey_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_FollowUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FollowUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).FollowUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_FollowUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).FollowUser(ctx, req.(*FollowUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_UnfollowUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FollowUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UnfollowUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UnfollowUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UnfollowUser(ctx, req.(*FollowUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetCreatorProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreatorProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetCreatorProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetCreatorProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetCreatorProfile(ctx, req.(*GetCreatorProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListFollowers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUserRelationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListFollowers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListFollowers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListFollowers(ctx, req.(*ListUserRelationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListFollowing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUserRelationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListFollowing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListFollowing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListFollowing(ctx, req.(*ListUserRelationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetFollowingFeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFollowingFeedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetFollowingFeed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetFollowingFeed_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetFollowingFeed(ctx, req.(*GetFollowingFeedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListTopCreators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTopCreatorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListTopCreators(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListTopCreators_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListTopCreators(ctx, req.(*ListTopCreatorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -628,6 +868,34 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAPIKey",
 			Handler:    _UserService_DeleteAPIKey_Handler,
+		},
+		{
+			MethodName: "FollowUser",
+			Handler:    _UserService_FollowUser_Handler,
+		},
+		{
+			MethodName: "UnfollowUser",
+			Handler:    _UserService_UnfollowUser_Handler,
+		},
+		{
+			MethodName: "GetCreatorProfile",
+			Handler:    _UserService_GetCreatorProfile_Handler,
+		},
+		{
+			MethodName: "ListFollowers",
+			Handler:    _UserService_ListFollowers_Handler,
+		},
+		{
+			MethodName: "ListFollowing",
+			Handler:    _UserService_ListFollowing_Handler,
+		},
+		{
+			MethodName: "GetFollowingFeed",
+			Handler:    _UserService_GetFollowingFeed_Handler,
+		},
+		{
+			MethodName: "ListTopCreators",
+			Handler:    _UserService_ListTopCreators_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

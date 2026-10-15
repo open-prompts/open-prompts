@@ -162,6 +162,8 @@ message UserStats {
   int64 likes_received = 2;
   int64 favorites_received = 3;
   int64 prompts_created = 4;
+  int64 follower_count = 5;
+  int64 following_count = 6;
 }
 
 message OAuthIdentity {

@@ -30,6 +30,7 @@ const Profile = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [avatar, setAvatar] = useState('');
   const [displayAvatar, setDisplayAvatar] = useState('');
+  const [bio, setBio] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showWarnedContent, setShowWarnedContent] = useState(false);
@@ -49,6 +50,7 @@ const Profile = () => {
             setEmail(data.email || '');
             setAvatar(data.avatar || '');
             setDisplayAvatar(data.avatar || '');
+            setBio(data.bio || '');
             setShowWarnedContent(!!data.show_warned_content);
 
             if (user) {
@@ -95,6 +97,7 @@ const Profile = () => {
       const updatedData = {
         display_name: displayName,
         avatar: avatar,
+        bio: bio,
       };
 
       if (password) {
@@ -184,6 +187,10 @@ const Profile = () => {
                           <label>{t('register.email')}</label>
                           <div className="value">{email}</div>
                       </div>
+                      <div className="info-group">
+                          <label>{t('profile.bio')}</label>
+                          <div className="value">{bio || t('profile.not_set')}</div>
+                      </div>
                   </div>
 
                   <div className="content-preferences-section">
@@ -241,6 +248,22 @@ const Profile = () => {
                           onChange={(e) => setDisplayName(e.target.value)}
                           placeholder={t('profile.ph_display_name')}
                       />
+                  </div>
+
+                  <div className="form-group">
+                      <label className="field-label" htmlFor="bio">{t('profile.bio')}</label>
+                      <textarea
+                          id="bio"
+                          className="input bio-input"
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                          placeholder={t('profile.ph_bio')}
+                          rows={3}
+                          maxLength={280}
+                      />
+                      <div className={`bio-counter ${bio.length > 280 ? 'is-over' : ''}`}>
+                        {bio.length} / 280
+                      </div>
                   </div>
 
                   <div className="form-group">

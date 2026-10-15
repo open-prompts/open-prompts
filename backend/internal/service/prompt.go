@@ -34,6 +34,7 @@ type PromptService struct {
 	UserRepo            repository.UserRepository
 	CommentRepo         repository.CommentRepository
 	ReviewRepo          repository.ReviewRepository
+	FollowRepo          repository.FollowRepository
 	Redis               RedisStore
 
 	// settingsCache caches platform settings (review thresholds) for
@@ -97,6 +98,12 @@ func (s *PromptService) SetReviewRepo(repo repository.ReviewRepository) {
 	s.settingsMu.Lock()
 	defer s.settingsMu.Unlock()
 	s.ReviewRepo = repo
+}
+
+// SetFollowRepo wires the follow repository after construction (nil-safe;
+// owner enrichment is skipped when absent).
+func (s *PromptService) SetFollowRepo(repo repository.FollowRepository) {
+	s.FollowRepo = repo
 }
 
 // getSettingInt returns a platform setting as an int, through the 60s
@@ -589,10 +596,30 @@ func (s *PromptService) GetTemplate(ctx context.Context, req *pb.GetTemplateRequ
 
 	latest, _ := s.TemplateVersionRepo.GetLatest(ctx, template.ID)
 
-	return &pb.GetTemplateResponse{
+	resp := &pb.GetTemplateResponse{
 		Template:      s.templateModelToProto(template),
 		LatestVersion: s.versionModelToProto(latest),
-	}, nil
+	}
+
+	// Owner enrichment: public identity + is_following for the viewer.
+	if s.UserRepo != nil {
+		if owner, err := s.UserRepo.GetByID(ctx, template.OwnerID); err == nil && owner != nil {
+			ownerInfo := &pb.OwnerInfo{
+				Id:            owner.ID,
+				DisplayName:   owner.DisplayName,
+				Avatar:        owner.Avatar,
+				FollowerCount: owner.FollowerCount,
+			}
+			if userID != "" && s.FollowRepo != nil {
+				if isFollowing, err := s.FollowRepo.IsFollowing(ctx, userID, owner.ID); err == nil {
+					ownerInfo.IsFollowing = isFollowing
+				}
+			}
+			resp.Owner = ownerInfo
+		}
+	}
+
+	return resp, nil
 }
 
 // normalizeKeyword trims, collapses internal whitespace, and caps at 100
@@ -1276,6 +1303,8 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 	}
 	tpl.ContentWarnings = m.ContentWarnings
 	tpl.LockedWarnings = m.LockedWarnings
+	tpl.OwnerDisplayName = m.OwnerDisplayName
+	tpl.OwnerAvatar = m.OwnerAvatar
 	return tpl
 }
 

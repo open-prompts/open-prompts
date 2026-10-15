@@ -36,6 +36,8 @@ type UserStats struct {
 	LikesReceived     int64 `json:"likes_received"`
 	FavoritesReceived int64 `json:"favorites_received"`
 	PromptsCreated    int64 `json:"prompts_created"`
+	FollowerCount     int64 `json:"follower_count"`
+	FollowingCount    int64 `json:"following_count"`
 }
 
 // OAuthIdentity is a linked OAuth provider for a user.

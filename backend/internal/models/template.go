@@ -32,6 +32,10 @@ type Template struct {
 	// Transient fields (not in templates table)
 	IsLiked     bool `json:"is_liked"`
 	IsFavorited bool `json:"is_favorited"`
+
+	// Owner enrichment (joined from users at read time, not stored).
+	OwnerDisplayName string `json:"owner_display_name"`
+	OwnerAvatar      string `json:"owner_avatar"`
 }
 
 // TemplateVersion represents a version of a template.

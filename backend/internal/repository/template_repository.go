@@ -310,13 +310,14 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 			t.content_warnings, t.locked_warnings,
 			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
-			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
+			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited,
+			ou.display_name AS owner_display_name, COALESCE(ou.avatar, '') AS owner_avatar
 	`
 	args := []interface{}{currentUserID}
 	argID := 2
 
 	from, args, argID := templateFromClause(sort, args, argID)
-	query += from + " WHERE 1=1"
+	query += from + " JOIN users ou ON ou.id = t.owner_id WHERE 1=1"
 
 	conditions, args, argID := buildTemplateConditions(filters, args, argID)
 	query += conditions
@@ -344,6 +345,7 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 			&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
 			&t.CreatedAt, &t.UpdatedAt,
 			&t.IsLiked, &t.IsFavorited,
+			&t.OwnerDisplayName, &t.OwnerAvatar,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan template: %w", err)
 		}

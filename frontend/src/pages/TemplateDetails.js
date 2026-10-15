@@ -27,6 +27,7 @@ import ChangeNoteInput from '../components/ChangeNoteInput';
 import PublishReviewModal from '../components/review/PublishReviewModal';
 import ContentInterstitial, { isWarnedRevealed } from '../components/warnings/ContentInterstitial';
 import WarningCheckboxGroup from '../components/warnings/WarningCheckboxGroup';
+import OwnerChip from '../components/OwnerChip';
 import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
@@ -40,6 +41,7 @@ const TemplateDetails = () => {
   usePageAnnouncement('template_details.title');
 
   const [template, setTemplate] = useState(null);
+  const [owner, setOwner] = useState(null);
   const [versions, setVersions] = useState([]);
   const [selectedVersionId, setSelectedVersionId] = useState(null);
   const [prompts, setPrompts] = useState([]);
@@ -137,6 +139,7 @@ const TemplateDetails = () => {
         ]);
 
         setTemplate(tplRes.data.template);
+        setOwner(tplRes.data.owner || null);
         setVersions(verRes.data.versions || []);
         setHistoryPageToken(verRes.data.next_page_token || '');
         setPrompts(pmtRes.data.prompts || []);
@@ -844,7 +847,11 @@ const TemplateDetails = () => {
                 </div>
             ) : (
                 <div className="meta">
-                    <span>{t('template_details.by', { owner: template.owner_id })}</span>
+                    {owner ? (
+                      <OwnerChip owner={owner} locale={i18n.language || 'en'} />
+                    ) : (
+                      <span>{t('template_details.by', { owner: template.owner_id })}</span>
+                    )}
                     <span>•</span>
                     <span className={`visibility ${template.visibility.toLowerCase()}`}>
                     {template.visibility === 'VISIBILITY_PUBLIC'

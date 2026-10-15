@@ -17,6 +17,9 @@ type User struct {
 	ApprovedTemplateCount int32          `json:"approved_template_count"` // gating threshold N
 	ReviewGatedRemaining  int32          `json:"review_gated_remaining"`  // re-gate count M after takedown/ban
 	ShowWarnedContent     bool           `json:"show_warned_content"`     // viewer pref: skip blur/interstitial for warned templates
+	Bio                   string         `json:"bio"`                     // nullable column; empty string when NULL
+	FollowerCount         int32          `json:"follower_count"`          // denormalized, maintained transactionally
+	FollowingCount        int32          `json:"following_count"`         // denormalized, maintained transactionally
 	CreatedAt             time.Time      `json:"created_at"`
 	UpdatedAt             time.Time      `json:"updated_at"`
 }

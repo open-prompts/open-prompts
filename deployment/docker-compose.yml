@@ -40,6 +40,8 @@ services:
       # Notification retention (days)
       NOTIFICATION_READ_RETENTION_DAYS: ${NOTIFICATION_READ_RETENTION_DAYS:-90}
       NOTIFICATION_RETENTION_DAYS: ${NOTIFICATION_RETENTION_DAYS:-180}
+      # Follow rate limit (successful follow/unfollow per minute per account)
+      FOLLOW_RATE_PER_MINUTE: ${FOLLOW_RATE_PER_MINUTE:-30}
     depends_on:
       - postgres
       - redis

@@ -101,6 +101,19 @@ const PromptCard = ({ template }) => {
           ))}
         </div>
         <div className="stats">
+          {template.owner_display_name && (
+            <button
+              type="button"
+              className="stat-item owner-byline"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/creators/${template.owner_id}`);
+              }}
+              title={t('template_details.by', { owner: template.owner_display_name })}
+            >
+              {t('template_details.by', { owner: template.owner_display_name })}
+            </button>
+          )}
           <button
             type="button"
             className="stat-item"

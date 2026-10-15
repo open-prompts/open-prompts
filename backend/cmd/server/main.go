@@ -98,6 +98,7 @@ func main() {
 	templateAliasRepo := repository.NewTemplateAliasRepository(pgConn.DB)
 	notificationRepo := repository.NewNotificationRepository(pgConn.DB)
 	commentRepo := repository.NewCommentRepository(pgConn.DB)
+	followRepo := repository.NewFollowRepository(pgConn.DB)
 
 	// User repository is needed by the prompt service for notification
 	// actor lookups; construct it before the prompt service.
@@ -119,6 +120,7 @@ func main() {
 	// checks, the admin review queue, and platform settings.
 	reviewRepo := repository.NewReviewRepository(pgConn.DB)
 	svc.SetReviewRepo(reviewRepo)
+	svc.SetFollowRepo(followRepo)
 
 	// User Service
 	apiKeyRepo := repository.NewAPIKeyRepository(pgConn.DB)
@@ -140,6 +142,8 @@ func main() {
 	emailSvc := service.NewEmailService(smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom)
 
 	userSvc := service.NewUserService(userRepo, apiKeyRepo, redisClient, emailSvc, jwtSecret)
+	userSvc.SetFollowRepo(followRepo)
+	userSvc.SetNotificationRepo(notificationRepo)
 
 	// Admin Service
 	adminRepo := repository.NewAdminRepository(pgConn.DB)
@@ -1035,6 +1039,268 @@ func main() {
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+
+	// Follow Creators: /api/v1/users routes. The /me/following-feed route is
+	// registered before the /{userId} patterns so "me" is never captured as a
+	// userId.
+	http.HandleFunc("/api/v1/users/me/following-feed", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		req := &pb.GetFollowingFeedRequest{}
+		q := r.URL.Query()
+		if v := q.Get("page_size"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				req.PageSize = int32(i)
+			}
+		}
+		req.PageToken = q.Get("page_token")
+
+		resp, err := userSvc.GetFollowingFeed(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	// GET /api/v1/users?sort=followers&limit=5 — top creators by followers
+	// (public user-card shape), used for empty-feed suggestions.
+	http.HandleFunc("/api/v1/users", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		ctx := context.Background()
+		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+				ctx = service.ContextWithUserID(ctx, userID)
+			}
+		}
+
+		q := r.URL.Query()
+		if q.Get("sort") == "followers" {
+			req := &pb.ListTopCreatorsRequest{}
+			if v := q.Get("limit"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.Limit = int32(i)
+				}
+			}
+			resp, err := userSvc.ListTopCreators(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+		http.Error(w, "unsupported query", http.StatusBadRequest)
+	})
+
+	// /api/v1/users/{userId}/... — follow, profile, templates, followers, following.
+	http.HandleFunc("/api/v1/users/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/users/")
+		parts := strings.Split(rest, "/")
+		userID := parts[0]
+		if userID == "" {
+			http.Error(w, "user id required", http.StatusBadRequest)
+			return
+		}
+
+		// Optional auth for public reads; required for follow/unfollow.
+		ctx := context.Background()
+		authedUserID := ""
+		authErr := error(nil)
+		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			if id, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+				ctx = service.ContextWithUserID(ctx, id)
+				authedUserID = id
+			} else {
+				authErr = err
+			}
+		}
+
+		// /api/v1/users/{userId}/follow
+		if len(parts) == 2 && parts[1] == "follow" {
+			if authErr != nil {
+				// Banned users' tokens are rejected by the auth layer with
+				// PermissionDenied; propagate it so the client sees 403.
+				writeError(w, authErr)
+				return
+			}
+			if authedUserID == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			req := &pb.FollowUserRequest{UserId: userID, FollowerId: authedUserID}
+			var resp *pb.FollowUserResponse
+			var err error
+			switch r.Method {
+			case http.MethodPost:
+				resp, err = userSvc.FollowUser(ctx, req)
+			case http.MethodDelete:
+				resp, err = userSvc.UnfollowUser(ctx, req)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/users/{userId}/profile
+		if len(parts) == 2 && parts[1] == "profile" {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			req := &pb.GetCreatorProfileRequest{UserId: userID, ViewerId: authedUserID}
+			resp, err := userSvc.GetCreatorProfile(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/users/{userId}/templates — public templates of the creator.
+		if len(parts) == 2 && parts[1] == "templates" {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			req := &pb.ListTemplatesRequest{OwnerId: userID, Visibility: pb.Visibility_VISIBILITY_PUBLIC}
+			q := r.URL.Query()
+			if v := q.Get("page_size"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.PageSize = int32(i)
+				}
+			}
+			req.PageToken = q.Get("page_token")
+			resp, err := svc.ListTemplates(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/users/{userId}/followers
+		if len(parts) == 2 && parts[1] == "followers" {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			req := &pb.ListUserRelationsRequest{UserId: userID}
+			q := r.URL.Query()
+			if v := q.Get("page"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.Page = int32(i)
+				}
+			}
+			if v := q.Get("page_size"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.PageSize = int32(i)
+				}
+			}
+			resp, err := userSvc.ListFollowers(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/users/{userId}/following
+		if len(parts) == 2 && parts[1] == "following" {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			req := &pb.ListUserRelationsRequest{UserId: userID}
+			q := r.URL.Query()
+			if v := q.Get("page"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.Page = int32(i)
+				}
+			}
+			if v := q.Get("page_size"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.PageSize = int32(i)
+				}
+			}
+			resp, err := userSvc.ListFollowing(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		http.Error(w, "Not found", http.StatusNotFound)
 	})
 
 	// API Key Handlers

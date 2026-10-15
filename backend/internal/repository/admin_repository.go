@@ -211,10 +211,12 @@ SELECT
 	(SELECT COUNT(*) FROM templates WHERE owner_id = $1) AS templates,
 	COALESCE((SELECT SUM(like_count) FROM templates WHERE owner_id = $1), 0) AS likes_received,
 	COALESCE((SELECT SUM(favorite_count) FROM templates WHERE owner_id = $1), 0) AS favorites_received,
-	(SELECT COUNT(*) FROM prompts WHERE owner_id = $1) AS prompts_created
+	(SELECT COUNT(*) FROM prompts WHERE owner_id = $1) AS prompts_created,
+	(SELECT follower_count FROM users WHERE id = $1) AS follower_count,
+	(SELECT following_count FROM users WHERE id = $1) AS following_count
 `
 	var s models.UserStats
-	err := r.db.QueryRowContext(ctx, query, userID).Scan(&s.Templates, &s.LikesReceived, &s.FavoritesReceived, &s.PromptsCreated)
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(&s.Templates, &s.LikesReceived, &s.FavoritesReceived, &s.PromptsCreated, &s.FollowerCount, &s.FollowingCount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user stats: %w", err)
 	}

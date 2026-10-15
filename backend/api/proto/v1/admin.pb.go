@@ -736,6 +736,8 @@ type UserStats struct {
 	LikesReceived     int64                  `protobuf:"varint,2,opt,name=likes_received,json=likesReceived,proto3" json:"likes_received,omitempty"`
 	FavoritesReceived int64                  `protobuf:"varint,3,opt,name=favorites_received,json=favoritesReceived,proto3" json:"favorites_received,omitempty"`
 	PromptsCreated    int64                  `protobuf:"varint,4,opt,name=prompts_created,json=promptsCreated,proto3" json:"prompts_created,omitempty"`
+	FollowerCount     int64                  `protobuf:"varint,5,opt,name=follower_count,json=followerCount,proto3" json:"follower_count,omitempty"`
+	FollowingCount    int64                  `protobuf:"varint,6,opt,name=following_count,json=followingCount,proto3" json:"following_count,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -794,6 +796,20 @@ func (x *UserStats) GetFavoritesReceived() int64 {
 func (x *UserStats) GetPromptsCreated() int64 {
 	if x != nil {
 		return x.PromptsCreated
+	}
+	return 0
+}
+
+func (x *UserStats) GetFollowerCount() int64 {
+	if x != nil {
+		return x.FollowerCount
+	}
+	return 0
+}
+
+func (x *UserStats) GetFollowingCount() int64 {
+	if x != nil {
+		return x.FollowingCount
 	}
 	return 0
 }
@@ -3797,12 +3813,14 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"identities\x121\n" +
 	"\bapi_keys\x18\x04 \x03(\v2\x16.v1.AdminAPIKeySummaryR\aapiKeys\x126\n" +
 	"\ttemplates\x18\x05 \x03(\v2\x18.v1.AdminTemplateSummaryR\ttemplates\x12=\n" +
-	"\x0eaction_history\x18\x06 \x03(\v2\x16.v1.AdminAuditLogEntryR\ractionHistory\"\xa8\x01\n" +
+	"\x0eaction_history\x18\x06 \x03(\v2\x16.v1.AdminAuditLogEntryR\ractionHistory\"\xf8\x01\n" +
 	"\tUserStats\x12\x1c\n" +
 	"\ttemplates\x18\x01 \x01(\x03R\ttemplates\x12%\n" +
 	"\x0elikes_received\x18\x02 \x01(\x03R\rlikesReceived\x12-\n" +
 	"\x12favorites_received\x18\x03 \x01(\x03R\x11favoritesReceived\x12'\n" +
-	"\x0fprompts_created\x18\x04 \x01(\x03R\x0epromptsCreated\"f\n" +
+	"\x0fprompts_created\x18\x04 \x01(\x03R\x0epromptsCreated\x12%\n" +
+	"\x0efollower_count\x18\x05 \x01(\x03R\rfollowerCount\x12'\n" +
+	"\x0ffollowing_count\x18\x06 \x01(\x03R\x0efollowingCount\"f\n" +
 	"\rOAuthIdentity\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x129\n" +
 	"\n" +

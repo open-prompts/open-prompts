@@ -129,3 +129,20 @@
   gap: 10px;
   margin-top: 6px;
 }
+
+.bio-input {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.bio-counter {
+  font-size: 12px;
+  color: var(--text-2);
+  text-align: right;
+  margin-top: 4px;
+
+  &.is-over {
+    color: var(--danger, #cf222e);
+  }
+}

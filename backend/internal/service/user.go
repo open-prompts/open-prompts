@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,11 +39,13 @@ type RedisStore interface {
 
 type UserService struct {
 	pb.UnimplementedUserServiceServer
-	Repo       repository.UserRepository
-	APIKeyRepo *repository.APIKeyRepository
-	Redis      RedisStore
-	EmailSvc   EmailService
-	JWTSecret  []byte
+	Repo             repository.UserRepository
+	APIKeyRepo       *repository.APIKeyRepository
+	Redis            RedisStore
+	EmailSvc         EmailService
+	JWTSecret        []byte
+	FollowRepo       repository.FollowRepository
+	NotificationRepo repository.NotificationRepository
 }
 
 func NewUserService(repo repository.UserRepository, apiKeyRepo *repository.APIKeyRepository, redisClient RedisStore, emailSvc EmailService, jwtSecret string) *UserService {
@@ -52,6 +56,18 @@ func NewUserService(repo repository.UserRepository, apiKeyRepo *repository.APIKe
 		EmailSvc:   emailSvc,
 		JWTSecret:  []byte(jwtSecret),
 	}
+}
+
+// SetFollowRepo wires the follow repository after construction (kept
+// separate from the constructor so existing call sites stay unchanged).
+func (s *UserService) SetFollowRepo(repo repository.FollowRepository) {
+	s.FollowRepo = repo
+}
+
+// SetNotificationRepo wires the notification repository after construction
+// (nil-safe; the follow notification hook is skipped when nil).
+func (s *UserService) SetNotificationRepo(repo repository.NotificationRepository) {
+	s.NotificationRepo = repo
 }
 
 func (s *UserService) SendVerificationCode(ctx context.Context, req *pb.SendVerificationCodeRequest) (*pb.SendVerificationCodeResponse, error) {
@@ -246,6 +262,14 @@ func (s *UserService) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRe
 	// client always sends the desired value (defaults to false when absent).
 	user.ShowWarnedContent = req.ShowWarnedContent
 
+	// Bio uses apply-as-sent semantics (empty clears), unlike display_name/
+	// avatar which are applied only when non-empty. Trim then validate 0-280.
+	bio := strings.TrimSpace(req.Bio)
+	if len([]rune(bio)) > 280 {
+		return nil, status.Error(codes.InvalidArgument, "bio must be at most 280 characters")
+	}
+	user.Bio = bio
+
 	if err := s.Repo.Update(ctx, user); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update user: %v", err)
 	}
@@ -255,6 +279,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRe
 		DisplayName:       user.DisplayName,
 		Avatar:            user.Avatar,
 		ShowWarnedContent: user.ShowWarnedContent,
+		Bio:               user.Bio,
 	}, nil
 }
 
@@ -275,6 +300,7 @@ func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileRequest)
 		DisplayName:       user.DisplayName,
 		Avatar:            user.Avatar,
 		ShowWarnedContent: user.ShowWarnedContent,
+		Bio:               user.Bio,
 	}, nil
 }
 
@@ -406,6 +432,420 @@ func (s *UserService) DeleteAPIKey(ctx context.Context, req *pb.DeleteAPIKeyRequ
 	}
 
 	return &pb.DeleteAPIKeyResponse{Success: true}, nil
+}
+
+// --- Follow RPCs ---
+
+const (
+	followRatePerMinuteDef = 30
+	followMaxPageSize      = 50
+	followDefaultPageSize  = 20
+	followMaxBioLen        = 280
+)
+
+// checkFollowRate enforces FOLLOW_RATE_PER_MINUTE using a fixed-window
+// counter in Redis. Returns (retryAfterSeconds, false) when over limit.
+// Fail-open when Redis is unavailable. Only successful actions consume quota:
+// the caller invokes this right before the graph mutation.
+func (s *UserService) checkFollowRate(ctx context.Context, userID string) (int, bool) {
+	if s.Redis == nil {
+		return 0, true
+	}
+	key := "follow_rate_min:" + userID
+	max, _ := strconv.Atoi(os.Getenv("FOLLOW_RATE_PER_MINUTE"))
+	if max <= 0 {
+		max = followRatePerMinuteDef
+	}
+	window := time.Minute
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if time.Now().Unix() >= expires { // window elapsed: reset
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if count >= max {
+		return int(expires - time.Now().Unix()), false
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count+1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+	return 0, true
+}
+
+// emitFollowNotification sends a best-effort 'follow' notification to the
+// followee. Nil-safe: skipped when the notification repo is absent. Self
+// follows are rejected earlier, so no self-suppression is needed here.
+func (s *UserService) emitFollowNotification(ctx context.Context, followeeID, followerID string) {
+	if s.NotificationRepo == nil || s.Repo == nil {
+		return
+	}
+	actor, err := s.Repo.GetByID(ctx, followerID)
+	if err != nil || actor == nil {
+		zap.S().Warnf("follow notification hook: failed to load actor %s: %v", followerID, err)
+		return
+	}
+	displayName := actor.DisplayName
+	if displayName == "" {
+		displayName = actor.ID
+	}
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      followeeID,
+		ActorID:          followerID,
+		Type:             "follow",
+		ActorDisplayName: displayName,
+	}); err != nil {
+		zap.S().Errorf("follow notification hook: failed to create follow notification (followee=%s actor=%s): %v",
+			followeeID, followerID, err)
+	}
+}
+
+// FollowUser creates a follow edge (idempotent). Self-follow is rejected;
+// either party banned is rejected; the followee must exist.
+func (s *UserService) FollowUser(ctx context.Context, req *pb.FollowUserRequest) (*pb.FollowUserResponse, error) {
+	followerID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if followerID == req.UserId {
+		return nil, status.Error(codes.InvalidArgument, "cannot follow yourself")
+	}
+
+	follower, err := s.Repo.GetByID(ctx, followerID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, status.Error(codes.Unauthenticated, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load follower: %v", err)
+	}
+	if follower.Status == "banned" {
+		return nil, status.Error(codes.PermissionDenied, "banned users cannot follow")
+	}
+
+	followee, err := s.Repo.GetByID(ctx, req.UserId)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load followee: %v", err)
+	}
+	if followee.Status == "banned" {
+		return nil, status.Error(codes.PermissionDenied, "cannot follow a banned user")
+	}
+
+	if s.FollowRepo == nil {
+		return nil, status.Error(codes.Internal, "follow service unavailable")
+	}
+
+	if retryAfter, ok := s.checkFollowRate(ctx, followerID); !ok {
+		return nil, status.Error(codes.ResourceExhausted,
+			fmt.Sprintf("rate limit exceeded, retry after %d seconds", retryAfter))
+	}
+
+	count, inserted, err := s.FollowRepo.Follow(ctx, followerID, req.UserId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to follow user: %v", err)
+	}
+	if inserted {
+		s.emitFollowNotification(ctx, req.UserId, followerID)
+	}
+	return &pb.FollowUserResponse{Following: true, FollowerCount: count}, nil
+}
+
+// UnfollowUser removes a follow edge (idempotent). Unfollow of a non-existent
+// user is 404; unfollow of an existing but not-followed user is 200.
+func (s *UserService) UnfollowUser(ctx context.Context, req *pb.FollowUserRequest) (*pb.FollowUserResponse, error) {
+	followerID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if followerID == req.UserId {
+		return nil, status.Error(codes.InvalidArgument, "cannot unfollow yourself")
+	}
+
+	follower, err := s.Repo.GetByID(ctx, followerID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, status.Error(codes.Unauthenticated, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load follower: %v", err)
+	}
+	if follower.Status == "banned" {
+		return nil, status.Error(codes.PermissionDenied, "banned users cannot unfollow")
+	}
+
+	if _, err := s.Repo.GetByID(ctx, req.UserId); err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load followee: %v", err)
+	}
+
+	if s.FollowRepo == nil {
+		return nil, status.Error(codes.Internal, "follow service unavailable")
+	}
+
+	if retryAfter, ok := s.checkFollowRate(ctx, followerID); !ok {
+		return nil, status.Error(codes.ResourceExhausted,
+			fmt.Sprintf("rate limit exceeded, retry after %d seconds", retryAfter))
+	}
+
+	count, _, err := s.FollowRepo.Unfollow(ctx, followerID, req.UserId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to unfollow user: %v", err)
+	}
+	return &pb.FollowUserResponse{Following: false, FollowerCount: count}, nil
+}
+
+// GetCreatorProfile returns the public, allow-listed profile of a user.
+// Never email/mobile/role. is_following/follows_you are computed when the
+// viewer is authenticated.
+func (s *UserService) GetCreatorProfile(ctx context.Context, req *pb.GetCreatorProfileRequest) (*pb.GetCreatorProfileResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	user, err := s.Repo.GetByID(ctx, req.UserId)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load user: %v", err)
+	}
+
+	resp := &pb.GetCreatorProfileResponse{
+		Id:             user.ID,
+		DisplayName:    user.DisplayName,
+		Avatar:         user.Avatar,
+		Bio:            user.Bio,
+		FollowerCount:  user.FollowerCount,
+		FollowingCount: user.FollowingCount,
+		CreatedAt:      timestamppb.New(user.CreatedAt),
+	}
+
+	if req.ViewerId != "" && s.FollowRepo != nil {
+		isFollowing, err := s.FollowRepo.IsFollowing(ctx, req.ViewerId, user.ID)
+		if err == nil {
+			resp.IsFollowing = isFollowing
+		}
+		followsYou, err := s.FollowRepo.IsFollowing(ctx, user.ID, req.ViewerId)
+		if err == nil {
+			resp.FollowsYou = followsYou
+		}
+	}
+	return resp, nil
+}
+
+// ListFollowers returns a page of the user's followers (public user cards).
+func (s *UserService) ListFollowers(ctx context.Context, req *pb.ListUserRelationsRequest) (*pb.ListUserRelationsResponse, error) {
+	return s.listUserRelations(ctx, req, true)
+}
+
+// ListFollowing returns a page of the users the given user follows.
+func (s *UserService) ListFollowing(ctx context.Context, req *pb.ListUserRelationsRequest) (*pb.ListUserRelationsResponse, error) {
+	return s.listUserRelations(ctx, req, false)
+}
+
+func (s *UserService) listUserRelations(ctx context.Context, req *pb.ListUserRelationsRequest, followers bool) (*pb.ListUserRelationsResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if _, err := s.Repo.GetByID(ctx, req.UserId); err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load user: %v", err)
+	}
+	if s.FollowRepo == nil {
+		return nil, status.Error(codes.Internal, "follow service unavailable")
+	}
+
+	page := int(req.Page)
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := int(req.PageSize)
+	if pageSize <= 0 {
+		pageSize = followDefaultPageSize
+	}
+	if pageSize > followMaxPageSize {
+		pageSize = followMaxPageSize
+	}
+
+	var cards []*models.UserCard
+	var total int
+	var err error
+	if followers {
+		cards, total, err = s.FollowRepo.ListFollowers(ctx, req.UserId, page, pageSize)
+	} else {
+		cards, total, err = s.FollowRepo.ListFollowing(ctx, req.UserId, page, pageSize)
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list relations: %v", err)
+	}
+
+	viewerID, _ := GetUserIDFromContext(ctx)
+	resp := &pb.ListUserRelationsResponse{
+		Users:      make([]*pb.UserCard, 0, len(cards)),
+		TotalCount: int32(total),
+		Page:       int32(page),
+		PageSize:   int32(pageSize),
+	}
+	for _, c := range cards {
+		card := &pb.UserCard{
+			Id:            c.ID,
+			DisplayName:   c.DisplayName,
+			Avatar:        c.Avatar,
+			FollowerCount: c.FollowerCount,
+		}
+		if viewerID != "" && s.FollowRepo != nil {
+			if isFollowing, err := s.FollowRepo.IsFollowing(ctx, viewerID, c.ID); err == nil {
+				card.IsFollowing = isFollowing
+			}
+		}
+		resp.Users = append(resp.Users, card)
+	}
+	return resp, nil
+}
+
+// GetFollowingFeed returns the newest public templates from the creators the
+// caller follows, keyset-paginated by created_at.
+func (s *UserService) GetFollowingFeed(ctx context.Context, req *pb.GetFollowingFeedRequest) (*pb.GetFollowingFeedResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.FollowRepo == nil {
+		return nil, status.Error(codes.Internal, "follow service unavailable")
+	}
+
+	pageSize := int(req.PageSize)
+	if pageSize <= 0 {
+		pageSize = followDefaultPageSize
+	}
+	if pageSize > followMaxPageSize {
+		pageSize = followMaxPageSize
+	}
+
+	before := time.Now()
+	if req.PageToken != "" {
+		ts, err := strconv.ParseInt(req.PageToken, 10, 64)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		before = time.Unix(0, ts)
+	}
+
+	templates, total, err := s.FollowRepo.GetFollowingFeed(ctx, userID, pageSize, before)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to load following feed: %v", err)
+	}
+
+	resp := &pb.GetFollowingFeedResponse{
+		Templates:  make([]*pb.Template, 0, len(templates)),
+		TotalCount: int32(total),
+	}
+	for _, t := range templates {
+		resp.Templates = append(resp.Templates, s.templateToFeedProto(t))
+	}
+	if len(templates) == pageSize {
+		last := templates[len(templates)-1]
+		resp.NextPageToken = strconv.FormatInt(last.CreatedAt.UnixNano(), 10)
+	}
+	return resp, nil
+}
+
+// ListTopCreators returns the creators with the most followers (public
+// user-card shape), used for empty-feed suggestions.
+func (s *UserService) ListTopCreators(ctx context.Context, req *pb.ListTopCreatorsRequest) (*pb.ListTopCreatorsResponse, error) {
+	if s.FollowRepo == nil {
+		return nil, status.Error(codes.Internal, "follow service unavailable")
+	}
+	limit := int(req.Limit)
+	if limit <= 0 {
+		limit = 5
+	}
+	if limit > 20 {
+		limit = 20
+	}
+	cards, err := s.FollowRepo.TopCreatorsByFollowers(ctx, limit)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list top creators: %v", err)
+	}
+	viewerID, _ := GetUserIDFromContext(ctx)
+	resp := &pb.ListTopCreatorsResponse{
+		Users:      make([]*pb.UserCard, 0, len(cards)),
+		TotalCount: int32(len(cards)),
+	}
+	for _, c := range cards {
+		card := &pb.UserCard{
+			Id:            c.ID,
+			DisplayName:   c.DisplayName,
+			Avatar:        c.Avatar,
+			FollowerCount: c.FollowerCount,
+		}
+		if viewerID != "" && s.FollowRepo != nil {
+			if isFollowing, err := s.FollowRepo.IsFollowing(ctx, viewerID, c.ID); err == nil {
+				card.IsFollowing = isFollowing
+			}
+		}
+		resp.Users = append(resp.Users, card)
+	}
+	return resp, nil
+}
+
+// templateToFeedProto maps a feed template to its proto form (owner
+// enrichment included). It mirrors the PromptService mapping but lives here
+// so the feed RPC does not depend on PromptService internals.
+func (s *UserService) templateToFeedProto(m *models.Template) *pb.Template {
+	if m == nil {
+		return nil
+	}
+	vis := pb.Visibility_VISIBILITY_PRIVATE
+	if m.Visibility == "public" {
+		vis = pb.Visibility_VISIBILITY_PUBLIC
+	}
+	tpl := &pb.Template{
+		Id:               m.ID,
+		OwnerId:          m.OwnerID,
+		Title:            m.Title,
+		Description:      m.Description.String,
+		Visibility:       vis,
+		Tags:             m.Tags,
+		Category:         m.Category.String,
+		CreatedAt:        timestamppb.New(m.CreatedAt),
+		UpdatedAt:        timestamppb.New(m.UpdatedAt),
+		LikeCount:        m.LikeCount,
+		FavoriteCount:    m.FavoriteCount,
+		CommentCount:     m.CommentCount,
+		Language:         m.Language,
+		OwnerDisplayName: m.OwnerDisplayName,
+		OwnerAvatar:      m.OwnerAvatar,
+	}
+	moderationStatus := m.ModerationStatus
+	if moderationStatus == "" {
+		moderationStatus = "normal"
+	}
+	tpl.ModerationStatus = moderationStatus
+	if m.PublishedAt.Valid {
+		tpl.PublishedAt = timestamppb.New(m.PublishedAt.Time)
+	}
+	tpl.ContentWarnings = m.ContentWarnings
+	tpl.LockedWarnings = m.LockedWarnings
+	return tpl
 }
 
 // Helpers

@@ -443,6 +443,8 @@ func (s *AdminService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb
 			LikesReceived:     stats.LikesReceived,
 			FavoritesReceived: stats.FavoritesReceived,
 			PromptsCreated:    stats.PromptsCreated,
+			FollowerCount:     stats.FollowerCount,
+			FollowingCount:    stats.FollowingCount,
 		},
 	}
 	for _, id := range identities {

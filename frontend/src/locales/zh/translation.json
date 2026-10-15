@@ -77,7 +77,37 @@
     "error_fetch": "获取模板失败。",
     "my_private_prompts": "我的私有提示词",
     "public_prompts": "公开提示词",
-    "no_results": "未找到模板"
+    "no_results": "未找到模板",
+    "browse_tab": "浏览",
+    "following": {
+      "tab": "关注",
+      "empty": "关注创作者，在这里查看他们的最新模板",
+      "suggested": "推荐创作者",
+      "login_prompt": "登录后即可关注创作者"
+    }
+  },
+  "creators": {
+    "title": "创作者",
+    "followers": "{{count}} 位粉丝",
+    "following_count": "关注 {{count}} 人",
+    "joined": "加入于 {{date}}",
+    "follows_you": "关注了你",
+    "tab_templates": "模板",
+    "tab_followers": "粉丝",
+    "tab_following": "关注",
+    "edit_profile": "编辑资料",
+    "empty_templates": "暂无公开模板",
+    "empty_followers": "暂无粉丝",
+    "empty_following": "尚未关注任何人",
+    "not_found": "未找到创作者",
+    "error_load": "加载创作者资料失败。"
+  },
+  "follow": {
+    "follow": "关注",
+    "following": "已关注",
+    "unfollow": "取消关注",
+    "error": "无法更新关注状态",
+    "error_banned": "不允许此操作"
   },
   "search": {
     "placeholder": "搜索提示词…",
@@ -332,6 +362,8 @@
     "avatar": "头像",
     "change_avatar": "更换头像",
     "ph_display_name": "输入您的显示名称",
+    "bio": "个人简介",
+    "ph_bio": "介绍一下自己（最多 280 个字符）",
     "new_password": "新密码",
     "ph_new_password": "留空以保持不变"
   },
@@ -477,7 +509,9 @@
       "no_history": "该用户暂无管理操作记录。",
       "likes_received": "收到的点赞",
       "favorites_received": "收到的收藏",
-      "prompts_created": "已创建提示"
+      "prompts_created": "已创建提示",
+      "followers": "粉丝",
+      "following": "关注"
     },
     "reasonModal": {
       "ban_title": "封禁 {{name}}",
@@ -568,6 +602,7 @@
       "like": "{{actor}} 赞了你的模板\"{{title}}\"",
       "favorite": "{{actor}} 收藏了你的模板\"{{title}}\"",
       "fork": "{{actor}} fork 了你的模板\"{{title}}\"",
+      "follow": "{{actor}} 关注了你",
       "template_approved": "你的模板“{{title}}”已上线",
       "template_rejected": "你的模板“{{title}}”被拒绝：{{reason}}"
     },

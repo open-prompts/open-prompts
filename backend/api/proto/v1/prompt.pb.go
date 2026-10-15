@@ -171,8 +171,12 @@ type Template struct {
 	// The subset of content_warnings applied by moderation; creator-immutable.
 	// Only meaningful to the owner and admins.
 	LockedWarnings []string `protobuf:"bytes,28,rep,name=locked_warnings,json=lockedWarnings,proto3" json:"locked_warnings,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Owner display name (joined from users at read time).
+	OwnerDisplayName string `protobuf:"bytes,29,opt,name=owner_display_name,json=ownerDisplayName,proto3" json:"owner_display_name,omitempty"`
+	// Owner avatar (joined from users at read time).
+	OwnerAvatar   string `protobuf:"bytes,30,opt,name=owner_avatar,json=ownerAvatar,proto3" json:"owner_avatar,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Template) Reset() {
@@ -350,6 +354,20 @@ func (x *Template) GetLockedWarnings() []string {
 		return x.LockedWarnings
 	}
 	return nil
+}
+
+func (x *Template) GetOwnerDisplayName() string {
+	if x != nil {
+		return x.OwnerDisplayName
+	}
+	return ""
+}
+
+func (x *Template) GetOwnerAvatar() string {
+	if x != nil {
+		return x.OwnerAvatar
+	}
+	return ""
 }
 
 // TemplateVersion represents a specific version of a template's content.
@@ -1075,6 +1093,9 @@ type GetTemplateResponse struct {
 	// Optionally return the latest version or all versions.
 	// For simplicity, let's return the latest version.
 	LatestVersion *TemplateVersion `protobuf:"bytes,2,opt,name=latest_version,json=latestVersion,proto3" json:"latest_version,omitempty"`
+	// Public owner identity (id, display_name, avatar, follower_count,
+	// is_following). Populated when the owner is resolvable.
+	Owner         *OwnerInfo `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1119,6 +1140,13 @@ func (x *GetTemplateResponse) GetTemplate() *Template {
 func (x *GetTemplateResponse) GetLatestVersion() *TemplateVersion {
 	if x != nil {
 		return x.LatestVersion
+	}
+	return nil
+}
+
+func (x *GetTemplateResponse) GetOwner() *OwnerInfo {
+	if x != nil {
+		return x.Owner
 	}
 	return nil
 }
@@ -2786,8 +2814,10 @@ type UpdateProfileRequest struct {
 	Password    string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
 	// Viewer preference: skip the blur/interstitial for warned templates.
 	ShowWarnedContent bool `protobuf:"varint,5,opt,name=show_warned_content,json=showWarnedContent,proto3" json:"show_warned_content,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Optional profile bio; trimmed server-side, 0-280 chars, empty clears.
+	Bio           string `protobuf:"bytes,6,opt,name=bio,proto3" json:"bio,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateProfileRequest) Reset() {
@@ -2855,6 +2885,13 @@ func (x *UpdateProfileRequest) GetShowWarnedContent() bool {
 	return false
 }
 
+func (x *UpdateProfileRequest) GetBio() string {
+	if x != nil {
+		return x.Bio
+	}
+	return ""
+}
+
 // UpdateProfileResponse is the response message for UpdateProfile.
 type UpdateProfileResponse struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
@@ -2862,6 +2899,7 @@ type UpdateProfileResponse struct {
 	DisplayName       string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Avatar            string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
 	ShowWarnedContent bool                   `protobuf:"varint,4,opt,name=show_warned_content,json=showWarnedContent,proto3" json:"show_warned_content,omitempty"`
+	Bio               string                 `protobuf:"bytes,5,opt,name=bio,proto3" json:"bio,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -2924,6 +2962,13 @@ func (x *UpdateProfileResponse) GetShowWarnedContent() bool {
 	return false
 }
 
+func (x *UpdateProfileResponse) GetBio() string {
+	if x != nil {
+		return x.Bio
+	}
+	return ""
+}
+
 // GetProfileRequest is the request message for GetProfile.
 type GetProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2977,6 +3022,7 @@ type GetProfileResponse struct {
 	DisplayName       string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Avatar            string                 `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty"`
 	ShowWarnedContent bool                   `protobuf:"varint,5,opt,name=show_warned_content,json=showWarnedContent,proto3" json:"show_warned_content,omitempty"`
+	Bio               string                 `protobuf:"bytes,6,opt,name=bio,proto3" json:"bio,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -3046,6 +3092,785 @@ func (x *GetProfileResponse) GetShowWarnedContent() bool {
 	return false
 }
 
+func (x *GetProfileResponse) GetBio() string {
+	if x != nil {
+		return x.Bio
+	}
+	return ""
+}
+
+// FollowUserRequest is the request message for FollowUser/UnfollowUser.
+type FollowUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`             // followee
+	FollowerId    string                 `protobuf:"bytes,2,opt,name=follower_id,json=followerId,proto3" json:"follower_id,omitempty"` // injected by the gateway from auth context
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FollowUserRequest) Reset() {
+	*x = FollowUserRequest{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FollowUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FollowUserRequest) ProtoMessage() {}
+
+func (x *FollowUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FollowUserRequest.ProtoReflect.Descriptor instead.
+func (*FollowUserRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *FollowUserRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *FollowUserRequest) GetFollowerId() string {
+	if x != nil {
+		return x.FollowerId
+	}
+	return ""
+}
+
+// FollowUserResponse is the response message for FollowUser/UnfollowUser.
+type FollowUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Following     bool                   `protobuf:"varint,1,opt,name=following,proto3" json:"following,omitempty"`
+	FollowerCount int32                  `protobuf:"varint,2,opt,name=follower_count,json=followerCount,proto3" json:"follower_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FollowUserResponse) Reset() {
+	*x = FollowUserResponse{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FollowUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FollowUserResponse) ProtoMessage() {}
+
+func (x *FollowUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FollowUserResponse.ProtoReflect.Descriptor instead.
+func (*FollowUserResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *FollowUserResponse) GetFollowing() bool {
+	if x != nil {
+		return x.Following
+	}
+	return false
+}
+
+func (x *FollowUserResponse) GetFollowerCount() int32 {
+	if x != nil {
+		return x.FollowerCount
+	}
+	return 0
+}
+
+// GetCreatorProfileRequest is the request message for GetCreatorProfile.
+type GetCreatorProfileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ViewerId      string                 `protobuf:"bytes,2,opt,name=viewer_id,json=viewerId,proto3" json:"viewer_id,omitempty"` // empty for anonymous
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCreatorProfileRequest) Reset() {
+	*x = GetCreatorProfileRequest{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCreatorProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCreatorProfileRequest) ProtoMessage() {}
+
+func (x *GetCreatorProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCreatorProfileRequest.ProtoReflect.Descriptor instead.
+func (*GetCreatorProfileRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GetCreatorProfileRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetCreatorProfileRequest) GetViewerId() string {
+	if x != nil {
+		return x.ViewerId
+	}
+	return ""
+}
+
+// GetCreatorProfileResponse is the response message for GetCreatorProfile.
+type GetCreatorProfileResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName    string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Avatar         string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	Bio            string                 `protobuf:"bytes,4,opt,name=bio,proto3" json:"bio,omitempty"`
+	FollowerCount  int32                  `protobuf:"varint,5,opt,name=follower_count,json=followerCount,proto3" json:"follower_count,omitempty"`
+	FollowingCount int32                  `protobuf:"varint,6,opt,name=following_count,json=followingCount,proto3" json:"following_count,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	IsFollowing    bool                   `protobuf:"varint,8,opt,name=is_following,json=isFollowing,proto3" json:"is_following,omitempty"`
+	FollowsYou     bool                   `protobuf:"varint,9,opt,name=follows_you,json=followsYou,proto3" json:"follows_you,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetCreatorProfileResponse) Reset() {
+	*x = GetCreatorProfileResponse{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCreatorProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCreatorProfileResponse) ProtoMessage() {}
+
+func (x *GetCreatorProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCreatorProfileResponse.ProtoReflect.Descriptor instead.
+func (*GetCreatorProfileResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *GetCreatorProfileResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GetCreatorProfileResponse) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *GetCreatorProfileResponse) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
+func (x *GetCreatorProfileResponse) GetBio() string {
+	if x != nil {
+		return x.Bio
+	}
+	return ""
+}
+
+func (x *GetCreatorProfileResponse) GetFollowerCount() int32 {
+	if x != nil {
+		return x.FollowerCount
+	}
+	return 0
+}
+
+func (x *GetCreatorProfileResponse) GetFollowingCount() int32 {
+	if x != nil {
+		return x.FollowingCount
+	}
+	return 0
+}
+
+func (x *GetCreatorProfileResponse) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *GetCreatorProfileResponse) GetIsFollowing() bool {
+	if x != nil {
+		return x.IsFollowing
+	}
+	return false
+}
+
+func (x *GetCreatorProfileResponse) GetFollowsYou() bool {
+	if x != nil {
+		return x.FollowsYou
+	}
+	return false
+}
+
+// ListUserRelationsRequest is the request message for ListFollowers/ListFollowing.
+type ListUserRelationsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`                         // 1-based, default 1
+	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"` // default 20, max 50
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUserRelationsRequest) Reset() {
+	*x = ListUserRelationsRequest{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserRelationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserRelationsRequest) ProtoMessage() {}
+
+func (x *ListUserRelationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserRelationsRequest.ProtoReflect.Descriptor instead.
+func (*ListUserRelationsRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *ListUserRelationsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ListUserRelationsRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListUserRelationsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+// UserCard is the public identity of a user in relation lists.
+type UserCard struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	FollowerCount int32                  `protobuf:"varint,4,opt,name=follower_count,json=followerCount,proto3" json:"follower_count,omitempty"`
+	IsFollowing   bool                   `protobuf:"varint,5,opt,name=is_following,json=isFollowing,proto3" json:"is_following,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserCard) Reset() {
+	*x = UserCard{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserCard) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserCard) ProtoMessage() {}
+
+func (x *UserCard) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserCard.ProtoReflect.Descriptor instead.
+func (*UserCard) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *UserCard) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UserCard) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UserCard) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
+func (x *UserCard) GetFollowerCount() int32 {
+	if x != nil {
+		return x.FollowerCount
+	}
+	return 0
+}
+
+func (x *UserCard) GetIsFollowing() bool {
+	if x != nil {
+		return x.IsFollowing
+	}
+	return false
+}
+
+// ListUserRelationsResponse is the response message for ListFollowers/ListFollowing.
+type ListUserRelationsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*UserCard            `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUserRelationsResponse) Reset() {
+	*x = ListUserRelationsResponse{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserRelationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserRelationsResponse) ProtoMessage() {}
+
+func (x *ListUserRelationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserRelationsResponse.ProtoReflect.Descriptor instead.
+func (*ListUserRelationsResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ListUserRelationsResponse) GetUsers() []*UserCard {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+func (x *ListUserRelationsResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *ListUserRelationsResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListUserRelationsResponse) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+// GetFollowingFeedRequest is the request message for GetFollowingFeed.
+type GetFollowingFeedRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`          // the follower (me)
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`   // default 20, max 50
+	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"` // opaque created_at cursor
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFollowingFeedRequest) Reset() {
+	*x = GetFollowingFeedRequest{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFollowingFeedRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFollowingFeedRequest) ProtoMessage() {}
+
+func (x *GetFollowingFeedRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFollowingFeedRequest.ProtoReflect.Descriptor instead.
+func (*GetFollowingFeedRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *GetFollowingFeedRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetFollowingFeedRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *GetFollowingFeedRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+// GetFollowingFeedResponse is the response message for GetFollowingFeed.
+type GetFollowingFeedResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Templates     []*Template            `protobuf:"bytes,1,rep,name=templates,proto3" json:"templates,omitempty"`
+	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFollowingFeedResponse) Reset() {
+	*x = GetFollowingFeedResponse{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFollowingFeedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFollowingFeedResponse) ProtoMessage() {}
+
+func (x *GetFollowingFeedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFollowingFeedResponse.ProtoReflect.Descriptor instead.
+func (*GetFollowingFeedResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *GetFollowingFeedResponse) GetTemplates() []*Template {
+	if x != nil {
+		return x.Templates
+	}
+	return nil
+}
+
+func (x *GetFollowingFeedResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *GetFollowingFeedResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+// ListTopCreatorsRequest is the request message for ListTopCreators.
+type ListTopCreatorsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"` // default 5, max 20
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTopCreatorsRequest) Reset() {
+	*x = ListTopCreatorsRequest{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTopCreatorsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTopCreatorsRequest) ProtoMessage() {}
+
+func (x *ListTopCreatorsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTopCreatorsRequest.ProtoReflect.Descriptor instead.
+func (*ListTopCreatorsRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ListTopCreatorsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+// ListTopCreatorsResponse is the response message for ListTopCreators.
+type ListTopCreatorsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*UserCard            `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTopCreatorsResponse) Reset() {
+	*x = ListTopCreatorsResponse{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTopCreatorsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTopCreatorsResponse) ProtoMessage() {}
+
+func (x *ListTopCreatorsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTopCreatorsResponse.ProtoReflect.Descriptor instead.
+func (*ListTopCreatorsResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *ListTopCreatorsResponse) GetUsers() []*UserCard {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+func (x *ListTopCreatorsResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+// OwnerInfo is the public owner identity on a template detail response.
+type OwnerInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	FollowerCount int32                  `protobuf:"varint,4,opt,name=follower_count,json=followerCount,proto3" json:"follower_count,omitempty"`
+	IsFollowing   bool                   `protobuf:"varint,5,opt,name=is_following,json=isFollowing,proto3" json:"is_following,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OwnerInfo) Reset() {
+	*x = OwnerInfo{}
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OwnerInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OwnerInfo) ProtoMessage() {}
+
+func (x *OwnerInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OwnerInfo.ProtoReflect.Descriptor instead.
+func (*OwnerInfo) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *OwnerInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OwnerInfo) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *OwnerInfo) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
+func (x *OwnerInfo) GetFollowerCount() int32 {
+	if x != nil {
+		return x.FollowerCount
+	}
+	return 0
+}
+
+func (x *OwnerInfo) GetIsFollowing() bool {
+	if x != nil {
+		return x.IsFollowing
+	}
+	return false
+}
+
 // Alias messages
 type Alias struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -3059,7 +3884,7 @@ type Alias struct {
 
 func (x *Alias) Reset() {
 	*x = Alias{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[44]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3071,7 +3896,7 @@ func (x *Alias) String() string {
 func (*Alias) ProtoMessage() {}
 
 func (x *Alias) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[44]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3084,7 +3909,7 @@ func (x *Alias) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Alias.ProtoReflect.Descriptor instead.
 func (*Alias) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{44}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *Alias) GetId() string {
@@ -3126,7 +3951,7 @@ type CreateAliasRequest struct {
 
 func (x *CreateAliasRequest) Reset() {
 	*x = CreateAliasRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[45]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3138,7 +3963,7 @@ func (x *CreateAliasRequest) String() string {
 func (*CreateAliasRequest) ProtoMessage() {}
 
 func (x *CreateAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[45]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3151,7 +3976,7 @@ func (x *CreateAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAliasRequest.ProtoReflect.Descriptor instead.
 func (*CreateAliasRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{45}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *CreateAliasRequest) GetTemplateId() string {
@@ -3184,7 +4009,7 @@ type ListAliasesRequest struct {
 
 func (x *ListAliasesRequest) Reset() {
 	*x = ListAliasesRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[46]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3196,7 +4021,7 @@ func (x *ListAliasesRequest) String() string {
 func (*ListAliasesRequest) ProtoMessage() {}
 
 func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[46]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3209,7 +4034,7 @@ func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasesRequest.ProtoReflect.Descriptor instead.
 func (*ListAliasesRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{46}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListAliasesRequest) GetTemplateId() string {
@@ -3228,7 +4053,7 @@ type ListAliasesResponse struct {
 
 func (x *ListAliasesResponse) Reset() {
 	*x = ListAliasesResponse{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[47]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3240,7 +4065,7 @@ func (x *ListAliasesResponse) String() string {
 func (*ListAliasesResponse) ProtoMessage() {}
 
 func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[47]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3253,7 +4078,7 @@ func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasesResponse.ProtoReflect.Descriptor instead.
 func (*ListAliasesResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{47}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ListAliasesResponse) GetAliases() []*Alias {
@@ -3274,7 +4099,7 @@ type UpdateAliasRequest struct {
 
 func (x *UpdateAliasRequest) Reset() {
 	*x = UpdateAliasRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[48]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3286,7 +4111,7 @@ func (x *UpdateAliasRequest) String() string {
 func (*UpdateAliasRequest) ProtoMessage() {}
 
 func (x *UpdateAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[48]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3299,7 +4124,7 @@ func (x *UpdateAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAliasRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAliasRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{48}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *UpdateAliasRequest) GetTemplateId() string {
@@ -3333,7 +4158,7 @@ type DeleteAliasRequest struct {
 
 func (x *DeleteAliasRequest) Reset() {
 	*x = DeleteAliasRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[49]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3345,7 +4170,7 @@ func (x *DeleteAliasRequest) String() string {
 func (*DeleteAliasRequest) ProtoMessage() {}
 
 func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[49]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3358,7 +4183,7 @@ func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAliasRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAliasRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{49}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *DeleteAliasRequest) GetTemplateId() string {
@@ -3385,7 +4210,7 @@ type GetPromptByAliasRequest struct {
 
 func (x *GetPromptByAliasRequest) Reset() {
 	*x = GetPromptByAliasRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[50]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3397,7 +4222,7 @@ func (x *GetPromptByAliasRequest) String() string {
 func (*GetPromptByAliasRequest) ProtoMessage() {}
 
 func (x *GetPromptByAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[50]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3410,7 +4235,7 @@ func (x *GetPromptByAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromptByAliasRequest.ProtoReflect.Descriptor instead.
 func (*GetPromptByAliasRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{50}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GetPromptByAliasRequest) GetTemplateId() string {
@@ -3443,7 +4268,7 @@ type APIKey struct {
 
 func (x *APIKey) Reset() {
 	*x = APIKey{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[51]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3455,7 +4280,7 @@ func (x *APIKey) String() string {
 func (*APIKey) ProtoMessage() {}
 
 func (x *APIKey) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[51]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3468,7 +4293,7 @@ func (x *APIKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use APIKey.ProtoReflect.Descriptor instead.
 func (*APIKey) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{51}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *APIKey) GetId() string {
@@ -3537,7 +4362,7 @@ type CreateAPIKeyRequest struct {
 
 func (x *CreateAPIKeyRequest) Reset() {
 	*x = CreateAPIKeyRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[52]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3549,7 +4374,7 @@ func (x *CreateAPIKeyRequest) String() string {
 func (*CreateAPIKeyRequest) ProtoMessage() {}
 
 func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[52]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3562,7 +4387,7 @@ func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{52}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *CreateAPIKeyRequest) GetName() string {
@@ -3590,7 +4415,7 @@ type CreateAPIKeyResponse struct {
 
 func (x *CreateAPIKeyResponse) Reset() {
 	*x = CreateAPIKeyResponse{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[53]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3602,7 +4427,7 @@ func (x *CreateAPIKeyResponse) String() string {
 func (*CreateAPIKeyResponse) ProtoMessage() {}
 
 func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[53]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3615,7 +4440,7 @@ func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{53}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *CreateAPIKeyResponse) GetId() string {
@@ -3649,7 +4474,7 @@ type ListAPIKeysRequest struct {
 
 func (x *ListAPIKeysRequest) Reset() {
 	*x = ListAPIKeysRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[54]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3661,7 +4486,7 @@ func (x *ListAPIKeysRequest) String() string {
 func (*ListAPIKeysRequest) ProtoMessage() {}
 
 func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[54]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3674,7 +4499,7 @@ func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysRequest.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{54}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ListAPIKeysRequest) GetPageToken() string {
@@ -3701,7 +4526,7 @@ type ListAPIKeysResponse struct {
 
 func (x *ListAPIKeysResponse) Reset() {
 	*x = ListAPIKeysResponse{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[55]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3713,7 +4538,7 @@ func (x *ListAPIKeysResponse) String() string {
 func (*ListAPIKeysResponse) ProtoMessage() {}
 
 func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[55]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3726,7 +4551,7 @@ func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{55}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListAPIKeysResponse) GetApiKeys() []*APIKey {
@@ -3752,7 +4577,7 @@ type DeleteAPIKeyRequest struct {
 
 func (x *DeleteAPIKeyRequest) Reset() {
 	*x = DeleteAPIKeyRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[56]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3764,7 +4589,7 @@ func (x *DeleteAPIKeyRequest) String() string {
 func (*DeleteAPIKeyRequest) ProtoMessage() {}
 
 func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[56]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3777,7 +4602,7 @@ func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{56}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *DeleteAPIKeyRequest) GetId() string {
@@ -3796,7 +4621,7 @@ type DeleteAPIKeyResponse struct {
 
 func (x *DeleteAPIKeyResponse) Reset() {
 	*x = DeleteAPIKeyResponse{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[57]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3808,7 +4633,7 @@ func (x *DeleteAPIKeyResponse) String() string {
 func (*DeleteAPIKeyResponse) ProtoMessage() {}
 
 func (x *DeleteAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[57]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3821,7 +4646,7 @@ func (x *DeleteAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{57}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *DeleteAPIKeyResponse) GetSuccess() bool {
@@ -3843,7 +4668,7 @@ type CommentAuthor struct {
 
 func (x *CommentAuthor) Reset() {
 	*x = CommentAuthor{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[58]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3855,7 +4680,7 @@ func (x *CommentAuthor) String() string {
 func (*CommentAuthor) ProtoMessage() {}
 
 func (x *CommentAuthor) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[58]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3868,7 +4693,7 @@ func (x *CommentAuthor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommentAuthor.ProtoReflect.Descriptor instead.
 func (*CommentAuthor) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{58}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *CommentAuthor) GetId() string {
@@ -3913,7 +4738,7 @@ type Comment struct {
 
 func (x *Comment) Reset() {
 	*x = Comment{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[59]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3925,7 +4750,7 @@ func (x *Comment) String() string {
 func (*Comment) ProtoMessage() {}
 
 func (x *Comment) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[59]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3938,7 +4763,7 @@ func (x *Comment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Comment.ProtoReflect.Descriptor instead.
 func (*Comment) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{59}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *Comment) GetId() string {
@@ -4015,7 +4840,7 @@ type ListCommentsRequest struct {
 
 func (x *ListCommentsRequest) Reset() {
 	*x = ListCommentsRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[60]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4027,7 +4852,7 @@ func (x *ListCommentsRequest) String() string {
 func (*ListCommentsRequest) ProtoMessage() {}
 
 func (x *ListCommentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[60]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4040,7 +4865,7 @@ func (x *ListCommentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommentsRequest.ProtoReflect.Descriptor instead.
 func (*ListCommentsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{60}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ListCommentsRequest) GetTemplateId() string {
@@ -4076,7 +4901,7 @@ type ListCommentsResponse struct {
 
 func (x *ListCommentsResponse) Reset() {
 	*x = ListCommentsResponse{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[61]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4088,7 +4913,7 @@ func (x *ListCommentsResponse) String() string {
 func (*ListCommentsResponse) ProtoMessage() {}
 
 func (x *ListCommentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[61]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4101,7 +4926,7 @@ func (x *ListCommentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommentsResponse.ProtoReflect.Descriptor instead.
 func (*ListCommentsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{61}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ListCommentsResponse) GetComments() []*Comment {
@@ -4142,7 +4967,7 @@ type CreateCommentRequest struct {
 
 func (x *CreateCommentRequest) Reset() {
 	*x = CreateCommentRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[62]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4154,7 +4979,7 @@ func (x *CreateCommentRequest) String() string {
 func (*CreateCommentRequest) ProtoMessage() {}
 
 func (x *CreateCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[62]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4167,7 +4992,7 @@ func (x *CreateCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCommentRequest.ProtoReflect.Descriptor instead.
 func (*CreateCommentRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{62}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *CreateCommentRequest) GetTemplateId() string {
@@ -4194,7 +5019,7 @@ type UpdateCommentRequest struct {
 
 func (x *UpdateCommentRequest) Reset() {
 	*x = UpdateCommentRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[63]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4206,7 +5031,7 @@ func (x *UpdateCommentRequest) String() string {
 func (*UpdateCommentRequest) ProtoMessage() {}
 
 func (x *UpdateCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[63]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4219,7 +5044,7 @@ func (x *UpdateCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCommentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCommentRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{63}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *UpdateCommentRequest) GetCommentId() string {
@@ -4245,7 +5070,7 @@ type DeleteCommentRequest struct {
 
 func (x *DeleteCommentRequest) Reset() {
 	*x = DeleteCommentRequest{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[64]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4257,7 +5082,7 @@ func (x *DeleteCommentRequest) String() string {
 func (*DeleteCommentRequest) ProtoMessage() {}
 
 func (x *DeleteCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[64]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4270,7 +5095,7 @@ func (x *DeleteCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCommentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCommentRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{64}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *DeleteCommentRequest) GetCommentId() string {
@@ -4289,7 +5114,7 @@ type DeleteCommentResponse struct {
 
 func (x *DeleteCommentResponse) Reset() {
 	*x = DeleteCommentResponse{}
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[65]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4301,7 +5126,7 @@ func (x *DeleteCommentResponse) String() string {
 func (*DeleteCommentResponse) ProtoMessage() {}
 
 func (x *DeleteCommentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_prompt_proto_msgTypes[65]
+	mi := &file_api_proto_v1_prompt_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4314,7 +5139,7 @@ func (x *DeleteCommentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCommentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCommentResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{65}
+	return file_api_proto_v1_prompt_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *DeleteCommentResponse) GetSuccess() bool {
@@ -4328,7 +5153,7 @@ var File_api_proto_v1_prompt_proto protoreflect.FileDescriptor
 
 const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\n" +
-	"\x19api/proto/v1/prompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaa\x06\n" +
+	"\x19api/proto/v1/prompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfb\x06\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
@@ -4356,7 +5181,9 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x11moderation_status\x18\x19 \x01(\tR\x10moderationStatus\x12=\n" +
 	"\fpublished_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x12)\n" +
 	"\x10content_warnings\x18\x1b \x03(\tR\x0fcontentWarnings\x12'\n" +
-	"\x0flocked_warnings\x18\x1c \x03(\tR\x0elockedWarnings\"\xf5\x01\n" +
+	"\x0flocked_warnings\x18\x1c \x03(\tR\x0elockedWarnings\x12,\n" +
+	"\x12owner_display_name\x18\x1d \x01(\tR\x10ownerDisplayName\x12!\n" +
+	"\fowner_avatar\x18\x1e \x01(\tR\vownerAvatar\"\xf5\x01\n" +
 	"\x0fTemplateVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -4430,10 +5257,11 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\vnew_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\n" +
 	"newVersion\"$\n" +
 	"\x12GetTemplateRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"{\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xa0\x01\n" +
 	"\x13GetTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x12:\n" +
-	"\x0elatest_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\rlatestVersion\"\xfc\x02\n" +
+	"\x0elatest_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\rlatestVersion\x12#\n" +
+	"\x05owner\x18\x03 \x01(\v2\r.v1.OwnerInfoR\x05owner\"\xfc\x02\n" +
 	"\x14ListTemplatesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -4553,26 +5381,89 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\"4\n" +
 	"\x10ListTagsResponse\x12 \n" +
-	"\x04tags\x18\x01 \x03(\v2\f.v1.TagStatsR\x04tags\"\xad\x01\n" +
+	"\x04tags\x18\x01 \x03(\v2\f.v1.TagStatsR\x04tags\"\xbf\x01\n" +
 	"\x14UpdateProfileRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
 	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12\x1a\n" +
 	"\bpassword\x18\x04 \x01(\tR\bpassword\x12.\n" +
-	"\x13show_warned_content\x18\x05 \x01(\bR\x11showWarnedContent\"\x92\x01\n" +
+	"\x13show_warned_content\x18\x05 \x01(\bR\x11showWarnedContent\x12\x10\n" +
+	"\x03bio\x18\x06 \x01(\tR\x03bio\"\xa4\x01\n" +
 	"\x15UpdateProfileResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
 	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12.\n" +
-	"\x13show_warned_content\x18\x04 \x01(\bR\x11showWarnedContent\"#\n" +
+	"\x13show_warned_content\x18\x04 \x01(\bR\x11showWarnedContent\x12\x10\n" +
+	"\x03bio\x18\x05 \x01(\tR\x03bio\"#\n" +
 	"\x11GetProfileRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xa5\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xb7\x01\n" +
 	"\x12GetProfileResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x16\n" +
 	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12.\n" +
-	"\x13show_warned_content\x18\x05 \x01(\bR\x11showWarnedContent\"v\n" +
+	"\x13show_warned_content\x18\x05 \x01(\bR\x11showWarnedContent\x12\x10\n" +
+	"\x03bio\x18\x06 \x01(\tR\x03bio\"M\n" +
+	"\x11FollowUserRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vfollower_id\x18\x02 \x01(\tR\n" +
+	"followerId\"Y\n" +
+	"\x12FollowUserResponse\x12\x1c\n" +
+	"\tfollowing\x18\x01 \x01(\bR\tfollowing\x12%\n" +
+	"\x0efollower_count\x18\x02 \x01(\x05R\rfollowerCount\"P\n" +
+	"\x18GetCreatorProfileRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tviewer_id\x18\x02 \x01(\tR\bviewerId\"\xc7\x02\n" +
+	"\x19GetCreatorProfileResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
+	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12\x10\n" +
+	"\x03bio\x18\x04 \x01(\tR\x03bio\x12%\n" +
+	"\x0efollower_count\x18\x05 \x01(\x05R\rfollowerCount\x12'\n" +
+	"\x0ffollowing_count\x18\x06 \x01(\x05R\x0efollowingCount\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12!\n" +
+	"\fis_following\x18\b \x01(\bR\visFollowing\x12\x1f\n" +
+	"\vfollows_you\x18\t \x01(\bR\n" +
+	"followsYou\"d\n" +
+	"\x18ListUserRelationsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"\x9f\x01\n" +
+	"\bUserCard\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
+	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12%\n" +
+	"\x0efollower_count\x18\x04 \x01(\x05R\rfollowerCount\x12!\n" +
+	"\fis_following\x18\x05 \x01(\bR\visFollowing\"\x91\x01\n" +
+	"\x19ListUserRelationsResponse\x12\"\n" +
+	"\x05users\x18\x01 \x03(\v2\f.v1.UserCardR\x05users\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\"n\n" +
+	"\x17GetFollowingFeedRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"\x8f\x01\n" +
+	"\x18GetFollowingFeedResponse\x12*\n" +
+	"\ttemplates\x18\x01 \x03(\v2\f.v1.TemplateR\ttemplates\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\x12&\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\".\n" +
+	"\x16ListTopCreatorsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\"^\n" +
+	"\x17ListTopCreatorsResponse\x12\"\n" +
+	"\x05users\x18\x01 \x03(\v2\f.v1.UserCardR\x05users\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\"\xa0\x01\n" +
+	"\tOwnerInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
+	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12%\n" +
+	"\x0efollower_count\x18\x04 \x01(\x05R\rfollowerCount\x12!\n" +
+	"\fis_following\x18\x05 \x01(\bR\visFollowing\"v\n" +
 	"\x05Alias\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -4691,7 +5582,7 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\fTemplateType\x12\x1d\n" +
 	"\x19TEMPLATE_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14TEMPLATE_TYPE_SYSTEM\x10\x01\x12\x16\n" +
-	"\x12TEMPLATE_TYPE_USER\x10\x022\x83\a\n" +
+	"\x12TEMPLATE_TYPE_USER\x10\x022\x88\v\n" +
 	"\vUserService\x125\n" +
 	"\bRegister\x12\x13.v1.RegisterRequest\x1a\x14.v1.RegisterResponse\x12,\n" +
 	"\x05Login\x12\x10.v1.LoginRequest\x1a\x11.v1.LoginResponse\x12>\n" +
@@ -4707,7 +5598,15 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x10GetPromptByAlias\x12\x1b.v1.GetPromptByAliasRequest\x1a\x13.v1.TemplateVersion\x12A\n" +
 	"\fCreateAPIKey\x12\x17.v1.CreateAPIKeyRequest\x1a\x18.v1.CreateAPIKeyResponse\x12>\n" +
 	"\vListAPIKeys\x12\x16.v1.ListAPIKeysRequest\x1a\x17.v1.ListAPIKeysResponse\x12A\n" +
-	"\fDeleteAPIKey\x12\x17.v1.DeleteAPIKeyRequest\x1a\x18.v1.DeleteAPIKeyResponse2\x9a\t\n" +
+	"\fDeleteAPIKey\x12\x17.v1.DeleteAPIKeyRequest\x1a\x18.v1.DeleteAPIKeyResponse\x12;\n" +
+	"\n" +
+	"FollowUser\x12\x15.v1.FollowUserRequest\x1a\x16.v1.FollowUserResponse\x12=\n" +
+	"\fUnfollowUser\x12\x15.v1.FollowUserRequest\x1a\x16.v1.FollowUserResponse\x12P\n" +
+	"\x11GetCreatorProfile\x12\x1c.v1.GetCreatorProfileRequest\x1a\x1d.v1.GetCreatorProfileResponse\x12L\n" +
+	"\rListFollowers\x12\x1c.v1.ListUserRelationsRequest\x1a\x1d.v1.ListUserRelationsResponse\x12L\n" +
+	"\rListFollowing\x12\x1c.v1.ListUserRelationsRequest\x1a\x1d.v1.ListUserRelationsResponse\x12M\n" +
+	"\x10GetFollowingFeed\x12\x1b.v1.GetFollowingFeedRequest\x1a\x1c.v1.GetFollowingFeedResponse\x12J\n" +
+	"\x0fListTopCreators\x12\x1a.v1.ListTopCreatorsRequest\x1a\x1b.v1.ListTopCreatorsResponse2\x9a\t\n" +
 	"\rPromptService\x12G\n" +
 	"\x0eCreateTemplate\x12\x19.v1.CreateTemplateRequest\x1a\x1a.v1.CreateTemplateResponse\x12G\n" +
 	"\x0eUpdateTemplate\x12\x19.v1.UpdateTemplateRequest\x1a\x1a.v1.UpdateTemplateResponse\x12>\n" +
@@ -4740,7 +5639,7 @@ func file_api_proto_v1_prompt_proto_rawDescGZIP() []byte {
 }
 
 var file_api_proto_v1_prompt_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_api_proto_v1_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 68)
+var file_api_proto_v1_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 80)
 var file_api_proto_v1_prompt_proto_goTypes = []any{
 	(Visibility)(0),                      // 0: v1.Visibility
 	(TemplateType)(0),                    // 1: v1.TemplateType
@@ -4788,43 +5687,55 @@ var file_api_proto_v1_prompt_proto_goTypes = []any{
 	(*UpdateProfileResponse)(nil),        // 43: v1.UpdateProfileResponse
 	(*GetProfileRequest)(nil),            // 44: v1.GetProfileRequest
 	(*GetProfileResponse)(nil),           // 45: v1.GetProfileResponse
-	(*Alias)(nil),                        // 46: v1.Alias
-	(*CreateAliasRequest)(nil),           // 47: v1.CreateAliasRequest
-	(*ListAliasesRequest)(nil),           // 48: v1.ListAliasesRequest
-	(*ListAliasesResponse)(nil),          // 49: v1.ListAliasesResponse
-	(*UpdateAliasRequest)(nil),           // 50: v1.UpdateAliasRequest
-	(*DeleteAliasRequest)(nil),           // 51: v1.DeleteAliasRequest
-	(*GetPromptByAliasRequest)(nil),      // 52: v1.GetPromptByAliasRequest
-	(*APIKey)(nil),                       // 53: v1.APIKey
-	(*CreateAPIKeyRequest)(nil),          // 54: v1.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil),         // 55: v1.CreateAPIKeyResponse
-	(*ListAPIKeysRequest)(nil),           // 56: v1.ListAPIKeysRequest
-	(*ListAPIKeysResponse)(nil),          // 57: v1.ListAPIKeysResponse
-	(*DeleteAPIKeyRequest)(nil),          // 58: v1.DeleteAPIKeyRequest
-	(*DeleteAPIKeyResponse)(nil),         // 59: v1.DeleteAPIKeyResponse
-	(*CommentAuthor)(nil),                // 60: v1.CommentAuthor
-	(*Comment)(nil),                      // 61: v1.Comment
-	(*ListCommentsRequest)(nil),          // 62: v1.ListCommentsRequest
-	(*ListCommentsResponse)(nil),         // 63: v1.ListCommentsResponse
-	(*CreateCommentRequest)(nil),         // 64: v1.CreateCommentRequest
-	(*UpdateCommentRequest)(nil),         // 65: v1.UpdateCommentRequest
-	(*DeleteCommentRequest)(nil),         // 66: v1.DeleteCommentRequest
-	(*DeleteCommentResponse)(nil),        // 67: v1.DeleteCommentResponse
-	nil,                                  // 68: v1.Prompt.VariablesEntry
-	nil,                                  // 69: v1.CreatePromptRequest.VariablesEntry
-	(*timestamppb.Timestamp)(nil),        // 70: google.protobuf.Timestamp
+	(*FollowUserRequest)(nil),            // 46: v1.FollowUserRequest
+	(*FollowUserResponse)(nil),           // 47: v1.FollowUserResponse
+	(*GetCreatorProfileRequest)(nil),     // 48: v1.GetCreatorProfileRequest
+	(*GetCreatorProfileResponse)(nil),    // 49: v1.GetCreatorProfileResponse
+	(*ListUserRelationsRequest)(nil),     // 50: v1.ListUserRelationsRequest
+	(*UserCard)(nil),                     // 51: v1.UserCard
+	(*ListUserRelationsResponse)(nil),    // 52: v1.ListUserRelationsResponse
+	(*GetFollowingFeedRequest)(nil),      // 53: v1.GetFollowingFeedRequest
+	(*GetFollowingFeedResponse)(nil),     // 54: v1.GetFollowingFeedResponse
+	(*ListTopCreatorsRequest)(nil),       // 55: v1.ListTopCreatorsRequest
+	(*ListTopCreatorsResponse)(nil),      // 56: v1.ListTopCreatorsResponse
+	(*OwnerInfo)(nil),                    // 57: v1.OwnerInfo
+	(*Alias)(nil),                        // 58: v1.Alias
+	(*CreateAliasRequest)(nil),           // 59: v1.CreateAliasRequest
+	(*ListAliasesRequest)(nil),           // 60: v1.ListAliasesRequest
+	(*ListAliasesResponse)(nil),          // 61: v1.ListAliasesResponse
+	(*UpdateAliasRequest)(nil),           // 62: v1.UpdateAliasRequest
+	(*DeleteAliasRequest)(nil),           // 63: v1.DeleteAliasRequest
+	(*GetPromptByAliasRequest)(nil),      // 64: v1.GetPromptByAliasRequest
+	(*APIKey)(nil),                       // 65: v1.APIKey
+	(*CreateAPIKeyRequest)(nil),          // 66: v1.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),         // 67: v1.CreateAPIKeyResponse
+	(*ListAPIKeysRequest)(nil),           // 68: v1.ListAPIKeysRequest
+	(*ListAPIKeysResponse)(nil),          // 69: v1.ListAPIKeysResponse
+	(*DeleteAPIKeyRequest)(nil),          // 70: v1.DeleteAPIKeyRequest
+	(*DeleteAPIKeyResponse)(nil),         // 71: v1.DeleteAPIKeyResponse
+	(*CommentAuthor)(nil),                // 72: v1.CommentAuthor
+	(*Comment)(nil),                      // 73: v1.Comment
+	(*ListCommentsRequest)(nil),          // 74: v1.ListCommentsRequest
+	(*ListCommentsResponse)(nil),         // 75: v1.ListCommentsResponse
+	(*CreateCommentRequest)(nil),         // 76: v1.CreateCommentRequest
+	(*UpdateCommentRequest)(nil),         // 77: v1.UpdateCommentRequest
+	(*DeleteCommentRequest)(nil),         // 78: v1.DeleteCommentRequest
+	(*DeleteCommentResponse)(nil),        // 79: v1.DeleteCommentResponse
+	nil,                                  // 80: v1.Prompt.VariablesEntry
+	nil,                                  // 81: v1.CreatePromptRequest.VariablesEntry
+	(*timestamppb.Timestamp)(nil),        // 82: google.protobuf.Timestamp
 }
 var file_api_proto_v1_prompt_proto_depIdxs = []int32{
 	0,  // 0: v1.Template.visibility:type_name -> v1.Visibility
 	1,  // 1: v1.Template.type:type_name -> v1.TemplateType
-	70, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
-	70, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
+	82, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
+	82, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 4: v1.Template.latest_version:type_name -> v1.TemplateVersion
-	70, // 5: v1.Template.published_at:type_name -> google.protobuf.Timestamp
-	70, // 6: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	82, // 5: v1.Template.published_at:type_name -> google.protobuf.Timestamp
+	82, // 6: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
 	3,  // 7: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
-	68, // 8: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
-	70, // 9: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
+	80, // 8: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
+	82, // 9: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 10: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
 	1,  // 11: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
 	2,  // 12: v1.CreateTemplateResponse.template:type_name -> v1.Template
@@ -4834,92 +5745,111 @@ var file_api_proto_v1_prompt_proto_depIdxs = []int32{
 	3,  // 16: v1.UpdateTemplateResponse.new_version:type_name -> v1.TemplateVersion
 	2,  // 17: v1.GetTemplateResponse.template:type_name -> v1.Template
 	3,  // 18: v1.GetTemplateResponse.latest_version:type_name -> v1.TemplateVersion
-	0,  // 19: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
-	2,  // 20: v1.ListTemplatesResponse.templates:type_name -> v1.Template
-	2,  // 21: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
-	69, // 22: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
-	6,  // 23: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
-	6,  // 24: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
-	6,  // 25: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
-	37, // 26: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
-	40, // 27: v1.ListTagsResponse.tags:type_name -> v1.TagStats
-	46, // 28: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
-	70, // 29: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
-	70, // 30: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
-	70, // 31: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
-	53, // 32: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
-	53, // 33: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
-	70, // 34: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
-	70, // 35: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
-	60, // 36: v1.Comment.author:type_name -> v1.CommentAuthor
-	61, // 37: v1.ListCommentsResponse.comments:type_name -> v1.Comment
-	29, // 38: v1.UserService.Register:input_type -> v1.RegisterRequest
-	31, // 39: v1.UserService.Login:input_type -> v1.LoginRequest
-	33, // 40: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
-	34, // 41: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
-	42, // 42: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
-	44, // 43: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
-	47, // 44: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
-	48, // 45: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
-	50, // 46: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
-	51, // 47: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
-	52, // 48: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
-	54, // 49: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
-	56, // 50: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
-	58, // 51: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
-	7,  // 52: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
-	9,  // 53: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
-	11, // 54: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
-	13, // 55: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
-	15, // 56: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
-	17, // 57: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
-	19, // 58: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
-	21, // 59: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
-	23, // 60: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
-	27, // 61: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
-	36, // 62: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
-	39, // 63: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
-	4,  // 64: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
-	62, // 65: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
-	64, // 66: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
-	65, // 67: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
-	66, // 68: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
-	30, // 69: v1.UserService.Register:output_type -> v1.RegisterResponse
-	32, // 70: v1.UserService.Login:output_type -> v1.LoginResponse
-	32, // 71: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
-	35, // 72: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
-	43, // 73: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
-	45, // 74: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
-	46, // 75: v1.UserService.CreateAlias:output_type -> v1.Alias
-	49, // 76: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
-	46, // 77: v1.UserService.UpdateAlias:output_type -> v1.Alias
-	16, // 78: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
-	3,  // 79: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
-	55, // 80: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
-	57, // 81: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
-	59, // 82: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
-	8,  // 83: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
-	10, // 84: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
-	12, // 85: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
-	14, // 86: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
-	16, // 87: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
-	18, // 88: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
-	20, // 89: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
-	22, // 90: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
-	24, // 91: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
-	28, // 92: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
-	38, // 93: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
-	41, // 94: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
-	5,  // 95: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
-	63, // 96: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
-	61, // 97: v1.PromptService.CreateComment:output_type -> v1.Comment
-	61, // 98: v1.PromptService.UpdateComment:output_type -> v1.Comment
-	67, // 99: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
-	69, // [69:100] is the sub-list for method output_type
-	38, // [38:69] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	57, // 19: v1.GetTemplateResponse.owner:type_name -> v1.OwnerInfo
+	0,  // 20: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
+	2,  // 21: v1.ListTemplatesResponse.templates:type_name -> v1.Template
+	2,  // 22: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
+	81, // 23: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
+	6,  // 24: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
+	6,  // 25: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
+	6,  // 26: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
+	37, // 27: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
+	40, // 28: v1.ListTagsResponse.tags:type_name -> v1.TagStats
+	82, // 29: v1.GetCreatorProfileResponse.created_at:type_name -> google.protobuf.Timestamp
+	51, // 30: v1.ListUserRelationsResponse.users:type_name -> v1.UserCard
+	2,  // 31: v1.GetFollowingFeedResponse.templates:type_name -> v1.Template
+	51, // 32: v1.ListTopCreatorsResponse.users:type_name -> v1.UserCard
+	58, // 33: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
+	82, // 34: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
+	82, // 35: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
+	82, // 36: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
+	65, // 37: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
+	65, // 38: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
+	82, // 39: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
+	82, // 40: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
+	72, // 41: v1.Comment.author:type_name -> v1.CommentAuthor
+	73, // 42: v1.ListCommentsResponse.comments:type_name -> v1.Comment
+	29, // 43: v1.UserService.Register:input_type -> v1.RegisterRequest
+	31, // 44: v1.UserService.Login:input_type -> v1.LoginRequest
+	33, // 45: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
+	34, // 46: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
+	42, // 47: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
+	44, // 48: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
+	59, // 49: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
+	60, // 50: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
+	62, // 51: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
+	63, // 52: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
+	64, // 53: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
+	66, // 54: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
+	68, // 55: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
+	70, // 56: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
+	46, // 57: v1.UserService.FollowUser:input_type -> v1.FollowUserRequest
+	46, // 58: v1.UserService.UnfollowUser:input_type -> v1.FollowUserRequest
+	48, // 59: v1.UserService.GetCreatorProfile:input_type -> v1.GetCreatorProfileRequest
+	50, // 60: v1.UserService.ListFollowers:input_type -> v1.ListUserRelationsRequest
+	50, // 61: v1.UserService.ListFollowing:input_type -> v1.ListUserRelationsRequest
+	53, // 62: v1.UserService.GetFollowingFeed:input_type -> v1.GetFollowingFeedRequest
+	55, // 63: v1.UserService.ListTopCreators:input_type -> v1.ListTopCreatorsRequest
+	7,  // 64: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
+	9,  // 65: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
+	11, // 66: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
+	13, // 67: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
+	15, // 68: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
+	17, // 69: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
+	19, // 70: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
+	21, // 71: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
+	23, // 72: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
+	27, // 73: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
+	36, // 74: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
+	39, // 75: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
+	4,  // 76: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
+	74, // 77: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
+	76, // 78: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
+	77, // 79: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
+	78, // 80: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
+	30, // 81: v1.UserService.Register:output_type -> v1.RegisterResponse
+	32, // 82: v1.UserService.Login:output_type -> v1.LoginResponse
+	32, // 83: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
+	35, // 84: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
+	43, // 85: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
+	45, // 86: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
+	58, // 87: v1.UserService.CreateAlias:output_type -> v1.Alias
+	61, // 88: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
+	58, // 89: v1.UserService.UpdateAlias:output_type -> v1.Alias
+	16, // 90: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
+	3,  // 91: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
+	67, // 92: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
+	69, // 93: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
+	71, // 94: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
+	47, // 95: v1.UserService.FollowUser:output_type -> v1.FollowUserResponse
+	47, // 96: v1.UserService.UnfollowUser:output_type -> v1.FollowUserResponse
+	49, // 97: v1.UserService.GetCreatorProfile:output_type -> v1.GetCreatorProfileResponse
+	52, // 98: v1.UserService.ListFollowers:output_type -> v1.ListUserRelationsResponse
+	52, // 99: v1.UserService.ListFollowing:output_type -> v1.ListUserRelationsResponse
+	54, // 100: v1.UserService.GetFollowingFeed:output_type -> v1.GetFollowingFeedResponse
+	56, // 101: v1.UserService.ListTopCreators:output_type -> v1.ListTopCreatorsResponse
+	8,  // 102: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
+	10, // 103: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
+	12, // 104: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
+	14, // 105: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
+	16, // 106: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
+	18, // 107: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
+	20, // 108: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
+	22, // 109: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
+	24, // 110: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
+	28, // 111: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
+	38, // 112: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
+	41, // 113: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
+	5,  // 114: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
+	75, // 115: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
+	73, // 116: v1.PromptService.CreateComment:output_type -> v1.Comment
+	73, // 117: v1.PromptService.UpdateComment:output_type -> v1.Comment
+	79, // 118: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
+	81, // [81:119] is the sub-list for method output_type
+	43, // [43:81] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_v1_prompt_proto_init() }
@@ -4933,7 +5863,7 @@ func file_api_proto_v1_prompt_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_v1_prompt_proto_rawDesc), len(file_api_proto_v1_prompt_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   68,
+			NumMessages:   80,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

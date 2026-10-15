@@ -23,6 +23,7 @@ const ReviewPage = lazy(() => import('./pages/admin/ReviewPage'));
 const ReviewDetailPage = lazy(() => import('./pages/admin/ReviewDetailPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const CreatorProfilePage = lazy(() => import('./pages/CreatorProfilePage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -52,6 +53,14 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/api-keys" element={<APIKeys />} />
             <Route path="/templates/:id" element={<TemplateDetails />} />
+            <Route
+              path="/creators/:id"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <CreatorProfilePage />
+                </Suspense>
+              }
+            />
             <Route
               path="/notifications"
               element={

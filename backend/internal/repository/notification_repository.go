@@ -44,19 +44,25 @@ func NewNotificationRepository(db *sql.DB) NotificationRepository {
 
 // Create inserts a notification with toggle-spam dedupe: if an identical
 // (recipient, actor, template, type) row is still unread, the insert is
-// silently skipped (zero rows returned is not an error).
+// silently skipped (zero rows returned is not an error). template_id is
+// nullable (follow notifications carry no template); an empty string is
+// stored as NULL.
 func (r *notificationRepository) Create(ctx context.Context, n *models.Notification) error {
+	var templateID interface{}
+	if n.TemplateID != "" {
+		templateID = n.TemplateID
+	}
 	query := `
 		INSERT INTO notifications (recipient_id, actor_id, template_id, type, actor_display_name)
 		SELECT $1, $2, $3, $4, $5
 		WHERE NOT EXISTS (
 			SELECT 1 FROM notifications
-			WHERE recipient_id = $1 AND actor_id = $2 AND template_id = $3
+			WHERE recipient_id = $1 AND actor_id = $2 AND template_id IS NOT DISTINCT FROM $3
 			  AND type = $4 AND read_at IS NULL
 		)
 		RETURNING id, created_at`
 	err := r.db.QueryRowContext(ctx, query,
-		n.RecipientID, n.ActorID, n.TemplateID, n.Type, n.ActorDisplayName,
+		n.RecipientID, n.ActorID, templateID, n.Type, n.ActorDisplayName,
 	).Scan(&n.ID, &n.CreatedAt)
 	if err == sql.ErrNoRows {
 		// Deduped: an identical unread notification already exists.
@@ -90,12 +96,16 @@ func (r *notificationRepository) List(ctx context.Context, recipientID, filter s
 	var notifications []*models.Notification
 	for rows.Next() {
 		n := &models.Notification{}
+		var templateID sql.NullString
+		var templateTitle sql.NullString
 		if err := rows.Scan(
 			&n.ID, &n.Type, &n.ActorID, &n.ActorDisplayName, &n.ActorAvatar,
-			&n.TemplateID, &n.TemplateTitle, &n.ReadAt, &n.CreatedAt,
+			&templateID, &templateTitle, &n.ReadAt, &n.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan notification: %w", err)
 		}
+		n.TemplateID = templateID.String
+		n.TemplateTitle = templateTitle.String
 		notifications = append(notifications, n)
 	}
 	if err := rows.Err(); err != nil {

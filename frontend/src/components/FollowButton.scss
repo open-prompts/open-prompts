@@ -1,0 +1,37 @@
+.follow-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #d0d7de);
+  background: var(--surface, #fff);
+  color: var(--text-1, #1f2328);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--accent, #0969da);
+    color: var(--accent, #0969da);
+  }
+
+  &.is-following {
+    background: var(--surface, #fff);
+    color: var(--text-1, #1f2328);
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--danger, #cf222e);
+      color: var(--danger, #cf222e);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}

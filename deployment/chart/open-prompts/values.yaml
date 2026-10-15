@@ -30,6 +30,8 @@ backend:
     # Notification retention (days)
     notificationReadRetentionDays: "90"
     notificationRetentionDays: "180"
+    # Follow rate limit (successful follow/unfollow per minute per account)
+    followRatePerMinute: "30"
 
 frontend:
   replicaCount: 1

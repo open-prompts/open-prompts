@@ -37,6 +37,15 @@ service UserService {
   rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
   rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
   rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse);
+
+  // Follow RPCs
+  rpc FollowUser(FollowUserRequest) returns (FollowUserResponse);
+  rpc UnfollowUser(FollowUserRequest) returns (FollowUserResponse);
+  rpc GetCreatorProfile(GetCreatorProfileRequest) returns (GetCreatorProfileResponse);
+  rpc ListFollowers(ListUserRelationsRequest) returns (ListUserRelationsResponse);
+  rpc ListFollowing(ListUserRelationsRequest) returns (ListUserRelationsResponse);
+  rpc GetFollowingFeed(GetFollowingFeedRequest) returns (GetFollowingFeedResponse);
+  rpc ListTopCreators(ListTopCreatorsRequest) returns (ListTopCreatorsResponse);
 }
 
 // PromptService defines the RPC methods for managing templates and prompts.
@@ -159,6 +168,10 @@ message Template {
   // The subset of content_warnings applied by moderation; creator-immutable.
   // Only meaningful to the owner and admins.
   repeated string locked_warnings = 28;
+  // Owner display name (joined from users at read time).
+  string owner_display_name = 29;
+  // Owner avatar (joined from users at read time).
+  string owner_avatar = 30;
 }
 
 // TemplateVersion represents a specific version of a template's content.
@@ -271,6 +284,9 @@ message GetTemplateResponse {
   // Optionally return the latest version or all versions.
   // For simplicity, let's return the latest version.
   TemplateVersion latest_version = 2;
+  // Public owner identity (id, display_name, avatar, follower_count,
+  // is_following). Populated when the owner is resolvable.
+  OwnerInfo owner = 3;
 }
 
 // ListTemplatesRequest is the request message for ListTemplates.
@@ -481,6 +497,8 @@ message UpdateProfileRequest {
   string password = 4;
   // Viewer preference: skip the blur/interstitial for warned templates.
   bool show_warned_content = 5;
+  // Optional profile bio; trimmed server-side, 0-280 chars, empty clears.
+  string bio = 6;
 }
 
 // UpdateProfileResponse is the response message for UpdateProfile.
@@ -489,6 +507,7 @@ message UpdateProfileResponse {
   string display_name = 2;
   string avatar = 3;
   bool show_warned_content = 4;
+  string bio = 5;
 }
 
 // GetProfileRequest is the request message for GetProfile.
@@ -503,6 +522,96 @@ message GetProfileResponse {
   string display_name = 3;
   string avatar = 4;
   bool show_warned_content = 5;
+  string bio = 6;
+}
+
+// FollowUserRequest is the request message for FollowUser/UnfollowUser.
+message FollowUserRequest {
+  string user_id = 1;     // followee
+  string follower_id = 2; // injected by the gateway from auth context
+}
+
+// FollowUserResponse is the response message for FollowUser/UnfollowUser.
+message FollowUserResponse {
+  bool following = 1;
+  int32 follower_count = 2;
+}
+
+// GetCreatorProfileRequest is the request message for GetCreatorProfile.
+message GetCreatorProfileRequest {
+  string user_id = 1;
+  string viewer_id = 2; // empty for anonymous
+}
+
+// GetCreatorProfileResponse is the response message for GetCreatorProfile.
+message GetCreatorProfileResponse {
+  string id = 1;
+  string display_name = 2;
+  string avatar = 3;
+  string bio = 4;
+  int32 follower_count = 5;
+  int32 following_count = 6;
+  google.protobuf.Timestamp created_at = 7;
+  bool is_following = 8;
+  bool follows_you = 9;
+}
+
+// ListUserRelationsRequest is the request message for ListFollowers/ListFollowing.
+message ListUserRelationsRequest {
+  string user_id = 1;
+  int32 page = 2;      // 1-based, default 1
+  int32 page_size = 3; // default 20, max 50
+}
+
+// UserCard is the public identity of a user in relation lists.
+message UserCard {
+  string id = 1;
+  string display_name = 2;
+  string avatar = 3;
+  int32 follower_count = 4;
+  bool is_following = 5;
+}
+
+// ListUserRelationsResponse is the response message for ListFollowers/ListFollowing.
+message ListUserRelationsResponse {
+  repeated UserCard users = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+// GetFollowingFeedRequest is the request message for GetFollowingFeed.
+message GetFollowingFeedRequest {
+  string user_id = 1;    // the follower (me)
+  int32 page_size = 2;   // default 20, max 50
+  string page_token = 3; // opaque created_at cursor
+}
+
+// GetFollowingFeedResponse is the response message for GetFollowingFeed.
+message GetFollowingFeedResponse {
+  repeated Template templates = 1;
+  int32 total_count = 2;
+  string next_page_token = 3;
+}
+
+// ListTopCreatorsRequest is the request message for ListTopCreators.
+message ListTopCreatorsRequest {
+  int32 limit = 1; // default 5, max 20
+}
+
+// ListTopCreatorsResponse is the response message for ListTopCreators.
+message ListTopCreatorsResponse {
+  repeated UserCard users = 1;
+  int32 total_count = 2;
+}
+
+// OwnerInfo is the public owner identity on a template detail response.
+message OwnerInfo {
+  string id = 1;
+  string display_name = 2;
+  string avatar = 3;
+  int32 follower_count = 4;
+  bool is_following = 5;
 }
 
 // Alias messages

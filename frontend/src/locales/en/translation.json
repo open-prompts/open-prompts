@@ -77,7 +77,37 @@
     "error_fetch": "Failed to fetch templates.",
     "my_private_prompts": "My Private Prompts",
     "public_prompts": "Public Prompts",
-    "no_results": "No templates found."
+    "no_results": "No templates found.",
+    "browse_tab": "Browse",
+    "following": {
+      "tab": "Following",
+      "empty": "Follow creators to see their latest templates here",
+      "suggested": "Suggested creators",
+      "login_prompt": "Log in to follow creators"
+    }
+  },
+  "creators": {
+    "title": "Creator",
+    "followers": "{{count}} followers",
+    "following_count": "{{count}} following",
+    "joined": "Joined {{date}}",
+    "follows_you": "Follows you",
+    "tab_templates": "Templates",
+    "tab_followers": "Followers",
+    "tab_following": "Following",
+    "edit_profile": "Edit profile",
+    "empty_templates": "No public templates yet",
+    "empty_followers": "No followers yet",
+    "empty_following": "Not following anyone yet",
+    "not_found": "Creator not found",
+    "error_load": "Failed to load creator profile."
+  },
+  "follow": {
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Unfollow",
+    "error": "Could not update follow status",
+    "error_banned": "This action is not allowed"
   },
   "search": {
     "placeholder": "Search prompts…",
@@ -332,6 +362,8 @@
     "avatar": "Avatar",
     "change_avatar": "Change Avatar",
     "ph_display_name": "Enter your display name",
+    "bio": "Bio",
+    "ph_bio": "Tell others about yourself (up to 280 characters)",
     "new_password": "New Password",
     "ph_new_password": "Leave blank to keep current"
   },
@@ -477,7 +509,9 @@
       "no_history": "No admin actions recorded for this user.",
       "likes_received": "Likes Received",
       "favorites_received": "Favorites Received",
-      "prompts_created": "Prompts Created"
+      "prompts_created": "Prompts Created",
+      "followers": "Followers",
+      "following": "Following"
     },
     "reasonModal": {
       "ban_title": "Ban {{name}}",
@@ -568,6 +602,7 @@
       "like": "{{actor}} liked your template \"{{title}}\"",
       "favorite": "{{actor}} favorited your template \"{{title}}\"",
       "fork": "{{actor}} forked your template \"{{title}}\"",
+      "follow": "{{actor}} followed you",
       "template_approved": "Your template \"{{title}}\" is live",
       "template_rejected": "Your template \"{{title}}\" was rejected: {{reason}}"
     },

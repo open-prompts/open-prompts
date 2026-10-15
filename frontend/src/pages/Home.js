@@ -12,7 +12,8 @@ import SkeletonCards from '../components/SkeletonCards';
 import ReviewStatusCard from '../components/review/ReviewStatusCard';
 import HideWarnedFilterChip from '../components/warnings/HideWarnedFilterChip';
 import useTemplateFilters from '../hooks/useTemplateFilters';
-import { getCategories, getTags } from '../services/api';
+import { getCategories, getTags, getFollowingFeed, getTopCreators } from '../services/api';
+import UserCard from '../components/UserCard';
 import { usePageAnnouncement } from '../utils/a11y';
 import './Home.scss';
 
@@ -22,9 +23,17 @@ import './Home.scss';
  * and infinite scroll. List state is owned by useTemplateFilters.
  */
 const Home = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [taxonomy, setTaxonomy] = useState({ categories: [], tags: [] });
+  const [activeTab, setActiveTab] = useState('browse');
+
+  // Following feed state (only used when the Following tab is active).
+  const [feedTemplates, setFeedTemplates] = useState([]);
+  const [feedNextToken, setFeedNextToken] = useState('');
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedError, setFeedError] = useState(false);
+  const [suggested, setSuggested] = useState([]);
 
   usePageAnnouncement('home.title');
 
@@ -85,6 +94,67 @@ const Home = () => {
     }
   };
 
+  // Load the following feed when the Following tab is active.
+  useEffect(() => {
+    if (activeTab !== 'following' || !isAuthenticated) return;
+    let cancelled = false;
+    setFeedLoading(true);
+    setFeedError(false);
+    const loadFeed = async () => {
+      try {
+        const resp = await getFollowingFeed({ page_size: 20 });
+        if (!cancelled) {
+          setFeedTemplates(resp.data.templates || []);
+          setFeedNextToken(resp.data.next_page_token || '');
+        }
+      } catch (err) {
+        if (!cancelled) setFeedError(true);
+      } finally {
+        if (!cancelled) setFeedLoading(false);
+      }
+    };
+    loadFeed();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isAuthenticated]);
+
+  // Load top-5 suggested creators for the empty-feed state.
+  useEffect(() => {
+    if (activeTab !== 'following' || !isAuthenticated) return;
+    let cancelled = false;
+    const loadSuggested = async () => {
+      try {
+        const resp = await getTopCreators({ limit: 5 });
+        if (!cancelled) setSuggested(resp.data.users || []);
+      } catch (err) {
+        // suggestions are non-critical
+      }
+    };
+    loadSuggested();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isAuthenticated]);
+
+  const handleLoadMoreFeed = async () => {
+    if (!feedNextToken || feedLoading) return;
+    setFeedLoading(true);
+    try {
+      const resp = await getFollowingFeed({ page_size: 20, page_token: feedNextToken });
+      setFeedTemplates((prev) => [...prev, ...(resp.data.templates || [])]);
+      setFeedNextToken(resp.data.next_page_token || '');
+    } catch (err) {
+      setFeedError(true);
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  const handleTabChange = (next) => {
+    setActiveTab(next);
+  };
+
   const handleRemoveKeyword = () => submitKeyword('');
   const handleRemoveCategory = () => setCategory('');
   const handleRemoveSort = () => setSort('newest');
@@ -121,6 +191,73 @@ const Home = () => {
     >
       <div className="home-page" onScroll={handleScroll}>
         <h1 className="visually-hidden">{t('home.title')}</h1>
+        <nav className="home-tabs" role="tablist" aria-label={t('home.title')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'browse'}
+            className={`home-tab ${activeTab === 'browse' ? 'is-active' : ''}`}
+            onClick={() => handleTabChange('browse')}
+          >
+            {t('home.browse_tab')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'following'}
+            className={`home-tab ${activeTab === 'following' ? 'is-active' : ''}`}
+            onClick={() => handleTabChange('following')}
+          >
+            {t('home.following.tab')}
+          </button>
+        </nav>
+
+        {activeTab === 'following' ? (
+          <div className="home-following">
+            {!isAuthenticated ? (
+              <div className="home-following__login-prompt">
+                <p>{t('home.following.login_prompt')}</p>
+              </div>
+            ) : (
+              <>
+                {feedError && (
+                  <div className="home-error-banner" role="alert">
+                    <span>{t('search.error.fetch')}</span>
+                  </div>
+                )}
+                {feedLoading && feedTemplates.length === 0 && <SkeletonCards />}
+                {!feedLoading && feedTemplates.length === 0 && (
+                  <div className="home-following__empty">
+                    <EmptyState title={t('home.following.empty')} />
+                    {suggested.length > 0 && (
+                      <div className="home-following__suggested">
+                        <h3>{t('home.following.suggested')}</h3>
+                        <div className="creator-profile__user-list">
+                          {suggested.map((u) => <UserCard key={u.id} user={u} locale={i18n.language || 'en'} />)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {feedTemplates.length > 0 && (
+                  <>
+                    <div className="templates-grid">
+                      {feedTemplates.map((template) => (
+                        <PromptCard key={template.id} template={template} />
+                      ))}
+                    </div>
+                    {feedNextToken && (
+                      <button type="button" className="home-following__load-more" onClick={handleLoadMoreFeed} disabled={feedLoading}>
+                        {feedLoading ? t('common.loading') : t('notifications.load_more')}
+                      </button>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+        <>
         <div className="home-search-row">
           <SearchBar
             value={filters.keyword}
@@ -186,6 +323,8 @@ const Home = () => {
 
             {loadingMore && <div className="loading">{t('common.loading')}</div>}
           </>
+        )}
+        </>
         )}
       </div>
     </Layout>

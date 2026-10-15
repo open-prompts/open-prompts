@@ -57,3 +57,5 @@ spec:
               value: {{ .Values.backend.env.notificationReadRetentionDays | quote }}
             - name: NOTIFICATION_RETENTION_DAYS
               value: {{ .Values.backend.env.notificationRetentionDays | quote }}
+            - name: FOLLOW_RATE_PER_MINUTE
+              value: {{ .Values.backend.env.followRatePerMinute | quote }}

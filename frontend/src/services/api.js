@@ -193,3 +193,36 @@ export const updateComment = (commentId, content) => {
 export const deleteComment = (commentId) => {
   return api.delete(`/comments/${commentId}`);
 };
+
+// API methods for Follow Creators
+export const followUser = (userId) => {
+  return api.post(`/users/${userId}/follow`);
+};
+
+export const unfollowUser = (userId) => {
+  return api.delete(`/users/${userId}/follow`);
+};
+
+export const getCreatorProfile = (userId) => {
+  return api.get(`/users/${userId}/profile`);
+};
+
+export const getCreatorTemplates = (userId, params) => {
+  return api.get(`/users/${userId}/templates`, { params });
+};
+
+export const getFollowers = (userId, params) => {
+  return api.get(`/users/${userId}/followers`, { params });
+};
+
+export const getFollowing = (userId, params) => {
+  return api.get(`/users/${userId}/following`, { params });
+};
+
+export const getFollowingFeed = (params) => {
+  return api.get('/users/me/following-feed', { params });
+};
+
+export const getTopCreators = (params) => {
+  return api.get('/users', { params: { sort: 'followers', ...params } });
+};

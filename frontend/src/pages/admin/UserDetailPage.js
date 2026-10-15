@@ -109,6 +109,8 @@ const UserDetailPage = () => {
     { label: t('admin.users.likes_received'), value: stats ? stats.likes_received : 0 },
     { label: t('admin.users.favorites_received'), value: stats ? stats.favorites_received : 0 },
     { label: t('admin.users.prompts_created'), value: stats ? stats.prompts_created : 0 },
+    { label: t('admin.users.followers'), value: stats ? stats.follower_count : 0 },
+    { label: t('admin.users.following'), value: stats ? stats.following_count : 0 },
   ];
 
   return (

@@ -618,3 +618,83 @@ BEGIN
                             'template_warning_changed'));
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: follow-creators
+-- Description: follow graph, denormalized counters, bio, and the 'follow'
+--              notification event (template_id nullable).
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_follows (
+    follower_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    followee_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (follower_id, followee_id),
+    CONSTRAINT chk_no_self_follow CHECK (follower_id <> followee_id)
+);
+
+COMMENT ON TABLE user_follows IS 'Directed follow graph (follower -> followee)';
+COMMENT ON COLUMN user_follows.follower_id IS 'User doing the following';
+COMMENT ON COLUMN user_follows.followee_id IS 'User being followed';
+
+CREATE INDEX IF NOT EXISTS idx_user_follows_followee
+    ON user_follows(followee_id, created_at DESC);
+
+-- Denormalized counters (same pattern as like_count / favorite_count).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='bio') THEN
+        ALTER TABLE users ADD COLUMN bio TEXT;
+        COMMENT ON COLUMN users.bio IS 'Optional profile bio, 0-280 chars (empty clears)';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='follower_count') THEN
+        ALTER TABLE users ADD COLUMN follower_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN users.follower_count IS 'Number of followers (maintained transactionally)';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='following_count') THEN
+        ALTER TABLE users ADD COLUMN following_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN users.following_count IS 'Number of users this user follows (maintained transactionally)';
+    END IF;
+END $$;
+
+-- 'follow' notifications carry no template: make template_id nullable
+-- (guarded, idempotent, order-independent vs. the notifications feature).
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications')
+       AND EXISTS (
+           SELECT 1 FROM pg_attribute
+           WHERE attrelid = 'notifications'::regclass
+             AND attname = 'template_id' AND attnotnull
+       ) THEN
+        ALTER TABLE notifications ALTER COLUMN template_id DROP NOT NULL;
+    END IF;
+END $$;
+
+-- Widen the notification type CHECK to include 'follow' (guarded drop/re-add,
+-- same pattern as prior CHECK widenings; safe in any landing order).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%follow%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment',
+                            'template_approved', 'template_rejected',
+                            'template_warning_changed', 'follow'));
+    END IF;
+END $$;
