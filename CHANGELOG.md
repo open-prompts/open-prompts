@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/open-prompts/open-prompts/compare/v1.25.0...v1.26.0) (2026-10-15)
+
+
+### Features
+
+* **import-export:** add template import and export ([a6304d5](https://github.com/open-prompts/open-prompts/commit/a6304d5f40214c39d4d03239110a47a271809b29))
+
 # [1.25.0](https://github.com/open-prompts/open-prompts/compare/v1.24.0...v1.25.0) (2026-10-15)
 
 
