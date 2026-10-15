@@ -153,6 +153,12 @@ message Template {
   string moderation_status = 25;
   // Approval time of the first review approval; null/absent until then.
   google.protobuf.Timestamp published_at = 26;
+  // Active content warnings (self-declared + moderator-applied), keys from
+  // the config-driven taxonomy (mature | violence | profanity | sensitive).
+  repeated string content_warnings = 27;
+  // The subset of content_warnings applied by moderation; creator-immutable.
+  // Only meaningful to the owner and admins.
+  repeated string locked_warnings = 28;
 }
 
 // TemplateVersion represents a specific version of a template's content.
@@ -218,6 +224,8 @@ message CreateTemplateRequest {
   string content = 8;
   // Language of the template.
   string language = 9;
+  // Content warning keys from the taxonomy; validated server-side.
+  repeated string content_warnings = 10;
 }
 
 // CreateTemplateResponse is the response message for CreateTemplate.
@@ -242,6 +250,8 @@ message UpdateTemplateRequest {
   // Optional change note for the new version (max 200 chars).
   // Ignored when content is unchanged (no version is created).
   string change_note = 10;
+  // Full desired content-warning set; locked warnings are enforced server-side.
+  repeated string content_warnings = 11;
 }
 
 // UpdateTemplateResponse is the response message for UpdateTemplate.
@@ -287,6 +297,8 @@ message ListTemplatesRequest {
   // Sort order: newest (default) | most_liked | most_favorited | trending.
   // Invalid values fall back to newest server-side.
   string sort = 11;
+  // When true, filter out templates with any content warning (public stream only).
+  bool exclude_warned = 12;
 }
 
 // ListTemplatesResponse is the response message for ListTemplates.
@@ -467,6 +479,8 @@ message UpdateProfileRequest {
   string display_name = 2;
   string avatar = 3;
   string password = 4;
+  // Viewer preference: skip the blur/interstitial for warned templates.
+  bool show_warned_content = 5;
 }
 
 // UpdateProfileResponse is the response message for UpdateProfile.
@@ -474,6 +488,7 @@ message UpdateProfileResponse {
   string id = 1;
   string display_name = 2;
   string avatar = 3;
+  bool show_warned_content = 4;
 }
 
 // GetProfileRequest is the request message for GetProfile.
@@ -487,6 +502,7 @@ message GetProfileResponse {
   string email = 2;
   string display_name = 3;
   string avatar = 4;
+  bool show_warned_content = 5;
 }
 
 // Alias messages

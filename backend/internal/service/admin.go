@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -151,6 +153,26 @@ func (s *AdminService) writeAudit(ctx context.Context, actor *models.User, actio
 	}
 }
 
+// taxonomy returns the config-driven warning keys (from platform_settings).
+// Falls back to the built-in default on cache miss or invalid JSON.
+func (s *AdminService) taxonomy(ctx context.Context) []string {
+	if s.ReviewRepo == nil {
+		return defaultWarningTaxonomy
+	}
+	value, err := s.ReviewRepo.GetSetting(ctx, settingWarningTaxonomy)
+	if err != nil || value == "" {
+		return defaultWarningTaxonomy
+	}
+	var keys []string
+	if err := json.Unmarshal([]byte(value), &keys); err != nil {
+		return defaultWarningTaxonomy
+	}
+	if len(keys) == 0 {
+		return defaultWarningTaxonomy
+	}
+	return keys
+}
+
 // userToSummary converts a models.User to the proto summary.
 func userToSummary(user *models.User, templateCount int32) *pb.AdminUserSummary {
 	return &pb.AdminUserSummary{
@@ -181,6 +203,8 @@ func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
 		UpdatedAt:        timestamppb.New(t.UpdatedAt),
 		OwnerId:          t.OwnerID,
 		OwnerDisplayName: t.OwnerDisplayName,
+		ContentWarnings:  t.ContentWarnings,
+		LockedWarnings:   t.LockedWarnings,
 	}
 }
 
@@ -611,6 +635,14 @@ func (s *AdminService) ListTemplates(ctx context.Context, req *pb.ListAdminTempl
 		return nil, status.Error(codes.InvalidArgument, "invalid sort")
 	}
 
+	// Validate the warning filter: "" (any), "none", or a taxonomy key.
+	if req.Warning != "" && req.Warning != "none" {
+		taxonomy := s.taxonomy(ctx)
+		if !slices.Contains(taxonomy, req.Warning) {
+			return nil, status.Error(codes.InvalidArgument, "invalid warning filter")
+		}
+	}
+
 	page := int(req.Page)
 	if page < 1 {
 		page = 1
@@ -628,6 +660,7 @@ func (s *AdminService) ListTemplates(ctx context.Context, req *pb.ListAdminTempl
 		Visibility: req.Visibility,
 		OwnerID:    req.OwnerId,
 		Sort:       req.Sort,
+		Warning:    req.Warning,
 		Limit:      perPage,
 		Offset:     (page - 1) * perPage,
 	})
@@ -683,7 +716,7 @@ func (s *AdminService) ListAuditLogs(ctx context.Context, req *pb.ListAuditLogsR
 		return nil, err
 	}
 
-	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" && req.Action != "review_approve" && req.Action != "review_reject" {
+	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" && req.Action != "review_approve" && req.Action != "review_reject" && req.Action != "template.warning_add" && req.Action != "template.warning_remove" {
 		return nil, status.Error(codes.InvalidArgument, "invalid action filter")
 	}
 
@@ -1198,8 +1231,27 @@ func (s *AdminService) UpdatePlatformSetting(ctx context.Context, req *pb.Update
 		return nil, err
 	}
 	key := strings.TrimSpace(req.Key)
-	if key != settingApprovalThreshold && key != settingRegateCount && key != settingAgingHours {
+	if key != settingApprovalThreshold && key != settingRegateCount && key != settingAgingHours && key != settingWarningTaxonomy {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown setting key: %s", key)
+	}
+	// The taxonomy is a JSON array of keys; the numeric settings are integers.
+	if key == settingWarningTaxonomy {
+		var keys []string
+		if err := json.Unmarshal([]byte(strings.TrimSpace(req.Value)), &keys); err != nil || len(keys) == 0 {
+			return nil, status.Error(codes.InvalidArgument, "value must be a non-empty JSON array of warning keys")
+		}
+		if err := s.ReviewRepo.UpsertSetting(ctx, key, strings.TrimSpace(req.Value)); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to update setting: %v", err)
+		}
+		if s.promptSvc != nil {
+			s.promptSvc.InvalidateSettingsCache()
+		}
+		s.writeAudit(ctx, actor, "settings_change", "platform", key, req.Reason)
+		return &pb.PlatformSettingEntry{
+			Key:       key,
+			Value:     strings.TrimSpace(req.Value),
+			UpdatedAt: timestamppb.New(time.Now()),
+		}, nil
 	}
 	value, err := strconv.Atoi(strings.TrimSpace(req.Value))
 	if err != nil || value < 0 {
@@ -1227,4 +1279,171 @@ func (s *AdminService) UpdatePlatformSetting(ctx context.Context, req *pb.Update
 		Value:     strconv.Itoa(value),
 		UpdatedAt: timestamppb.New(time.Now()),
 	}, nil
+}
+
+// UpdateTemplateWarnings adds/removes content warnings on a template with a
+// mandatory reason. The change is audited (template.warning_add /
+// template.warning_remove) and the creator is notified (best-effort).
+func (s *AdminService) UpdateTemplateWarnings(ctx context.Context, req *pb.UpdateTemplateWarningsRequest) (*pb.UpdateTemplateWarningsResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	if req.TemplateId == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+
+	// Validate every key in add/remove against the taxonomy (constraint 8).
+	taxonomy := s.taxonomy(ctx)
+	for _, w := range req.Add {
+		if !slices.Contains(taxonomy, w) {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown content warning %q", w)
+		}
+	}
+	for _, w := range req.Remove {
+		if !slices.Contains(taxonomy, w) {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown content warning %q", w)
+		}
+	}
+
+	// Load the current template to compute the new sets.
+	template, _, err := s.AdminRepo.GetTemplateWithVersions(ctx, req.TemplateId)
+	if err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get template: %v", err)
+	}
+
+	current := template.ContentWarnings
+	locked := template.LockedWarnings
+
+	// newContent = (current ∪ add) − remove
+	// newLocked = (currentLocked ∪ add) − remove (a moderator can remove any
+	// warning they or another moderator applied).
+	newContent := unionMinus(current, req.Add, req.Remove)
+	newLocked := unionMinus(locked, req.Add, req.Remove)
+
+	if err := s.AdminRepo.UpdateTemplateWarnings(ctx, req.TemplateId, newContent, newLocked); err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to update template warnings: %v", err)
+	}
+
+	// Audit each added/removed warning (best-effort). The reason field
+	// carries a JSON array of the changed warnings so the history list can
+	// reconstruct them.
+	for _, w := range req.Add {
+		payload, _ := json.Marshal([]string{w})
+		s.writeAudit(ctx, actor, "template.warning_add", "template", req.TemplateId, string(payload))
+	}
+	for _, w := range req.Remove {
+		payload, _ := json.Marshal([]string{w})
+		s.writeAudit(ctx, actor, "template.warning_remove", "template", req.TemplateId, string(payload))
+	}
+
+	// Notify the creator (best-effort, self-suppressed). The
+	// ActorDisplayName slot carries a compact JSON delta payload
+	// {"added":[...],"removed":[...]} that the frontend renders into the
+	// localized sentence (OQ-5).
+	s.notifyWarningChange(ctx, actor, template.OwnerID, req.TemplateId, req.Add, req.Remove)
+
+	return &pb.UpdateTemplateWarningsResponse{
+		TemplateId:      req.TemplateId,
+		ContentWarnings: newContent,
+		LockedWarnings:  newLocked,
+	}, nil
+}
+
+// unionMinus computes (base ∪ add) − remove, preserving order and deduping.
+func unionMinus(base, add, remove []string) []string {
+	removeSet := make(map[string]bool, len(remove))
+	for _, r := range remove {
+		removeSet[r] = true
+	}
+	seen := make(map[string]bool)
+	var out []string
+	for _, w := range append(append([]string{}, base...), add...) {
+		if removeSet[w] || seen[w] {
+			continue
+		}
+		seen[w] = true
+		out = append(out, w)
+	}
+	return out
+}
+
+// notifyWarningChange emits the template_warning_changed notification to the
+// template owner. Best-effort: failures are logged, never fatal. Self-actions
+// (an admin changing warnings on their own template) are suppressed.
+func (s *AdminService) notifyWarningChange(ctx context.Context, actor *models.User, ownerID, templateID string, added, removed []string) {
+	if s.NotificationRepo == nil {
+		return
+	}
+	if actor == nil || actor.ID == ownerID {
+		// Self-decision (an admin changing warnings on their own template): skip.
+		zap.S().Warnf("warning change notification: self-action suppressed (template=%s)", templateID)
+		return
+	}
+	payload, err := json.Marshal(map[string][]string{"added": added, "removed": removed})
+	if err != nil {
+		zap.S().Errorf("warning change notification: failed to marshal delta: %v", err)
+		return
+	}
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      ownerID,
+		ActorID:          actor.ID,
+		TemplateID:       templateID,
+		Type:             "template_warning_changed",
+		ActorDisplayName: string(payload),
+	}); err != nil {
+		zap.S().Errorf("warning change notification: failed to create notification (template=%s creator=%s): %v",
+			templateID, ownerID, err)
+	}
+}
+
+// ListWarningHistory returns the warning-change history for a template,
+// newest first, paginated.
+func (s *AdminService) ListWarningHistory(ctx context.Context, req *pb.ListWarningHistoryRequest) (*pb.ListWarningHistoryResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if req.TemplateId == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	entries, total, err := s.AdminRepo.ListWarningHistory(ctx, req.TemplateId, perPage, (page-1)*perPage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list warning history: %v", err)
+	}
+
+	resp := &pb.ListWarningHistoryResponse{Total: total, Page: int32(page), PerPage: int32(perPage)}
+	for _, e := range entries {
+		resp.Entries = append(resp.Entries, &pb.WarningHistoryEntry{
+			Id:         e.ID,
+			ActorId:    e.ActorID,
+			ActorEmail: e.ActorEmail,
+			Action:     e.Action,
+			Warnings:   e.Warnings,
+			Reason:     e.Reason,
+			CreatedAt:  timestamppb.New(e.CreatedAt),
+		})
+	}
+	return resp, nil
 }

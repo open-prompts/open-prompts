@@ -46,19 +46,21 @@ type OAuthIdentity struct {
 
 // AdminTemplate is the admin moderation view of a template (includes private).
 type AdminTemplate struct {
-	ID               string    `json:"id"`
-	OwnerID          string    `json:"owner_id"`
-	OwnerDisplayName string    `json:"owner_display_name"`
-	Title            string    `json:"title"`
+	ID               string         `json:"id"`
+	OwnerID          string         `json:"owner_id"`
+	OwnerDisplayName string         `json:"owner_display_name"`
+	Title            string         `json:"title"`
 	Description      sql.NullString `json:"description"`
-	Visibility       string    `json:"visibility"`
-	Type             string    `json:"type"`
-	Language         string    `json:"language"`
+	Visibility       string         `json:"visibility"`
+	Type             string         `json:"type"`
+	Language         string         `json:"language"`
 	Tags             pq.StringArray `json:"tags"`
-	LikeCount        int32     `json:"like_count"`
-	FavoriteCount    int32     `json:"favorite_count"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	LikeCount        int32          `json:"like_count"`
+	FavoriteCount    int32          `json:"favorite_count"`
+	ContentWarnings  pq.StringArray `json:"content_warnings"`
+	LockedWarnings   pq.StringArray `json:"locked_warnings"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 // AdminTemplateVersion is a template version with its alias (if any) for the

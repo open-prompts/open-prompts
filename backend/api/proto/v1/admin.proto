@@ -72,6 +72,13 @@ service AdminService {
 
   // UpdatePlatformSetting updates one platform setting (reason-audited).
   rpc UpdatePlatformSetting(UpdatePlatformSettingRequest) returns (PlatformSettingEntry);
+
+  // UpdateTemplateWarnings adds/removes content warnings on a template with a
+  // mandatory reason (audited, creator notified).
+  rpc UpdateTemplateWarnings(UpdateTemplateWarningsRequest) returns (UpdateTemplateWarningsResponse);
+
+  // ListWarningHistory returns the warning-change history for a template.
+  rpc ListWarningHistory(ListWarningHistoryRequest) returns (ListWarningHistoryResponse);
 }
 
 // ---- Auth ----
@@ -206,6 +213,10 @@ message AdminTemplateSummary {
   google.protobuf.Timestamp updated_at = 10;
   string owner_id = 11;
   string owner_display_name = 12;
+  // Active content warnings (taxonomy keys).
+  repeated string content_warnings = 15;
+  // The subset applied by moderation; creator-immutable.
+  repeated string locked_warnings = 16;
 }
 
 message ListAdminTemplatesRequest {
@@ -215,6 +226,7 @@ message ListAdminTemplatesRequest {
   string sort = 4; // "recently_updated" (default) | "newest" | "oldest" | "most_likes"
   int32 page = 5;
   int32 per_page = 6;
+  string warning = 7; // "" = any | "none" | a taxonomy key (mature|violence|profanity|sensitive)
 }
 
 message ListAdminTemplatesResponse {
@@ -426,4 +438,42 @@ message UpdatePlatformSettingRequest {
   string key = 1; // must exist in the known-keys whitelist
   string value = 2; // integer >= 0 for review_approval_threshold (0 disables gating), >= 1 otherwise
   string reason = 3; // 3-500 chars, audit-logged
+}
+
+// ---- Content warnings ----
+
+message UpdateTemplateWarningsRequest {
+  string template_id = 1;
+  repeated string add = 2;    // warnings to add (taxonomy keys)
+  repeated string remove = 3; // warnings to remove (taxonomy keys)
+  string reason = 4;          // required, 3-500 chars, audit-logged
+}
+
+message UpdateTemplateWarningsResponse {
+  string template_id = 1;
+  repeated string content_warnings = 2; // post-change full set
+  repeated string locked_warnings = 3;  // post-change locked set
+}
+
+message ListWarningHistoryRequest {
+  string template_id = 1;
+  int32 page = 2;    // 1-based, default 1
+  int32 per_page = 3; // default 20, max 100
+}
+
+message WarningHistoryEntry {
+  string id = 1;
+  string actor_id = 2;
+  string actor_email = 3;
+  string action = 4; // "template.warning_add" | "template.warning_remove"
+  repeated string warnings = 5; // the warnings added/removed in this change
+  string reason = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListWarningHistoryResponse {
+  repeated WarningHistoryEntry entries = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
 }

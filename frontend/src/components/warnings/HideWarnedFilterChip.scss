@@ -1,0 +1,23 @@
+.hide-warned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-color, #333);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.hide-warned-chip.is-active {
+  background: var(--warning-chip-bg, rgba(214, 158, 46, 0.16));
+  color: var(--warning-chip-fg, #b8860b);
+  border-color: var(--warning-chip-fg, #b8860b);
+}
+
+.hide-warned-chip__icon {
+  flex-shrink: 0;
+}

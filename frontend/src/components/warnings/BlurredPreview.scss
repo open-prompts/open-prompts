@@ -1,0 +1,22 @@
+.blurred-preview {
+  position: relative;
+}
+
+.blurred-preview__blur {
+  filter: blur(12px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.blurred-preview__chip {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blurred-preview__blur {
+    transition: none;
+  }
+}

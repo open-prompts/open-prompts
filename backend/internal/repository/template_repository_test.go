@@ -156,3 +156,37 @@ func TestTemplateFromClauseNonTrendingUnchanged(t *testing.T) {
 		t.Errorf("non-trending should not add args: %v nextID=%d", args, nextID)
 	}
 }
+
+func TestBuildTemplateConditionsExcludeWarned(t *testing.T) {
+	// exclude_warned on a public stream adds a bound-parameter array filter.
+	// visibility consumes $2, so the taxonomy array lands on $3.
+	filters := map[string]interface{}{"visibility": "public", "exclude_warned": true}
+	cond, args, nextID := buildTemplateConditions(filters, nil, 2)
+	if !strings.Contains(cond, "NOT (t.content_warnings && $3)") {
+		t.Errorf("exclude_warned filter missing: %s", cond)
+	}
+	if len(args) != 2 {
+		t.Errorf("expected 2 args (viewer + taxonomy array), got %d", len(args))
+	}
+	if nextID != 4 {
+		t.Errorf("next placeholder should be 4, got %d", nextID)
+	}
+}
+
+func TestBuildTemplateConditionsExcludeWarnedPrivateUntouched(t *testing.T) {
+	// exclude_warned must NOT apply to a private stream (FR-6).
+	filters := map[string]interface{}{"visibility": "private", "exclude_warned": true}
+	cond, _, _ := buildTemplateConditions(filters, nil, 2)
+	if strings.Contains(cond, "content_warnings") {
+		t.Errorf("exclude_warned must not apply to private stream: %s", cond)
+	}
+}
+
+func TestBuildTemplateConditionsExcludeWarnedOff(t *testing.T) {
+	// exclude_warned=false (or absent) adds no filter.
+	filters := map[string]interface{}{"visibility": "public"}
+	cond, _, _ := buildTemplateConditions(filters, nil, 2)
+	if strings.Contains(cond, "content_warnings") {
+		t.Errorf("exclude_warned off must add no filter: %s", cond)
+	}
+}

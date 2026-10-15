@@ -1,0 +1,127 @@
+.warning-actions-panel {
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.warning-actions-panel h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.warning-actions-panel__current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.warning-actions-panel__current-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.warning-actions-panel__none {
+  color: var(--text-muted, #888);
+  font-size: 13px;
+}
+
+.warning-actions-panel__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--warning-chip-bg, rgba(214, 158, 46, 0.16));
+  font-size: 13px;
+}
+
+.warning-actions-panel__chip-origin {
+  font-size: 11px;
+  color: var(--text-muted, #888);
+}
+
+.warning-actions-panel__remove {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted, #888);
+  padding: 0;
+}
+
+.warning-actions-panel__remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.warning-actions-panel__controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.warning-actions-panel__select,
+.warning-actions-panel__reason {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.warning-actions-panel__reason {
+  flex: 1;
+  min-width: 180px;
+}
+
+.warning-actions-panel__error {
+  color: var(--danger-color, #d9534f);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.warning-actions-panel__history h3 {
+  font-size: 14px;
+  margin: 12px 0 8px;
+}
+
+.warning-actions-panel__muted {
+  color: var(--text-muted, #888);
+  font-size: 13px;
+}
+
+.warning-actions-panel__history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.warning-actions-panel__history-item {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color, #eee);
+  font-size: 13px;
+}
+
+.warning-actions-panel__history-action {
+  font-weight: 600;
+}
+
+.warning-actions-panel__history-actor {
+  color: var(--text-muted, #888);
+}
+
+.warning-actions-panel__history-time {
+  margin-left: auto;
+  color: var(--text-muted, #888);
+  font-size: 12px;
+}

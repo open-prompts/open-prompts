@@ -39,6 +39,8 @@ const (
 	AdminService_GetReviewMetrics_FullMethodName        = "/v1.AdminService/GetReviewMetrics"
 	AdminService_GetPlatformSettings_FullMethodName     = "/v1.AdminService/GetPlatformSettings"
 	AdminService_UpdatePlatformSetting_FullMethodName   = "/v1.AdminService/UpdatePlatformSetting"
+	AdminService_UpdateTemplateWarnings_FullMethodName  = "/v1.AdminService/UpdateTemplateWarnings"
+	AdminService_ListWarningHistory_FullMethodName      = "/v1.AdminService/ListWarningHistory"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -92,6 +94,11 @@ type AdminServiceClient interface {
 	GetPlatformSettings(ctx context.Context, in *GetPlatformSettingsRequest, opts ...grpc.CallOption) (*GetPlatformSettingsResponse, error)
 	// UpdatePlatformSetting updates one platform setting (reason-audited).
 	UpdatePlatformSetting(ctx context.Context, in *UpdatePlatformSettingRequest, opts ...grpc.CallOption) (*PlatformSettingEntry, error)
+	// UpdateTemplateWarnings adds/removes content warnings on a template with a
+	// mandatory reason (audited, creator notified).
+	UpdateTemplateWarnings(ctx context.Context, in *UpdateTemplateWarningsRequest, opts ...grpc.CallOption) (*UpdateTemplateWarningsResponse, error)
+	// ListWarningHistory returns the warning-change history for a template.
+	ListWarningHistory(ctx context.Context, in *ListWarningHistoryRequest, opts ...grpc.CallOption) (*ListWarningHistoryResponse, error)
 }
 
 type adminServiceClient struct {
@@ -302,6 +309,26 @@ func (c *adminServiceClient) UpdatePlatformSetting(ctx context.Context, in *Upda
 	return out, nil
 }
 
+func (c *adminServiceClient) UpdateTemplateWarnings(ctx context.Context, in *UpdateTemplateWarningsRequest, opts ...grpc.CallOption) (*UpdateTemplateWarningsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateTemplateWarningsResponse)
+	err := c.cc.Invoke(ctx, AdminService_UpdateTemplateWarnings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListWarningHistory(ctx context.Context, in *ListWarningHistoryRequest, opts ...grpc.CallOption) (*ListWarningHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWarningHistoryResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListWarningHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -353,6 +380,11 @@ type AdminServiceServer interface {
 	GetPlatformSettings(context.Context, *GetPlatformSettingsRequest) (*GetPlatformSettingsResponse, error)
 	// UpdatePlatformSetting updates one platform setting (reason-audited).
 	UpdatePlatformSetting(context.Context, *UpdatePlatformSettingRequest) (*PlatformSettingEntry, error)
+	// UpdateTemplateWarnings adds/removes content warnings on a template with a
+	// mandatory reason (audited, creator notified).
+	UpdateTemplateWarnings(context.Context, *UpdateTemplateWarningsRequest) (*UpdateTemplateWarningsResponse, error)
+	// ListWarningHistory returns the warning-change history for a template.
+	ListWarningHistory(context.Context, *ListWarningHistoryRequest) (*ListWarningHistoryResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -422,6 +454,12 @@ func (UnimplementedAdminServiceServer) GetPlatformSettings(context.Context, *Get
 }
 func (UnimplementedAdminServiceServer) UpdatePlatformSetting(context.Context, *UpdatePlatformSettingRequest) (*PlatformSettingEntry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePlatformSetting not implemented")
+}
+func (UnimplementedAdminServiceServer) UpdateTemplateWarnings(context.Context, *UpdateTemplateWarningsRequest) (*UpdateTemplateWarningsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTemplateWarnings not implemented")
+}
+func (UnimplementedAdminServiceServer) ListWarningHistory(context.Context, *ListWarningHistoryRequest) (*ListWarningHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWarningHistory not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -804,6 +842,42 @@ func _AdminService_UpdatePlatformSetting_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_UpdateTemplateWarnings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTemplateWarningsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UpdateTemplateWarnings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UpdateTemplateWarnings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UpdateTemplateWarnings(ctx, req.(*UpdateTemplateWarningsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListWarningHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWarningHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListWarningHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListWarningHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListWarningHistory(ctx, req.(*ListWarningHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -890,6 +964,14 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePlatformSetting",
 			Handler:    _AdminService_UpdatePlatformSetting_Handler,
+		},
+		{
+			MethodName: "UpdateTemplateWarnings",
+			Handler:    _AdminService_UpdateTemplateWarnings_Handler,
+		},
+		{
+			MethodName: "ListWarningHistory",
+			Handler:    _AdminService_ListWarningHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

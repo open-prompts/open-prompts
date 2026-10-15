@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { useNotification } from '../context/NotificationContext';
 import { toggleTemplateLike, toggleTemplateFavorite } from '../services/api';
 import { HeartIcon, StarIcon } from './ui/Icons';
+import BlurredPreview from './warnings/BlurredPreview';
 import './PromptCard.scss';
 
 /**
@@ -28,6 +29,13 @@ const PromptCard = ({ template }) => {
     user &&
     template.owner_id === user.id &&
     (template.moderation_status === 'in_review' || template.moderation_status === 'rejected');
+
+  // Content warnings: blur the preview when the template has warnings and the
+  // viewer has not opted out (show_warned_content) or revealed this session.
+  const warnings = template.content_warnings || [];
+  const showWarnedContent = user && user.show_warned_content;
+  const hasWarnings = warnings.length > 0;
+  const shouldGate = hasWarnings && !showWarnedContent;
 
   const handleLike = async (e) => {
     e.stopPropagation();
@@ -71,7 +79,13 @@ const PromptCard = ({ template }) => {
       <p className="card-description">{template.description}</p>
       {template.latest_version && (
         <div className="content-preview">
-          <pre>{template.latest_version.content}</pre>
+          {shouldGate ? (
+            <BlurredPreview warnings={warnings}>
+              <pre>{template.latest_version.content}</pre>
+            </BlurredPreview>
+          ) : (
+            <pre>{template.latest_version.content}</pre>
+          )}
         </div>
       )}
       <div className="card-footer">

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { getTemplates } from '../services/api';
 
 const STORAGE_KEY = 'home.selectedVisibility';
+const HIDE_WARNED_KEY = 'home.hideWarned';
 const SORT_WHITELIST = ['newest', 'most_liked', 'most_favorited', 'trending'];
 
 const normalizeSort = (value) =>
@@ -35,6 +36,10 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
     const saved =
       typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
     const defaultVisibility = urlVisibility || saved || (isAuthenticated ? '' : 'VISIBILITY_PUBLIC');
+    // exclude_warned: URL (?hideWarned=1) -> localStorage (logged-in) -> off.
+    const urlHideWarned = searchParams.get('hideWarned') === '1';
+    const savedHideWarned =
+      typeof window !== 'undefined' ? window.localStorage.getItem(HIDE_WARNED_KEY) === '1' : false;
     return {
       keyword: searchParams.get('q') || '',
       category: searchParams.get('category') || '',
@@ -44,6 +49,7 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
       myLikes: false,
       myFavorites: false,
       ownerId: '',
+      excludeWarned: urlHideWarned || savedHideWarned,
     };
   });
 
@@ -83,6 +89,7 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
       if (next.tags && next.tags.length > 0) params.tags = next.tags.join(',');
       if (next.sort && next.sort !== 'newest') params.sort = next.sort;
       if (next.visibility) params.visibility = next.visibility;
+      if (next.excludeWarned) params.hideWarned = '1';
       setSearchParams(params, { replace });
     },
     [setSearchParams]
@@ -114,6 +121,7 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
       if (currentFilters.ownerId) params.owner_id = currentFilters.ownerId;
       if (currentFilters.myLikes) params.my_likes = true;
       if (currentFilters.myFavorites) params.my_favorites = true;
+      if (currentFilters.excludeWarned) params.exclude_warned = true;
       return params;
     },
     [pageSize]
@@ -282,6 +290,23 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
     [syncUrl, persistVisibility]
   );
 
+  // Toggle the "hide warned content" filter. Persists per user (localStorage)
+  // and syncs to the URL (?hideWarned=1) for shareability (FR-6).
+  const toggleHideWarned = useCallback(() => {
+    setFilters((prev) => {
+      const next = { ...prev, excludeWarned: !prev.excludeWarned };
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(HIDE_WARNED_KEY, next.excludeWarned ? '1' : '0');
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+      syncUrl(next);
+      return next;
+    });
+  }, [syncUrl]);
+
   const clearAll = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     setFilters((prev) => {
@@ -339,6 +364,7 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
     setCategory,
     setSort,
     setVisibility,
+    toggleHideWarned,
     clearAll,
     applyFilterChange,
     templates,

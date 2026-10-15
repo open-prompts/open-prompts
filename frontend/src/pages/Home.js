@@ -10,6 +10,7 @@ import ResultCount from '../components/ResultCount';
 import EmptyState from '../components/EmptyState';
 import SkeletonCards from '../components/SkeletonCards';
 import ReviewStatusCard from '../components/review/ReviewStatusCard';
+import HideWarnedFilterChip from '../components/warnings/HideWarnedFilterChip';
 import useTemplateFilters from '../hooks/useTemplateFilters';
 import { getCategories, getTags } from '../services/api';
 import './Home.scss';
@@ -31,6 +32,7 @@ const Home = () => {
     toggleTag,
     setCategory,
     setSort,
+    toggleHideWarned,
     clearAll,
     applyFilterChange,
     templates,
@@ -134,6 +136,8 @@ const Home = () => {
           onRemoveSort={handleRemoveSort}
           onClearAll={clearAll}
         />
+
+        <HideWarnedFilterChip active={filters.excludeWarned} onToggle={toggleHideWarned} />
 
         <ResultCount count={totalCount} />
 

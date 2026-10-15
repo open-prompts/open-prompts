@@ -16,6 +16,7 @@ type User struct {
 	Status                string         `json:"status"`                  // "active" | "banned"
 	ApprovedTemplateCount int32          `json:"approved_template_count"` // gating threshold N
 	ReviewGatedRemaining  int32          `json:"review_gated_remaining"`  // re-gate count M after takedown/ban
+	ShowWarnedContent     bool           `json:"show_warned_content"`     // viewer pref: skip blur/interstitial for warned templates
 	CreatedAt             time.Time      `json:"created_at"`
 	UpdatedAt             time.Time      `json:"updated_at"`
 }

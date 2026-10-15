@@ -144,6 +144,19 @@ func (m *MockAdminRepository) SetTemplateModeration(ctx context.Context, templat
 	return args.Error(0)
 }
 
+func (m *MockAdminRepository) UpdateTemplateWarnings(ctx context.Context, templateID string, contentWarnings, lockedWarnings []string) error {
+	args := m.Called(ctx, templateID, contentWarnings, lockedWarnings)
+	return args.Error(0)
+}
+
+func (m *MockAdminRepository) ListWarningHistory(ctx context.Context, templateID string, limit, offset int) ([]*models.WarningHistoryEntry, int64, error) {
+	args := m.Called(ctx, templateID, limit, offset)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int64), args.Error(2)
+	}
+	return args.Get(0).([]*models.WarningHistoryEntry), args.Get(1).(int64), args.Error(2)
+}
+
 // MockAPIKeyLister is a mock implementation of service.APIKeyLister.
 type MockAPIKeyLister struct {
 	mock.Mock

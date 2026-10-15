@@ -534,3 +534,87 @@ BEGIN
             CHECK (type IN ('like', 'favorite', 'fork', 'comment', 'template_approved', 'template_rejected'));
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: content-warnings
+-- Description: config-driven warning taxonomy, per-template warning arrays,
+--              moderator lock, audit + notification widenings.
+-- -----------------------------------------------------------------------------
+
+-- Viewer preference: skip the blur/interstitial for warned templates
+-- (FR-5). Default off; additive, no backfill needed.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='show_warned_content') THEN
+        ALTER TABLE users ADD COLUMN show_warned_content BOOLEAN NOT NULL DEFAULT false;
+        COMMENT ON COLUMN users.show_warned_content IS
+            'Viewer preference: when true, skip the blur/interstitial for warned templates';
+    END IF;
+END $$;
+
+-- Warning arrays on templates (OQ-1: two parallel TEXT[] columns; the lock is
+-- the intersection). Default empty — no backfill needed for existing rows.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='content_warnings') THEN
+        ALTER TABLE templates ADD COLUMN content_warnings TEXT[] NOT NULL DEFAULT '{}';
+        COMMENT ON COLUMN templates.content_warnings IS
+            'Active content warnings (self-declared + moderator-applied), keys from the config-driven taxonomy';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='locked_warnings') THEN
+        ALTER TABLE templates ADD COLUMN locked_warnings TEXT[] NOT NULL DEFAULT '{}';
+        COMMENT ON COLUMN templates.locked_warnings IS
+            'Subset of content_warnings applied by moderation; creator-immutable (FR-8)';
+    END IF;
+END $$;
+
+-- GIN index serves exclude_warned on public lists and the admin warning-state
+-- filter (NFR-6).
+CREATE INDEX IF NOT EXISTS idx_templates_content_warnings
+    ON templates USING GIN(content_warnings);
+
+-- Taxonomy seed (NFR-2: config-driven, admin-editable without deploy).
+INSERT INTO platform_settings (key, value) VALUES
+    ('content_warning_taxonomy', '["mature","violence","profanity","sensitive"]')
+ON CONFLICT (key) DO NOTHING;
+
+-- Widen admin_audit_logs.action CHECK for warning changes (guarded, idempotent).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_action_check';
+    IF def IS NOT NULL AND def NOT LIKE '%template.warning_add%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_action_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_action_check
+            CHECK (action IN ('ban', 'unban', 'role_change', 'delete_comment',
+                              'review_approve', 'review_reject', 'settings_change',
+                              'template.warning_add', 'template.warning_remove'));
+    END IF;
+END $$;
+
+-- Widen notifications.type CHECK for warning-change notifications (guarded).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%template_warning_changed%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment',
+                            'template_approved', 'template_rejected',
+                            'template_warning_changed'));
+    END IF;
+END $$;

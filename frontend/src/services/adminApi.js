@@ -96,6 +96,13 @@ export const changeAdminUserRole = (id, role, reason) =>
 // Templates
 export const getAdminTemplates = (params) => adminApi.get('/admin/templates', { params });
 export const getAdminTemplate = (id) => adminApi.get(`/admin/templates/${id}`);
+// Content warnings (admin)
+export const updateTemplateWarnings = (id, { add, remove, reason }) =>
+  adminApi.post(`/admin/templates/${id}/warnings`, { add, remove, reason });
+export const removeTemplateWarnings = (id, { add, remove, reason }) =>
+  adminApi.delete(`/admin/templates/${id}/warnings`, { data: { add, remove, reason } });
+export const getWarningHistory = (id, params) =>
+  adminApi.get(`/admin/templates/${id}/warnings/history`, { params });
 // Pre-publication review
 export const getReviewQueue = (params) => adminApi.get('/admin/review', { params });
 export const getReviewMetrics = () => adminApi.get('/admin/review/metrics');

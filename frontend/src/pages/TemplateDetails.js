@@ -25,6 +25,8 @@ import DiffModal from '../components/DiffModal';
 import RestoreConfirmModal from '../components/RestoreConfirmModal';
 import ChangeNoteInput from '../components/ChangeNoteInput';
 import PublishReviewModal from '../components/review/PublishReviewModal';
+import ContentInterstitial, { isWarnedRevealed } from '../components/warnings/ContentInterstitial';
+import WarningCheckboxGroup from '../components/warnings/WarningCheckboxGroup';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
 
@@ -95,6 +97,10 @@ const TemplateDetails = () => {
   const [categories, setCategories] = useState([]);
   const [customCategory, setCustomCategory] = useState('');
 
+  // Content warnings: interstitial reveal state (session-scoped) + edit form.
+  const [warnedRevealed, setWarnedRevealed] = useState(() => isWarnedRevealed(id));
+  const [editWarnings, setEditWarnings] = useState([]);
+
   const { addNotification } = useNotification();
 
   // Fetch the first page of versions (server-truthful numbering after writes).
@@ -131,6 +137,7 @@ const TemplateDetails = () => {
         setVersions(verRes.data.versions || []);
         setHistoryPageToken(verRes.data.next_page_token || '');
         setPrompts(pmtRes.data.prompts || []);
+        setEditWarnings(tplRes.data.template.content_warnings || []);
 
         setIsLiked(tplRes.data.template.is_liked || false);
         setIsFavorited(tplRes.data.template.is_favorited || false);
@@ -257,7 +264,8 @@ const TemplateDetails = () => {
               visibility: template.visibility,
               category: finalCategory,
               tags: finalTags,
-              content: contentToSend
+              content: contentToSend,
+              content_warnings: editWarnings
           };
             // Preserve language field when updating metadata
             if (template && template.language) {
@@ -815,6 +823,11 @@ const TemplateDetails = () => {
                             </svg>
                         </button>
                     </div>
+                    <WarningCheckboxGroup
+                      value={editWarnings}
+                      locked={template.locked_warnings || []}
+                      onChange={setEditWarnings}
+                    />
                     <div className="editor-actions">
                         <button className="save-meta-btn" onClick={handleSaveMetadata} disabled={isSaving}>
                             {t('common.save') || 'Save'}
@@ -882,6 +895,20 @@ const TemplateDetails = () => {
 
         <div className="content-layout">
           <div className="main-column">
+            {/* Content warnings interstitial: shown before content when the
+                template has warnings and the viewer hasn't opted out/revealed. */}
+            {template.content_warnings &&
+              template.content_warnings.length > 0 &&
+              !(user && user.show_warned_content) &&
+              !warnedRevealed && (
+                <ContentInterstitial
+                  templateId={template.id}
+                  warnings={template.content_warnings}
+                  onReveal={() => setWarnedRevealed(true)}
+                  onBack={() => navigate(-1)}
+                />
+              )}
+
             {/* Version Selection & Editor */}
             <div className="section template-content">
               <h3>{t('template_details.content_title')}</h3>

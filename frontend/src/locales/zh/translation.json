@@ -631,5 +631,64 @@
       "restore": "恢复版本失败。",
       "retry": "重试"
     }
+  },
+  "warnings": {
+    "group": {
+      "title": "内容警告（可选）",
+      "help": "帮助观众在打开前了解内容。"
+    },
+    "type": {
+      "mature": "成人主题",
+      "violence": "血腥暴力",
+      "profanity": "强烈语言",
+      "sensitive": "敏感话题"
+    },
+    "locked": {
+      "appliedBy": "由审核于 {{date}} 施加：{{reason}}",
+      "label": "由审核施加（已锁定）"
+    },
+    "chip": {
+      "multiple": "{{first}} 等 {{count}} 项"
+    },
+    "interstitial": {
+      "title": "内容警告",
+      "body": "本模板涉及：{{reasons}}",
+      "subtext": "你可以查看 —— 我们只是想让你先知情。",
+      "show": "显示内容",
+      "back": "返回"
+    },
+    "filter": {
+      "hideWarned": "隐藏警告内容"
+    },
+    "settings": {
+      "title": "内容偏好",
+      "showAlways": "始终显示警告内容",
+      "showAlwaysHelp": "跳过已标记模板的模糊与警告页。"
+    },
+    "admin": {
+      "filter": {
+        "label": "警告",
+        "any": "任意",
+        "none": "无"
+      },
+      "panel": {
+        "title": "内容警告",
+        "current": "当前",
+        "origin": {
+          "creator": "创作者",
+          "moderation": "审核"
+        },
+        "add": "添加警告",
+        "remove": "移除",
+        "reason": "原因（必填）",
+        "history": "历史",
+        "historyEmpty": "暂无警告历史"
+      }
+    },
+    "notify": {
+      "changed": "你的模板\"{{title}}\"的内容警告已变更：{{change}}",
+      "added": "已添加 {{warning}}",
+      "removed": "已移除 {{warning}}"
+    }
   }
 }

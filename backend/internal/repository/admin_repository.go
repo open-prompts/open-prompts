@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"open-prompts/backend/internal/models"
+
+	"github.com/lib/pq"
 )
 
 var (
@@ -34,6 +37,7 @@ type TemplateFilters struct {
 	Visibility string // "" | public | private
 	OwnerID    string // deep-link filter from user detail
 	Sort       string // recently_updated | newest | oldest | most_likes
+	Warning    string // "" = any | "none" | a taxonomy key
 	Limit      int
 	Offset     int
 }
@@ -71,6 +75,13 @@ type AdminRepository interface {
 	// publish=false sets moderation_status='rejected'. Both are guarded by
 	// WHERE moderation_status='in_review' so concurrent decisions are safe.
 	SetTemplateModeration(ctx context.Context, templateID string, status string, publish bool) error
+	// UpdateTemplateWarnings sets the content_warnings/locked_warnings arrays
+	// on a template. Returns ErrTemplateNotFound when the id is unknown.
+	UpdateTemplateWarnings(ctx context.Context, templateID string, contentWarnings, lockedWarnings []string) error
+	// ListWarningHistory returns the warning-change audit entries for a
+	// template (action template.warning_add / template.warning_remove),
+	// newest first, paginated.
+	ListWarningHistory(ctx context.Context, templateID string, limit, offset int) ([]*models.WarningHistoryEntry, int64, error)
 	// Comments (moderation)
 	ListComments(ctx context.Context, f CommentFilters) ([]*models.AdminComment, int64, error)
 	DeleteComment(ctx context.Context, id string) (bool, int64, error)
@@ -93,13 +104,14 @@ func NewAdminRepository(db *sql.DB) AdminRepository {
 	return &adminRepository{db: db}
 }
 
-const adminUserColumns = `id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status, created_at, updated_at`
+const adminUserColumns = `id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status, approved_template_count, review_gated_remaining, show_warned_content, created_at, updated_at`
 
 func scanAdminUser(row interface{ Scan(...interface{}) error }) (*models.User, error) {
 	var u models.User
 	if err := row.Scan(
 		&u.ID, &u.Email, &u.Mobile, &u.PasswordHash, &u.DisplayName, &u.Avatar,
-		&u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt,
+		&u.Role, &u.Status, &u.ApprovedTemplateCount, &u.ReviewGatedRemaining, &u.ShowWarnedContent,
+		&u.CreatedAt, &u.UpdatedAt,
 	); err != nil {
 		return nil, err
 	}
@@ -231,13 +243,14 @@ func (r *adminRepository) ListUserIdentities(ctx context.Context, userID string)
 	return identities, nil
 }
 
-const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.created_at, t.updated_at`
+const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.content_warnings, t.locked_warnings, t.created_at, t.updated_at`
 
 func scanAdminTemplate(row interface{ Scan(...interface{}) error }) (*models.AdminTemplate, error) {
 	var t models.AdminTemplate
 	if err := row.Scan(
 		&t.ID, &t.OwnerID, &t.OwnerDisplayName, &t.Title, &t.Description,
 		&t.Visibility, &t.Type, &t.Language, &t.Tags, &t.LikeCount, &t.FavoriteCount,
+		&t.ContentWarnings, &t.LockedWarnings,
 		&t.CreatedAt, &t.UpdatedAt,
 	); err != nil {
 		return nil, err
@@ -265,6 +278,18 @@ func (r *adminRepository) ListTemplates(ctx context.Context, f TemplateFilters) 
 	if f.OwnerID != "" {
 		where += fmt.Sprintf(` AND t.owner_id = $%d`, argID)
 		args = append(args, f.OwnerID)
+		argID++
+	}
+	// Warning-state filter (FR-9): "" = any, "none" = no warnings, a
+	// taxonomy key = contains that warning. Values are bound parameters.
+	switch f.Warning {
+	case "none":
+		where += ` AND (t.content_warnings = '{}' OR t.content_warnings IS NULL)`
+	case "":
+		// any — no clause
+	default:
+		where += fmt.Sprintf(` AND t.content_warnings @> ARRAY[$%d]`, argID)
+		args = append(args, f.Warning)
 		argID++
 	}
 
@@ -465,6 +490,77 @@ func (r *adminRepository) SetTemplateModeration(ctx context.Context, templateID 
 		return ErrTemplateNotInReview
 	}
 	return nil
+}
+
+// UpdateTemplateWarnings sets the warning arrays on a template. The
+// WHERE id = $1 guard returns ErrTemplateNotFound when the id is unknown.
+func (r *adminRepository) UpdateTemplateWarnings(ctx context.Context, templateID string, contentWarnings, lockedWarnings []string) error {
+	query := `
+		UPDATE templates
+		SET content_warnings = $1, locked_warnings = $2, updated_at = now()
+		WHERE id = $3
+	`
+	res, err := r.db.ExecContext(ctx, query, pq.Array(warnArray(contentWarnings)), pq.Array(warnArray(lockedWarnings)), templateID)
+	if err != nil {
+		return fmt.Errorf("failed to update template warnings: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to update template warnings: %w", err)
+	}
+	if rows == 0 {
+		return ErrTemplateNotFound
+	}
+	return nil
+}
+
+// ListWarningHistory returns the warning-change audit entries for a template,
+// newest first, paginated. The warnings column is parsed from the reason
+// field, which the service stores as a JSON array of the changed warnings.
+func (r *adminRepository) ListWarningHistory(ctx context.Context, templateID string, limit, offset int) ([]*models.WarningHistoryEntry, int64, error) {
+	where := ` WHERE target_type = 'template' AND target_id = $1
+	           AND action IN ('template.warning_add', 'template.warning_remove')`
+	args := []interface{}{templateID}
+	argID := 2
+
+	countQuery := `SELECT COUNT(*) FROM admin_audit_logs` + where
+	var total int64
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count warning history: %w", err)
+	}
+
+	query := `SELECT id, actor_id, actor_email, action, reason, created_at
+FROM admin_audit_logs` + where + ` ORDER BY created_at DESC` +
+		fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argID, argID+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list warning history: %w", err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	var entries []*models.WarningHistoryEntry
+	for rows.Next() {
+		e := &models.WarningHistoryEntry{}
+		if err := rows.Scan(&e.ID, &e.ActorID, &e.ActorEmail, &e.Action, &e.Reason, &e.CreatedAt); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan warning history: %w", err)
+		}
+		// The reason field carries a JSON array of the changed warnings
+		// (service-side), so parse it back into the Warnings slice.
+		var warnings []string
+		if err := json.Unmarshal([]byte(e.Reason), &warnings); err == nil {
+			e.Warnings = warnings
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows error: %w", err)
+	}
+
+	return entries, total, nil
 }
 
 // InsertAuditLog appends an entry to the audit trail.

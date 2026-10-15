@@ -5,6 +5,7 @@ import { getAdminTemplate } from '../../services/adminApi';
 import Badge from '../../components/admin/Badge';
 import ErrorBanner from '../../components/admin/ErrorBanner';
 import EmptyState from '../../components/admin/EmptyState';
+import WarningActionsPanel from '../../components/warnings/WarningActionsPanel';
 import { formatDate } from '../../utils/adminFormat';
 import './TemplateDetailPage.scss';
 
@@ -21,6 +22,8 @@ const TemplateDetailPage = () => {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState('');
   const [openVersion, setOpenVersion] = useState(null);
+  const [warnings, setWarnings] = useState([]);
+  const [lockedWarnings, setLockedWarnings] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,6 +32,8 @@ const TemplateDetailPage = () => {
     try {
       const resp = await getAdminTemplate(id);
       setData(resp.data);
+      setWarnings(resp.data.template.content_warnings || []);
+      setLockedWarnings(resp.data.template.locked_warnings || []);
       // Open the newest version by default.
       if (resp.data && resp.data.versions && resp.data.versions.length > 0) {
         setOpenVersion(resp.data.versions[0].id);
@@ -151,6 +156,16 @@ const TemplateDetailPage = () => {
           })}
         </div>
       </section>
+
+      <WarningActionsPanel
+        templateId={template.id}
+        contentWarnings={warnings}
+        lockedWarnings={lockedWarnings}
+        onChanged={(cw, lw) => {
+          setWarnings(cw);
+          setLockedWarnings(lw);
+        }}
+      />
     </div>
   );
 };

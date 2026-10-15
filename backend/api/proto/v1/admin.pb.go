@@ -1156,8 +1156,12 @@ type AdminTemplateSummary struct {
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	OwnerId          string                 `protobuf:"bytes,11,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	OwnerDisplayName string                 `protobuf:"bytes,12,opt,name=owner_display_name,json=ownerDisplayName,proto3" json:"owner_display_name,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Active content warnings (taxonomy keys).
+	ContentWarnings []string `protobuf:"bytes,15,rep,name=content_warnings,json=contentWarnings,proto3" json:"content_warnings,omitempty"`
+	// The subset applied by moderation; creator-immutable.
+	LockedWarnings []string `protobuf:"bytes,16,rep,name=locked_warnings,json=lockedWarnings,proto3" json:"locked_warnings,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AdminTemplateSummary) Reset() {
@@ -1274,6 +1278,20 @@ func (x *AdminTemplateSummary) GetOwnerDisplayName() string {
 	return ""
 }
 
+func (x *AdminTemplateSummary) GetContentWarnings() []string {
+	if x != nil {
+		return x.ContentWarnings
+	}
+	return nil
+}
+
+func (x *AdminTemplateSummary) GetLockedWarnings() []string {
+	if x != nil {
+		return x.LockedWarnings
+	}
+	return nil
+}
+
 type ListAdminTemplatesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Search        string                 `protobuf:"bytes,1,opt,name=search,proto3" json:"search,omitempty"`                  // matches title or owner id/display_name
@@ -1282,6 +1300,7 @@ type ListAdminTemplatesRequest struct {
 	Sort          string                 `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`                      // "recently_updated" (default) | "newest" | "oldest" | "most_likes"
 	Page          int32                  `protobuf:"varint,5,opt,name=page,proto3" json:"page,omitempty"`
 	PerPage       int32                  `protobuf:"varint,6,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`
+	Warning       string                 `protobuf:"bytes,7,opt,name=warning,proto3" json:"warning,omitempty"` // "" = any | "none" | a taxonomy key (mature|violence|profanity|sensitive)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1356,6 +1375,13 @@ func (x *ListAdminTemplatesRequest) GetPerPage() int32 {
 		return x.PerPage
 	}
 	return 0
+}
+
+func (x *ListAdminTemplatesRequest) GetWarning() string {
+	if x != nil {
+		return x.Warning
+	}
+	return ""
 }
 
 type ListAdminTemplatesResponse struct {
@@ -3364,6 +3390,354 @@ func (x *UpdatePlatformSettingRequest) GetReason() string {
 	return ""
 }
 
+type UpdateTemplateWarningsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	Add           []string               `protobuf:"bytes,2,rep,name=add,proto3" json:"add,omitempty"`       // warnings to add (taxonomy keys)
+	Remove        []string               `protobuf:"bytes,3,rep,name=remove,proto3" json:"remove,omitempty"` // warnings to remove (taxonomy keys)
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"` // required, 3-500 chars, audit-logged
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTemplateWarningsRequest) Reset() {
+	*x = UpdateTemplateWarningsRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTemplateWarningsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTemplateWarningsRequest) ProtoMessage() {}
+
+func (x *UpdateTemplateWarningsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTemplateWarningsRequest.ProtoReflect.Descriptor instead.
+func (*UpdateTemplateWarningsRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *UpdateTemplateWarningsRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *UpdateTemplateWarningsRequest) GetAdd() []string {
+	if x != nil {
+		return x.Add
+	}
+	return nil
+}
+
+func (x *UpdateTemplateWarningsRequest) GetRemove() []string {
+	if x != nil {
+		return x.Remove
+	}
+	return nil
+}
+
+func (x *UpdateTemplateWarningsRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type UpdateTemplateWarningsResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId      string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	ContentWarnings []string               `protobuf:"bytes,2,rep,name=content_warnings,json=contentWarnings,proto3" json:"content_warnings,omitempty"` // post-change full set
+	LockedWarnings  []string               `protobuf:"bytes,3,rep,name=locked_warnings,json=lockedWarnings,proto3" json:"locked_warnings,omitempty"`    // post-change locked set
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UpdateTemplateWarningsResponse) Reset() {
+	*x = UpdateTemplateWarningsResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTemplateWarningsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTemplateWarningsResponse) ProtoMessage() {}
+
+func (x *UpdateTemplateWarningsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTemplateWarningsResponse.ProtoReflect.Descriptor instead.
+func (*UpdateTemplateWarningsResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *UpdateTemplateWarningsResponse) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *UpdateTemplateWarningsResponse) GetContentWarnings() []string {
+	if x != nil {
+		return x.ContentWarnings
+	}
+	return nil
+}
+
+func (x *UpdateTemplateWarningsResponse) GetLockedWarnings() []string {
+	if x != nil {
+		return x.LockedWarnings
+	}
+	return nil
+}
+
+type ListWarningHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`                      // 1-based, default 1
+	PerPage       int32                  `protobuf:"varint,3,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"` // default 20, max 100
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWarningHistoryRequest) Reset() {
+	*x = ListWarningHistoryRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWarningHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWarningHistoryRequest) ProtoMessage() {}
+
+func (x *ListWarningHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWarningHistoryRequest.ProtoReflect.Descriptor instead.
+func (*ListWarningHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ListWarningHistoryRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ListWarningHistoryRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListWarningHistoryRequest) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type WarningHistoryEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ActorId       string                 `protobuf:"bytes,2,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
+	ActorEmail    string                 `protobuf:"bytes,3,opt,name=actor_email,json=actorEmail,proto3" json:"actor_email,omitempty"`
+	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`     // "template.warning_add" | "template.warning_remove"
+	Warnings      []string               `protobuf:"bytes,5,rep,name=warnings,proto3" json:"warnings,omitempty"` // the warnings added/removed in this change
+	Reason        string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WarningHistoryEntry) Reset() {
+	*x = WarningHistoryEntry{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WarningHistoryEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarningHistoryEntry) ProtoMessage() {}
+
+func (x *WarningHistoryEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarningHistoryEntry.ProtoReflect.Descriptor instead.
+func (*WarningHistoryEntry) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *WarningHistoryEntry) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WarningHistoryEntry) GetActorId() string {
+	if x != nil {
+		return x.ActorId
+	}
+	return ""
+}
+
+func (x *WarningHistoryEntry) GetActorEmail() string {
+	if x != nil {
+		return x.ActorEmail
+	}
+	return ""
+}
+
+func (x *WarningHistoryEntry) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *WarningHistoryEntry) GetWarnings() []string {
+	if x != nil {
+		return x.Warnings
+	}
+	return nil
+}
+
+func (x *WarningHistoryEntry) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *WarningHistoryEntry) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type ListWarningHistoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*WarningHistoryEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWarningHistoryResponse) Reset() {
+	*x = ListWarningHistoryResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWarningHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWarningHistoryResponse) ProtoMessage() {}
+
+func (x *ListWarningHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWarningHistoryResponse.ProtoReflect.Descriptor instead.
+func (*ListWarningHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ListWarningHistoryResponse) GetEntries() []*WarningHistoryEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+func (x *ListWarningHistoryResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *ListWarningHistoryResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListWarningHistoryResponse) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
 var File_api_proto_v1_admin_proto protoreflect.FileDescriptor
 
 const file_api_proto_v1_admin_proto_rawDesc = "" +
@@ -3453,7 +3827,7 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\">\n" +
 	"\x12UserActionResponse\x12(\n" +
-	"\x04user\x18\x01 \x01(\v2\x14.v1.AdminUserSummaryR\x04user\"\xa5\x03\n" +
+	"\x04user\x18\x01 \x01(\v2\x14.v1.AdminUserSummaryR\x04user\"\xf9\x03\n" +
 	"\x14AdminTemplateSummary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1e\n" +
@@ -3472,7 +3846,9 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x19\n" +
 	"\bowner_id\x18\v \x01(\tR\aownerId\x12,\n" +
-	"\x12owner_display_name\x18\f \x01(\tR\x10ownerDisplayName\"\xb1\x01\n" +
+	"\x12owner_display_name\x18\f \x01(\tR\x10ownerDisplayName\x12)\n" +
+	"\x10content_warnings\x18\x0f \x03(\tR\x0fcontentWarnings\x12'\n" +
+	"\x0flocked_warnings\x18\x10 \x03(\tR\x0elockedWarnings\"\xcb\x01\n" +
 	"\x19ListAdminTemplatesRequest\x12\x16\n" +
 	"\x06search\x18\x01 \x01(\tR\x06search\x12\x1e\n" +
 	"\n" +
@@ -3481,7 +3857,8 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\bowner_id\x18\x03 \x01(\tR\aownerId\x12\x12\n" +
 	"\x04sort\x18\x04 \x01(\tR\x04sort\x12\x12\n" +
 	"\x04page\x18\x05 \x01(\x05R\x04page\x12\x19\n" +
-	"\bper_page\x18\x06 \x01(\x05R\aperPage\"\x99\x01\n" +
+	"\bper_page\x18\x06 \x01(\x05R\aperPage\x12\x18\n" +
+	"\awarning\x18\a \x01(\tR\awarning\"\x99\x01\n" +
 	"\x1aListAdminTemplatesResponse\x126\n" +
 	"\ttemplates\x18\x01 \x03(\v2\x18.v1.AdminTemplateSummaryR\ttemplates\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
@@ -3658,7 +4035,38 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\x1cUpdatePlatformSettingRequest\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason2\xde\v\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x82\x01\n" +
+	"\x1dUpdateTemplateWarningsRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x10\n" +
+	"\x03add\x18\x02 \x03(\tR\x03add\x12\x16\n" +
+	"\x06remove\x18\x03 \x03(\tR\x06remove\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"\x95\x01\n" +
+	"\x1eUpdateTemplateWarningsResponse\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12)\n" +
+	"\x10content_warnings\x18\x02 \x03(\tR\x0fcontentWarnings\x12'\n" +
+	"\x0flocked_warnings\x18\x03 \x03(\tR\x0elockedWarnings\"k\n" +
+	"\x19ListWarningHistoryRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x12\n" +
+	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x03 \x01(\x05R\aperPage\"\xe8\x01\n" +
+	"\x13WarningHistoryEntry\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bactor_id\x18\x02 \x01(\tR\aactorId\x12\x1f\n" +
+	"\vactor_email\x18\x03 \x01(\tR\n" +
+	"actorEmail\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\x12\x1a\n" +
+	"\bwarnings\x18\x05 \x03(\tR\bwarnings\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x94\x01\n" +
+	"\x1aListWarningHistoryResponse\x121\n" +
+	"\aentries\x18\x01 \x03(\v2\x17.v1.WarningHistoryEntryR\aentries\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x04 \x01(\x05R\aperPage2\x94\r\n" +
 	"\fAdminService\x12;\n" +
 	"\n" +
 	"AdminLogin\x12\x15.v1.AdminLoginRequest\x1a\x16.v1.AdminLoginResponse\x12V\n" +
@@ -3680,7 +4088,9 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\x16RejectReviewSubmission\x12!.v1.RejectReviewSubmissionRequest\x1a\x1a.v1.ReviewDecisionResponse\x12B\n" +
 	"\x10GetReviewMetrics\x12\x1b.v1.GetReviewMetricsRequest\x1a\x11.v1.ReviewMetrics\x12V\n" +
 	"\x13GetPlatformSettings\x12\x1e.v1.GetPlatformSettingsRequest\x1a\x1f.v1.GetPlatformSettingsResponse\x12S\n" +
-	"\x15UpdatePlatformSetting\x12 .v1.UpdatePlatformSettingRequest\x1a\x18.v1.PlatformSettingEntryB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
+	"\x15UpdatePlatformSetting\x12 .v1.UpdatePlatformSettingRequest\x1a\x18.v1.PlatformSettingEntry\x12_\n" +
+	"\x16UpdateTemplateWarnings\x12!.v1.UpdateTemplateWarningsRequest\x1a\".v1.UpdateTemplateWarningsResponse\x12S\n" +
+	"\x12ListWarningHistory\x12\x1d.v1.ListWarningHistoryRequest\x1a\x1e.v1.ListWarningHistoryResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
 
 var (
 	file_api_proto_v1_admin_proto_rawDescOnce sync.Once
@@ -3694,7 +4104,7 @@ func file_api_proto_v1_admin_proto_rawDescGZIP() []byte {
 	return file_api_proto_v1_admin_proto_rawDescData
 }
 
-var file_api_proto_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
+var file_api_proto_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_api_proto_v1_admin_proto_goTypes = []any{
 	(*AdminLoginRequest)(nil),              // 0: v1.AdminLoginRequest
 	(*AdminLoginResponse)(nil),             // 1: v1.AdminLoginResponse
@@ -3745,14 +4155,19 @@ var file_api_proto_v1_admin_proto_goTypes = []any{
 	(*PlatformSettingEntry)(nil),           // 46: v1.PlatformSettingEntry
 	(*GetPlatformSettingsResponse)(nil),    // 47: v1.GetPlatformSettingsResponse
 	(*UpdatePlatformSettingRequest)(nil),   // 48: v1.UpdatePlatformSettingRequest
-	(*timestamppb.Timestamp)(nil),          // 49: google.protobuf.Timestamp
+	(*UpdateTemplateWarningsRequest)(nil),  // 49: v1.UpdateTemplateWarningsRequest
+	(*UpdateTemplateWarningsResponse)(nil), // 50: v1.UpdateTemplateWarningsResponse
+	(*ListWarningHistoryRequest)(nil),      // 51: v1.ListWarningHistoryRequest
+	(*WarningHistoryEntry)(nil),            // 52: v1.WarningHistoryEntry
+	(*ListWarningHistoryResponse)(nil),     // 53: v1.ListWarningHistoryResponse
+	(*timestamppb.Timestamp)(nil),          // 54: google.protobuf.Timestamp
 }
 var file_api_proto_v1_admin_proto_depIdxs = []int32{
 	6,  // 0: v1.AdminLoginResponse.user:type_name -> v1.AdminUserSummary
 	6,  // 1: v1.GetAdminStatsResponse.recent_signups:type_name -> v1.AdminUserSummary
 	18, // 2: v1.GetAdminStatsResponse.recent_templates:type_name -> v1.AdminTemplateSummary
-	49, // 3: v1.AdminUserSummary.created_at:type_name -> google.protobuf.Timestamp
-	49, // 4: v1.AdminUserSummary.updated_at:type_name -> google.protobuf.Timestamp
+	54, // 3: v1.AdminUserSummary.created_at:type_name -> google.protobuf.Timestamp
+	54, // 4: v1.AdminUserSummary.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 5: v1.ListUsersResponse.users:type_name -> v1.AdminUserSummary
 	6,  // 6: v1.GetUserResponse.user:type_name -> v1.AdminUserSummary
 	11, // 7: v1.GetUserResponse.stats:type_name -> v1.UserStats
@@ -3760,77 +4175,83 @@ var file_api_proto_v1_admin_proto_depIdxs = []int32{
 	13, // 9: v1.GetUserResponse.api_keys:type_name -> v1.AdminAPIKeySummary
 	18, // 10: v1.GetUserResponse.templates:type_name -> v1.AdminTemplateSummary
 	24, // 11: v1.GetUserResponse.action_history:type_name -> v1.AdminAuditLogEntry
-	49, // 12: v1.OAuthIdentity.created_at:type_name -> google.protobuf.Timestamp
-	49, // 13: v1.AdminAPIKeySummary.created_at:type_name -> google.protobuf.Timestamp
-	49, // 14: v1.AdminAPIKeySummary.last_used_at:type_name -> google.protobuf.Timestamp
+	54, // 12: v1.OAuthIdentity.created_at:type_name -> google.protobuf.Timestamp
+	54, // 13: v1.AdminAPIKeySummary.created_at:type_name -> google.protobuf.Timestamp
+	54, // 14: v1.AdminAPIKeySummary.last_used_at:type_name -> google.protobuf.Timestamp
 	6,  // 15: v1.UserActionResponse.user:type_name -> v1.AdminUserSummary
-	49, // 16: v1.AdminTemplateSummary.created_at:type_name -> google.protobuf.Timestamp
-	49, // 17: v1.AdminTemplateSummary.updated_at:type_name -> google.protobuf.Timestamp
+	54, // 16: v1.AdminTemplateSummary.created_at:type_name -> google.protobuf.Timestamp
+	54, // 17: v1.AdminTemplateSummary.updated_at:type_name -> google.protobuf.Timestamp
 	18, // 18: v1.ListAdminTemplatesResponse.templates:type_name -> v1.AdminTemplateSummary
 	18, // 19: v1.GetAdminTemplateResponse.template:type_name -> v1.AdminTemplateSummary
 	23, // 20: v1.GetAdminTemplateResponse.versions:type_name -> v1.AdminTemplateVersion
-	49, // 21: v1.AdminTemplateVersion.created_at:type_name -> google.protobuf.Timestamp
-	49, // 22: v1.AdminAuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	54, // 21: v1.AdminTemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	54, // 22: v1.AdminAuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
 	24, // 23: v1.ListAuditLogsResponse.entries:type_name -> v1.AdminAuditLogEntry
-	49, // 24: v1.AdminCommentEntry.created_at:type_name -> google.protobuf.Timestamp
-	49, // 25: v1.AdminCommentEntry.updated_at:type_name -> google.protobuf.Timestamp
+	54, // 24: v1.AdminCommentEntry.created_at:type_name -> google.protobuf.Timestamp
+	54, // 25: v1.AdminCommentEntry.updated_at:type_name -> google.protobuf.Timestamp
 	27, // 26: v1.ListAdminCommentsResponse.entries:type_name -> v1.AdminCommentEntry
-	49, // 27: v1.ReviewQueueItem.submitted_at:type_name -> google.protobuf.Timestamp
+	54, // 27: v1.ReviewQueueItem.submitted_at:type_name -> google.protobuf.Timestamp
 	33, // 28: v1.ListReviewQueueResponse.items:type_name -> v1.ReviewQueueItem
-	49, // 29: v1.ReviewChainEntry.submitted_at:type_name -> google.protobuf.Timestamp
-	49, // 30: v1.ReviewChainEntry.decided_at:type_name -> google.protobuf.Timestamp
-	49, // 31: v1.ReviewSubmissionDetail.creator_joined_at:type_name -> google.protobuf.Timestamp
-	49, // 32: v1.ReviewSubmissionDetail.submitted_at:type_name -> google.protobuf.Timestamp
+	54, // 29: v1.ReviewChainEntry.submitted_at:type_name -> google.protobuf.Timestamp
+	54, // 30: v1.ReviewChainEntry.decided_at:type_name -> google.protobuf.Timestamp
+	54, // 31: v1.ReviewSubmissionDetail.creator_joined_at:type_name -> google.protobuf.Timestamp
+	54, // 32: v1.ReviewSubmissionDetail.submitted_at:type_name -> google.protobuf.Timestamp
 	36, // 33: v1.ReviewSubmissionDetail.chain:type_name -> v1.ReviewChainEntry
 	37, // 34: v1.GetReviewSubmissionResponse.submission:type_name -> v1.ReviewSubmissionDetail
 	43, // 35: v1.ReviewMetrics.rejection_rate_by_reason:type_name -> v1.RejectionRateEntry
-	49, // 36: v1.PlatformSettingEntry.updated_at:type_name -> google.protobuf.Timestamp
+	54, // 36: v1.PlatformSettingEntry.updated_at:type_name -> google.protobuf.Timestamp
 	46, // 37: v1.GetPlatformSettingsResponse.settings:type_name -> v1.PlatformSettingEntry
-	0,  // 38: v1.AdminService.AdminLogin:input_type -> v1.AdminLoginRequest
-	2,  // 39: v1.AdminService.RefreshAdminSession:input_type -> v1.RefreshAdminSessionRequest
-	4,  // 40: v1.AdminService.GetAdminStats:input_type -> v1.GetAdminStatsRequest
-	7,  // 41: v1.AdminService.ListUsers:input_type -> v1.ListUsersRequest
-	9,  // 42: v1.AdminService.GetUser:input_type -> v1.GetUserRequest
-	14, // 43: v1.AdminService.BanUser:input_type -> v1.BanUserRequest
-	15, // 44: v1.AdminService.UnbanUser:input_type -> v1.UnbanUserRequest
-	16, // 45: v1.AdminService.ChangeUserRole:input_type -> v1.ChangeUserRoleRequest
-	19, // 46: v1.AdminService.ListTemplates:input_type -> v1.ListAdminTemplatesRequest
-	21, // 47: v1.AdminService.GetTemplate:input_type -> v1.GetAdminTemplateRequest
-	25, // 48: v1.AdminService.ListAuditLogs:input_type -> v1.ListAuditLogsRequest
-	28, // 49: v1.AdminService.ListAdminComments:input_type -> v1.ListAdminCommentsRequest
-	30, // 50: v1.AdminService.DeleteAdminComment:input_type -> v1.DeleteAdminCommentRequest
-	32, // 51: v1.AdminService.ListReviewQueue:input_type -> v1.ListReviewQueueRequest
-	35, // 52: v1.AdminService.GetReviewSubmission:input_type -> v1.GetReviewSubmissionRequest
-	39, // 53: v1.AdminService.ApproveReviewSubmission:input_type -> v1.ApproveReviewSubmissionRequest
-	40, // 54: v1.AdminService.RejectReviewSubmission:input_type -> v1.RejectReviewSubmissionRequest
-	42, // 55: v1.AdminService.GetReviewMetrics:input_type -> v1.GetReviewMetricsRequest
-	45, // 56: v1.AdminService.GetPlatformSettings:input_type -> v1.GetPlatformSettingsRequest
-	48, // 57: v1.AdminService.UpdatePlatformSetting:input_type -> v1.UpdatePlatformSettingRequest
-	1,  // 58: v1.AdminService.AdminLogin:output_type -> v1.AdminLoginResponse
-	3,  // 59: v1.AdminService.RefreshAdminSession:output_type -> v1.RefreshAdminSessionResponse
-	5,  // 60: v1.AdminService.GetAdminStats:output_type -> v1.GetAdminStatsResponse
-	8,  // 61: v1.AdminService.ListUsers:output_type -> v1.ListUsersResponse
-	10, // 62: v1.AdminService.GetUser:output_type -> v1.GetUserResponse
-	17, // 63: v1.AdminService.BanUser:output_type -> v1.UserActionResponse
-	17, // 64: v1.AdminService.UnbanUser:output_type -> v1.UserActionResponse
-	17, // 65: v1.AdminService.ChangeUserRole:output_type -> v1.UserActionResponse
-	20, // 66: v1.AdminService.ListTemplates:output_type -> v1.ListAdminTemplatesResponse
-	22, // 67: v1.AdminService.GetTemplate:output_type -> v1.GetAdminTemplateResponse
-	26, // 68: v1.AdminService.ListAuditLogs:output_type -> v1.ListAuditLogsResponse
-	29, // 69: v1.AdminService.ListAdminComments:output_type -> v1.ListAdminCommentsResponse
-	31, // 70: v1.AdminService.DeleteAdminComment:output_type -> v1.DeleteAdminCommentResponse
-	34, // 71: v1.AdminService.ListReviewQueue:output_type -> v1.ListReviewQueueResponse
-	38, // 72: v1.AdminService.GetReviewSubmission:output_type -> v1.GetReviewSubmissionResponse
-	41, // 73: v1.AdminService.ApproveReviewSubmission:output_type -> v1.ReviewDecisionResponse
-	41, // 74: v1.AdminService.RejectReviewSubmission:output_type -> v1.ReviewDecisionResponse
-	44, // 75: v1.AdminService.GetReviewMetrics:output_type -> v1.ReviewMetrics
-	47, // 76: v1.AdminService.GetPlatformSettings:output_type -> v1.GetPlatformSettingsResponse
-	46, // 77: v1.AdminService.UpdatePlatformSetting:output_type -> v1.PlatformSettingEntry
-	58, // [58:78] is the sub-list for method output_type
-	38, // [38:58] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	54, // 38: v1.WarningHistoryEntry.created_at:type_name -> google.protobuf.Timestamp
+	52, // 39: v1.ListWarningHistoryResponse.entries:type_name -> v1.WarningHistoryEntry
+	0,  // 40: v1.AdminService.AdminLogin:input_type -> v1.AdminLoginRequest
+	2,  // 41: v1.AdminService.RefreshAdminSession:input_type -> v1.RefreshAdminSessionRequest
+	4,  // 42: v1.AdminService.GetAdminStats:input_type -> v1.GetAdminStatsRequest
+	7,  // 43: v1.AdminService.ListUsers:input_type -> v1.ListUsersRequest
+	9,  // 44: v1.AdminService.GetUser:input_type -> v1.GetUserRequest
+	14, // 45: v1.AdminService.BanUser:input_type -> v1.BanUserRequest
+	15, // 46: v1.AdminService.UnbanUser:input_type -> v1.UnbanUserRequest
+	16, // 47: v1.AdminService.ChangeUserRole:input_type -> v1.ChangeUserRoleRequest
+	19, // 48: v1.AdminService.ListTemplates:input_type -> v1.ListAdminTemplatesRequest
+	21, // 49: v1.AdminService.GetTemplate:input_type -> v1.GetAdminTemplateRequest
+	25, // 50: v1.AdminService.ListAuditLogs:input_type -> v1.ListAuditLogsRequest
+	28, // 51: v1.AdminService.ListAdminComments:input_type -> v1.ListAdminCommentsRequest
+	30, // 52: v1.AdminService.DeleteAdminComment:input_type -> v1.DeleteAdminCommentRequest
+	32, // 53: v1.AdminService.ListReviewQueue:input_type -> v1.ListReviewQueueRequest
+	35, // 54: v1.AdminService.GetReviewSubmission:input_type -> v1.GetReviewSubmissionRequest
+	39, // 55: v1.AdminService.ApproveReviewSubmission:input_type -> v1.ApproveReviewSubmissionRequest
+	40, // 56: v1.AdminService.RejectReviewSubmission:input_type -> v1.RejectReviewSubmissionRequest
+	42, // 57: v1.AdminService.GetReviewMetrics:input_type -> v1.GetReviewMetricsRequest
+	45, // 58: v1.AdminService.GetPlatformSettings:input_type -> v1.GetPlatformSettingsRequest
+	48, // 59: v1.AdminService.UpdatePlatformSetting:input_type -> v1.UpdatePlatformSettingRequest
+	49, // 60: v1.AdminService.UpdateTemplateWarnings:input_type -> v1.UpdateTemplateWarningsRequest
+	51, // 61: v1.AdminService.ListWarningHistory:input_type -> v1.ListWarningHistoryRequest
+	1,  // 62: v1.AdminService.AdminLogin:output_type -> v1.AdminLoginResponse
+	3,  // 63: v1.AdminService.RefreshAdminSession:output_type -> v1.RefreshAdminSessionResponse
+	5,  // 64: v1.AdminService.GetAdminStats:output_type -> v1.GetAdminStatsResponse
+	8,  // 65: v1.AdminService.ListUsers:output_type -> v1.ListUsersResponse
+	10, // 66: v1.AdminService.GetUser:output_type -> v1.GetUserResponse
+	17, // 67: v1.AdminService.BanUser:output_type -> v1.UserActionResponse
+	17, // 68: v1.AdminService.UnbanUser:output_type -> v1.UserActionResponse
+	17, // 69: v1.AdminService.ChangeUserRole:output_type -> v1.UserActionResponse
+	20, // 70: v1.AdminService.ListTemplates:output_type -> v1.ListAdminTemplatesResponse
+	22, // 71: v1.AdminService.GetTemplate:output_type -> v1.GetAdminTemplateResponse
+	26, // 72: v1.AdminService.ListAuditLogs:output_type -> v1.ListAuditLogsResponse
+	29, // 73: v1.AdminService.ListAdminComments:output_type -> v1.ListAdminCommentsResponse
+	31, // 74: v1.AdminService.DeleteAdminComment:output_type -> v1.DeleteAdminCommentResponse
+	34, // 75: v1.AdminService.ListReviewQueue:output_type -> v1.ListReviewQueueResponse
+	38, // 76: v1.AdminService.GetReviewSubmission:output_type -> v1.GetReviewSubmissionResponse
+	41, // 77: v1.AdminService.ApproveReviewSubmission:output_type -> v1.ReviewDecisionResponse
+	41, // 78: v1.AdminService.RejectReviewSubmission:output_type -> v1.ReviewDecisionResponse
+	44, // 79: v1.AdminService.GetReviewMetrics:output_type -> v1.ReviewMetrics
+	47, // 80: v1.AdminService.GetPlatformSettings:output_type -> v1.GetPlatformSettingsResponse
+	46, // 81: v1.AdminService.UpdatePlatformSetting:output_type -> v1.PlatformSettingEntry
+	50, // 82: v1.AdminService.UpdateTemplateWarnings:output_type -> v1.UpdateTemplateWarningsResponse
+	53, // 83: v1.AdminService.ListWarningHistory:output_type -> v1.ListWarningHistoryResponse
+	62, // [62:84] is the sub-list for method output_type
+	40, // [40:62] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_v1_admin_proto_init() }
@@ -3844,7 +4265,7 @@ func file_api_proto_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_v1_admin_proto_rawDesc), len(file_api_proto_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   49,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

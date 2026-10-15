@@ -333,6 +333,9 @@ func main() {
 				req.Keyword = q.Get("q") // alias
 			}
 			req.Sort = q.Get("sort")
+			if v := q.Get("exclude_warned"); v == "true" {
+				req.ExcludeWarned = true
+			}
 
 			resp, err := svc.ListTemplates(ctx, req)
 			if err != nil {
@@ -1747,6 +1750,7 @@ func main() {
 		req.Visibility = q.Get("visibility")
 		req.OwnerId = q.Get("owner_id")
 		req.Sort = q.Get("sort")
+		req.Warning = q.Get("warning")
 		if v, err := strconv.Atoi(q.Get("page")); err == nil {
 			req.Page = int32(v)
 		}
@@ -1885,14 +1889,10 @@ func main() {
 
 	http.HandleFunc("/api/v1/admin/templates/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		if r.Method == http.MethodOptions {
-			return
-		}
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		ctx, ok := requireAdmin(w, r)
@@ -1900,20 +1900,82 @@ func main() {
 			return
 		}
 
-		id := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/templates/")
-		if id == "" {
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/templates/")
+		parts := strings.Split(rest, "/")
+		if parts[0] == "" {
 			http.Error(w, "ID required", http.StatusBadRequest)
 			return
 		}
+		templateID := parts[0]
 
-		resp, err := adminSvc.GetTemplate(ctx, &pb.GetAdminTemplateRequest{Id: id})
-		if err != nil {
-			writeError(w, err)
+		// GET /api/v1/admin/templates/{id}
+		if r.Method == http.MethodGet && len(parts) == 1 {
+			resp, err := adminSvc.GetTemplate(ctx, &pb.GetAdminTemplateRequest{Id: templateID})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		b, _ := marshaler.Marshal(resp)
-		_, _ = w.Write(b)
+
+		// Warning routes:
+		//   POST   /api/v1/admin/templates/{id}/warnings   (add)
+		//   DELETE /api/v1/admin/templates/{id}/warnings   (remove)
+		//   GET    /api/v1/admin/templates/{id}/warnings/history
+		if len(parts) == 2 && parts[1] == "warnings" {
+			if r.Method != http.MethodPost && r.Method != http.MethodDelete {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			var body struct {
+				Add    []string `json:"add"`
+				Remove []string `json:"remove"`
+				Reason string   `json:"reason"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "Invalid request body", http.StatusBadRequest)
+				return
+			}
+			resp, err := adminSvc.UpdateTemplateWarnings(ctx, &pb.UpdateTemplateWarningsRequest{
+				TemplateId: templateID,
+				Add:        body.Add,
+				Remove:     body.Remove,
+				Reason:     body.Reason,
+			})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		if len(parts) == 3 && parts[1] == "warnings" && parts[2] == "history" && r.Method == http.MethodGet {
+			req := &pb.ListWarningHistoryRequest{TemplateId: templateID}
+			q := r.URL.Query()
+			if v, err := strconv.Atoi(q.Get("page")); err == nil {
+				req.Page = int32(v)
+			}
+			if v, err := strconv.Atoi(q.Get("per_page")); err == nil {
+				req.PerPage = int32(v)
+			}
+			resp, err := adminSvc.ListWarningHistory(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
 	http.HandleFunc("/api/v1/admin/users/", func(w http.ResponseWriter, r *http.Request) {

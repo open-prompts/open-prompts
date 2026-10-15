@@ -25,6 +25,7 @@ const TemplatesPage = () => {
   const visibility = searchParams.get('visibility') || '';
   const ownerId = searchParams.get('owner_id') || '';
   const sort = searchParams.get('sort') || 'recently_updated';
+  const warning = searchParams.get('warning') || '';
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const perPage = Math.max(1, parseInt(searchParams.get('per_page') || '20', 10) || 20);
 
@@ -50,6 +51,7 @@ const TemplatesPage = () => {
       if (q) params.search = q;
       if (visibility) params.visibility = visibility;
       if (ownerId) params.owner_id = ownerId;
+      if (warning) params.warning = warning;
       const resp = await getAdminTemplates(params);
       setData(resp.data);
     } catch (err) {
@@ -57,14 +59,14 @@ const TemplatesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [q, visibility, ownerId, sort, page, perPage]);
+  }, [q, visibility, ownerId, sort, warning, page, perPage]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const lang = i18n.language || 'en';
-  const hasFilters = q || visibility || ownerId;
+  const hasFilters = q || visibility || ownerId || warning;
 
   const columns = [
     {
@@ -117,6 +119,23 @@ const TemplatesPage = () => {
       key: 'favorite_count',
       header: t('admin.templates.favorites'),
       render: (tpl) => formatNumber(tpl.favorite_count, lang),
+    },
+    {
+      key: 'warnings',
+      header: t('warnings.admin.filter.label'),
+      render: (tpl) => {
+        const warnings = tpl.content_warnings || [];
+        if (warnings.length === 0) return <span className="admin-templates__no-warnings">—</span>;
+        return (
+          <span className="admin-templates__warnings">
+            {warnings.map((w) => (
+              <span key={w} className="admin-templates__warning-chip">
+                {t(`warnings.type.${w}`, { defaultValue: w })}
+              </span>
+            ))}
+          </span>
+        );
+      },
     },
     {
       key: 'updated_at',
@@ -172,6 +191,19 @@ const TemplatesPage = () => {
             { value: 'newest', label: t('admin.users.newest') },
             { value: 'oldest', label: t('admin.users.oldest') },
             { value: 'most_likes', label: t('admin.templates.sort_most_likes') },
+          ]}
+        />
+        <AdminSelect
+          label={t('warnings.admin.filter.label')}
+          value={warning}
+          onChange={(e) => setParam({ warning: e.target.value })}
+          options={[
+            { value: '', label: t('warnings.admin.filter.any') },
+            { value: 'none', label: t('warnings.admin.filter.none') },
+            { value: 'mature', label: t('warnings.type.mature') },
+            { value: 'violence', label: t('warnings.type.violence') },
+            { value: 'profanity', label: t('warnings.type.profanity') },
+            { value: 'sensitive', label: t('warnings.type.sensitive') },
           ]}
         />
       </div>

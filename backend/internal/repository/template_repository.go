@@ -40,14 +40,15 @@ func (r *templateRepository) Create(ctx context.Context, t *models.Template) err
 	query := `
 		INSERT INTO templates (
 			owner_id, title, description, visibility, type, tags, category, language,
-			moderation_status, published_at, created_at, updated_at
+			moderation_status, published_at, content_warnings, locked_warnings, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
 		) RETURNING id
 	`
 	err := r.db.QueryRowContext(ctx, query,
 		t.OwnerID, t.Title, t.Description, t.Visibility, t.Type, pq.Array(t.Tags), t.Category, t.Language,
-		t.ModerationStatus, t.PublishedAt, t.CreatedAt, t.UpdatedAt,
+		t.ModerationStatus, t.PublishedAt, pq.Array(warnArray(t.ContentWarnings)), pq.Array(warnArray(t.LockedWarnings)),
+		t.CreatedAt, t.UpdatedAt,
 	).Scan(&t.ID)
 	if err != nil {
 		return fmt.Errorf("failed to create template: %w", err)
@@ -60,17 +61,28 @@ func (r *templateRepository) Update(ctx context.Context, t *models.Template) err
 	query := `
 		UPDATE templates
 		SET title = $1, description = $2, visibility = $3, tags = $4, category = $5, language = $6,
-		    moderation_status = $7, published_at = $8, updated_at = $9
-		WHERE id = $10
+		    moderation_status = $7, published_at = $8, content_warnings = $9, locked_warnings = $10,
+		    updated_at = $11
+		WHERE id = $12
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		t.Title, t.Description, t.Visibility, pq.Array(t.Tags), t.Category, t.Language,
-		t.ModerationStatus, t.PublishedAt, t.UpdatedAt, t.ID,
+		t.ModerationStatus, t.PublishedAt, pq.Array(warnArray(t.ContentWarnings)), pq.Array(warnArray(t.LockedWarnings)),
+		t.UpdatedAt, t.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update template: %w", err)
 	}
 	return nil
+}
+
+// warnArray returns a non-nil slice for the warning columns so an empty set
+// is stored as '{}' (NOT NULL) rather than NULL.
+func warnArray(a []string) []string {
+	if a == nil {
+		return []string{}
+	}
+	return a
 }
 
 // Delete removes a template from the database.
@@ -89,6 +101,7 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
 			t.like_count, t.favorite_count, t.comment_count, t.moderation_status, t.published_at,
+			t.content_warnings, t.locked_warnings,
 			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
@@ -101,7 +114,8 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 	err := r.db.QueryRowContext(ctx, query, id, currentUserID).Scan(
 		&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
 		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
-		&t.ModerationStatus, &t.PublishedAt, &t.CreatedAt, &t.UpdatedAt,
+		&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
+		&t.CreatedAt, &t.UpdatedAt,
 		&t.IsLiked, &t.IsFavorited,
 	)
 	if err != nil {
@@ -135,6 +149,12 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 // Expressed as a Postgres interval literal because a bare numeric bind
 // parameter is interpreted in seconds and 7d of nanoseconds overflows it.
 const trendingWindow = "7 days"
+
+// defaultWarningTaxonomy is the built-in fallback warning taxonomy used by
+// the exclude_warned filter when the platform_settings value is unavailable.
+// The service normally passes the live taxonomy; this is a resilience
+// fallback so the filter never inlines user input.
+var defaultWarningTaxonomy = []string{"mature", "violence", "profanity", "sensitive"}
 
 // escapeLike backslash-escapes LIKE metacharacters (\, %, _) so user input
 // is always matched literally inside an ILIKE pattern.
@@ -223,6 +243,14 @@ func buildTemplateConditions(filters map[string]interface{}, args []interface{},
 		// stream except their owner's. $1 is current_user_id ("" for
 		// anonymous), so the bypass never matches for anonymous callers.
 		query += " AND (t.moderation_status = 'normal' OR t.owner_id = $1)"
+		// exclude_warned applies to the public stream only (FR-6): when
+		// true, drop templates carrying any taxonomy warning. The taxonomy
+		// array is a bound parameter, never inlined (constraint 7).
+		if val, ok := filters["exclude_warned"]; ok && val.(bool) {
+			query += fmt.Sprintf(" AND NOT (t.content_warnings && $%d)", argID)
+			args = append(args, pq.Array(defaultWarningTaxonomy))
+			argID++
+		}
 	}
 	// Keyword: case-insensitive phrase match across title, description,
 	// category, individual tag values, and latest-version content. The
@@ -279,6 +307,7 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
 			t.like_count, t.favorite_count, t.comment_count, t.moderation_status, t.published_at,
+			t.content_warnings, t.locked_warnings,
 			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
@@ -312,7 +341,8 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 		if err := rows.Scan(
 			&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
 			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
-			&t.ModerationStatus, &t.PublishedAt, &t.CreatedAt, &t.UpdatedAt,
+			&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
+			&t.CreatedAt, &t.UpdatedAt,
 			&t.IsLiked, &t.IsFavorited,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan template: %w", err)

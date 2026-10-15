@@ -66,7 +66,8 @@ RETURNING created_at, updated_at`
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	zap.S().Infof("UserRepository.GetByEmail: email=%s", email)
 	query := `
-SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status, created_at, updated_at
+SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status,
+       approved_template_count, review_gated_remaining, show_warned_content, created_at, updated_at
 FROM users
 WHERE email = $1`
 
@@ -80,6 +81,9 @@ WHERE email = $1`
 		&user.Avatar,
 		&user.Role,
 		&user.Status,
+		&user.ApprovedTemplateCount,
+		&user.ReviewGatedRemaining,
+		&user.ShowWarnedContent,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -97,7 +101,8 @@ WHERE email = $1`
 func (r *userRepository) GetByID(ctx context.Context, id string) (*models.User, error) {
 	zap.S().Infof("UserRepository.GetByID: id=%s", id)
 	query := `
-SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status, created_at, updated_at
+SELECT id, email, mobile, password_hash, display_name, COALESCE(avatar, ''), role, status,
+       approved_template_count, review_gated_remaining, show_warned_content, created_at, updated_at
 FROM users
 WHERE id = $1`
 
@@ -111,6 +116,9 @@ WHERE id = $1`
 		&user.Avatar,
 		&user.Role,
 		&user.Status,
+		&user.ApprovedTemplateCount,
+		&user.ReviewGatedRemaining,
+		&user.ShowWarnedContent,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -129,7 +137,8 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 	zap.S().Infof("UserRepository.Update: id=%s", user.ID)
 	query := `
 UPDATE users
-SET email = $2, mobile = $3, password_hash = $4, display_name = $5, avatar = $6, updated_at = $7
+SET email = $2, mobile = $3, password_hash = $4, display_name = $5, avatar = $6,
+    show_warned_content = $7, updated_at = $8
 WHERE id = $1`
 
 	args := []interface{}{
@@ -139,6 +148,7 @@ WHERE id = $1`
 		user.PasswordHash,
 		user.DisplayName,
 		user.Avatar,
+		user.ShowWarnedContent,
 		time.Now(),
 	}
 

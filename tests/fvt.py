@@ -2711,6 +2711,304 @@ def set_review_threshold(value, reason):
     return resp.status_code == 200
 
 
+def test_content_warnings():
+    """Content warnings (AC-1..AC-10):
+    1.  Creator self-declares a warning at create -> returned + locked empty
+    2.  Creator removes a self-declared warning -> 200, empty
+    3.  Admin adds a warning with reason -> audit + creator notification;
+        creator sees locked_warnings; creator removing it -> 403
+    4.  exclude_warned=true filters warned templates from the public stream
+    5.  Admin warning filter (none / specific key)
+    6.  Unknown warning type on create -> 400
+    7.  FR-11: warned template's position in newest/most_liked unchanged
+    8.  NFR-2: taxonomy editable via admin settings
+    9.  Audit log records template.warning_add / template.warning_remove
+    """
+    print("\n--- Starting Content Warnings Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    NOTIF_URL = f"{APP}/notifications"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    creator_id = f"fvt_warn_creator_{ts}"
+    viewer_id = f"fvt_warn_viewer_{ts}"
+    creator_token = get_auth_token(creator_id)
+    viewer_token = get_auth_token(viewer_id)
+    if not creator_token or not viewer_token:
+        print("Failed to create test users")
+        return False
+    headers_creator = {"Authorization": f"Bearer {creator_token}"}
+    headers_viewer = {"Authorization": f"Bearer {viewer_token}"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # --- 1. AC-1: creator self-declares a warning at create ---
+    print("1. Creator self-declares warning (AC-1)...")
+    payload = {
+        "title": f"Warned Template {ts}",
+        "description": "Has mature content",
+        "content": "Mature content here",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["warntest"],
+        "content_warnings": ["mature"],
+    }
+    resp = requests.post(BASE_URL, json=payload, headers=headers_creator)
+    if resp.status_code != 200:
+        print(f"Create warned template failed: {resp.status_code} - {resp.text}")
+        return False
+    tpl = resp.json()["template"]
+    tid = tpl["id"]
+    CREATED_TEMPLATES.append({"id": tid, "owner_id": creator_id})
+    if tpl.get("content_warnings") != ["mature"]:
+        print(f"content_warnings should be ['mature'], got {tpl.get('content_warnings')}")
+        return False
+    if tpl.get("locked_warnings"):
+        print(f"locked_warnings should be empty on create, got {tpl.get('locked_warnings')}")
+        return False
+    # GET detail returns the same
+    resp = requests.get(f"{BASE_URL}/{tid}", headers=headers_creator)
+    if resp.status_code != 200 or resp.json()["template"].get("content_warnings") != ["mature"]:
+        print("GET detail should return content_warnings ['mature']")
+        return False
+    print("   PASS")
+
+    # --- 2. AC-6: creator removes a self-declared warning ---
+    print("2. Creator removes self-declared warning (AC-6)...")
+    resp = requests.put(f"{BASE_URL}/{tid}", headers=headers_creator, json={
+        "title": f"Warned Template {ts}",
+        "description": "Has mature content",
+        "content": "Mature content here",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["warntest"],
+        "content_warnings": [],
+    })
+    if resp.status_code != 200:
+        print(f"Remove self-declared warning failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json()["template"].get("content_warnings"):
+        print(f"content_warnings should be empty after removal, got {resp.json()['template'].get('content_warnings')}")
+        return False
+    print("   PASS")
+
+    # --- 3. FR-8/AC-6: admin adds a warning -> locked; creator cannot remove ---
+    print("3. Admin adds warning, creator locked (FR-8/AC-6)...")
+    resp = requests.post(f"{ADMIN}/templates/{tid}/warnings", headers=admin_headers, json={
+        "add": ["violence"],
+        "reason": "FVT: contains graphic violence",
+    })
+    if resp.status_code != 200:
+        print(f"Admin add warning failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("content_warnings") != ["violence"]:
+        print(f"Admin add should set content_warnings ['violence'], got {resp.json().get('content_warnings')}")
+        return False
+    if resp.json().get("locked_warnings") != ["violence"]:
+        print(f"Admin add should set locked_warnings ['violence'], got {resp.json().get('locked_warnings')}")
+        return False
+    # Creator GET shows locked_warnings
+    resp = requests.get(f"{BASE_URL}/{tid}", headers=headers_creator)
+    if resp.json()["template"].get("locked_warnings") != ["violence"]:
+        print("Creator GET should show locked_warnings ['violence']")
+        return False
+    # Creator update removing the locked warning -> 403
+    resp = requests.put(f"{BASE_URL}/{tid}", headers=headers_creator, json={
+        "title": f"Warned Template {ts}",
+        "description": "Has mature content",
+        "content": "Mature content here",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["warntest"],
+        "content_warnings": [],
+    })
+    if resp.status_code != 403:
+        print(f"Creator removing locked warning should be 403, got {resp.status_code}: {resp.text}")
+        return False
+    # Creator notification contains template_warning_changed
+    resp = requests.get(NOTIF_URL, headers=headers_creator)
+    notifs = [n for n in resp.json().get("notifications", []) if n.get("template_id") == tid]
+    if not any(n.get("type") == "template_warning_changed" for n in notifs):
+        print("Creator should have a template_warning_changed notification")
+        return False
+    print("   PASS")
+
+    # --- 4. FR-6/AC-4: exclude_warned filter ---
+    print("4. exclude_warned filter (FR-6/AC-4)...")
+    # The warned template is present without the param
+    resp = requests.get(BASE_URL, params={"keyword": f"Warned Template {ts}"})
+    if not any(t["id"] == tid for t in resp.json().get("templates", [])):
+        print("Warned template should be present without exclude_warned")
+        return False
+    # Absent with exclude_warned=true
+    resp = requests.get(BASE_URL, params={"keyword": f"Warned Template {ts}", "exclude_warned": "true"})
+    if any(t["id"] == tid for t in resp.json().get("templates", [])):
+        print("Warned template should be absent with exclude_warned=true")
+        return False
+    print("   PASS")
+
+    # --- 5. FR-9/AC-7: admin warning filter ---
+    print("5. Admin warning filter (FR-9/AC-7)...")
+    resp = requests.get(f"{ADMIN}/templates", headers=admin_headers, params={"warning": "none", "per_page": 100})
+    if any(t["id"] == tid for t in resp.json().get("templates", [])):
+        print("warning=none should exclude the warned template")
+        return False
+    resp = requests.get(f"{ADMIN}/templates", headers=admin_headers, params={"warning": "violence", "per_page": 100})
+    if not any(t["id"] == tid for t in resp.json().get("templates", [])):
+        print("warning=violence should include the warned template")
+        return False
+    resp = requests.get(f"{ADMIN}/templates", headers=admin_headers, params={"warning": "mature", "per_page": 100})
+    if any(t["id"] == tid for t in resp.json().get("templates", [])):
+        print("warning=mature should exclude a violence-only template")
+        return False
+    print("   PASS")
+
+    # --- 6. FR-2: unknown warning type on create -> 400 ---
+    print("6. Unknown warning type (FR-2)...")
+    resp = requests.post(BASE_URL, json={
+        "title": f"Bad Warning {ts}",
+        "content": "x",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "content_warnings": ["not_a_warning"],
+    }, headers=headers_creator)
+    if resp.status_code != 400:
+        print(f"Unknown warning type should be 400, got {resp.status_code}: {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 7. FR-11/AC-9: warned template position unchanged in sorts ---
+    print("7. FR-11: warned template position unchanged (AC-9)...")
+    # Create a warned and an unwarned template with distinct created_at (a small
+    # delay guarantees the unwarned one is strictly newer). newest sort orders
+    # by created_at DESC, so the unwarned (newer) must come first in BOTH
+    # newest and most_liked — proving warnings do not affect ranking (FR-11).
+    warned2 = requests.post(BASE_URL, json={
+        "title": f"Warned Sort {ts} A",
+        "content": "a",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "content_warnings": ["sensitive"],
+    }, headers=headers_creator).json()["template"]
+    CREATED_TEMPLATES.append({"id": warned2["id"], "owner_id": creator_id})
+    time.sleep(1.1)
+    unwarned = requests.post(BASE_URL, json={
+        "title": f"Unwarned Sort {ts} B",
+        "content": "b",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+    }, headers=headers_creator).json()["template"]
+    CREATED_TEMPLATES.append({"id": unwarned["id"], "owner_id": creator_id})
+    # newest: unwarned (newer) should come first
+    resp = requests.get(BASE_URL, params={"keyword": f"Sort {ts}", "sort": "newest"})
+    ids = [t["id"] for t in resp.json().get("templates", [])]
+    if warned2["id"] not in ids or unwarned["id"] not in ids:
+        print(f"FR-11 search did not return both templates: {ids}")
+        return False
+    if ids.index(unwarned["id"]) > ids.index(warned2["id"]):
+        print("newest sort: newer unwarned template should come first (warnings must not affect ranking)")
+        return False
+    # most_liked: both have 0 likes; order falls back to created_at DESC
+    resp = requests.get(BASE_URL, params={"keyword": f"Sort {ts}", "sort": "most_liked"})
+    ids = [t["id"] for t in resp.json().get("templates", [])]
+    if warned2["id"] not in ids or unwarned["id"] not in ids:
+        print(f"FR-11 most_liked search did not return both templates: {ids}")
+        return False
+    if ids.index(unwarned["id"]) > ids.index(warned2["id"]):
+        print("most_liked sort: newer unwarned template should come first (warnings must not affect ranking)")
+        return False
+    print("   PASS")
+
+    # --- 8. NFR-2: taxonomy editable via admin settings ---
+    print("8. Taxonomy editable (NFR-2)...")
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "content_warning_taxonomy",
+        "value": '["mature","violence","profanity","sensitive","custom_warn"]',
+        "reason": "FVT: add custom warning type",
+    })
+    if resp.status_code != 200:
+        print(f"Update taxonomy failed: {resp.status_code} - {resp.text}")
+        return False
+    # A new type is accepted
+    resp = requests.post(BASE_URL, json={
+        "title": f"Custom Warn {ts}",
+        "content": "x",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "content_warnings": ["custom_warn"],
+    }, headers=headers_creator)
+    if resp.status_code != 200:
+        print(f"Custom warning type should be accepted, got {resp.status_code}: {resp.text}")
+        return False
+    custom_tid = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({"id": custom_tid, "owner_id": creator_id})
+    # Restore default taxonomy
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "content_warning_taxonomy",
+        "value": '["mature","violence","profanity","sensitive"]',
+        "reason": "FVT: restore default taxonomy",
+    })
+    if resp.status_code != 200:
+        print(f"Restore taxonomy failed: {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 9. Audit log records warning changes ---
+    print("9. Audit log (warning_add/remove)...")
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "template.warning_add", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit warning_add failed: {resp.status_code} - {resp.text}")
+        return False
+    add_entries = [e for e in resp.json().get("entries", []) if e.get("target_id") == tid]
+    if not add_entries:
+        print("Audit log should contain template.warning_add for the template")
+        return False
+    if not add_entries[0].get("actor_id") or not add_entries[0].get("reason"):
+        print("Audit warning_add entry should have actor_id and reason")
+        return False
+    # Admin removes the warning -> warning_remove audit entry
+    resp = requests.delete(f"{ADMIN}/templates/{tid}/warnings", headers=admin_headers, json={
+        "remove": ["violence"],
+        "reason": "FVT: remove violence warning",
+    })
+    if resp.status_code != 200:
+        print(f"Admin remove warning failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "template.warning_remove", "per_page": 50})
+    remove_entries = [e for e in resp.json().get("entries", []) if e.get("target_id") == tid]
+    if not remove_entries:
+        print("Audit log should contain template.warning_remove for the template")
+        return False
+    # Warning history endpoint
+    resp = requests.get(f"{ADMIN}/templates/{tid}/warnings/history", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Warning history failed: {resp.status_code} - {resp.text}")
+        return False
+    history = resp.json().get("entries", [])
+    if not any(e.get("action") == "template.warning_add" for e in history):
+        print("Warning history should contain the add entry")
+        return False
+    if not any(e.get("action") == "template.warning_remove" for e in history):
+        print("Warning history should contain the remove entry")
+        return False
+    print("   PASS")
+
+    print("--- Content Warnings Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -2761,6 +3059,7 @@ def main():
     if success: success = test_security_authz()
     if success: success = test_template_search_filtering()
     if success: success = test_pre_publication_review()
+    if success: success = test_content_warnings()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

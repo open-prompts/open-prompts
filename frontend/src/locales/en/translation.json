@@ -631,5 +631,64 @@
       "restore": "Failed to restore version.",
       "retry": "Retry"
     }
+  },
+  "warnings": {
+    "group": {
+      "title": "Content warnings (optional)",
+      "help": "Help viewers know what to expect before opening."
+    },
+    "type": {
+      "mature": "Mature themes",
+      "violence": "Graphic violence",
+      "profanity": "Strong language",
+      "sensitive": "Sensitive topics"
+    },
+    "locked": {
+      "appliedBy": "Applied by moderation on {{date}}: {{reason}}",
+      "label": "Applied by moderation (locked)"
+    },
+    "chip": {
+      "multiple": "{{first}} +{{count}} more"
+    },
+    "interstitial": {
+      "title": "Content warning",
+      "body": "This template covers: {{reasons}}",
+      "subtext": "You can view it — we just want you to know first.",
+      "show": "Show content",
+      "back": "Go back"
+    },
+    "filter": {
+      "hideWarned": "Hide warned content"
+    },
+    "settings": {
+      "title": "Content preferences",
+      "showAlways": "Always show warned content",
+      "showAlwaysHelp": "Skip the blur and warning screen for flagged templates."
+    },
+    "admin": {
+      "filter": {
+        "label": "Warnings",
+        "any": "Any",
+        "none": "None"
+      },
+      "panel": {
+        "title": "Content warnings",
+        "current": "Current",
+        "origin": {
+          "creator": "creator",
+          "moderation": "moderation"
+        },
+        "add": "Add warning",
+        "remove": "Remove",
+        "reason": "Reason (required)",
+        "history": "History",
+        "historyEmpty": "No warning history"
+      }
+    },
+    "notify": {
+      "changed": "Content warnings on \"{{title}}\" were changed: {{change}}",
+      "added": "added {{warning}}",
+      "removed": "removed {{warning}}"
+    }
   }
 }

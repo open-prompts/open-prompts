@@ -24,6 +24,8 @@ type Template struct {
 	CommentCount     int32          `json:"comment_count"`
 	ModerationStatus string         `json:"moderation_status"` // "normal" | "in_review" | "rejected"
 	PublishedAt      sql.NullTime   `json:"published_at"`      // first review-approval time; NULL until approved
+	ContentWarnings  pq.StringArray `json:"content_warnings"`  // active warnings (taxonomy keys)
+	LockedWarnings   pq.StringArray `json:"locked_warnings"`   // moderator-applied subset (creator-immutable)
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 

@@ -9,6 +9,7 @@ const EVENT_ICONS = {
   fork: { Icon: ForkIcon, className: 'event-icon-fork' },
   template_approved: { Icon: CheckIcon, className: 'event-icon-approved' },
   template_rejected: { Icon: AlertIcon, className: 'event-icon-rejected' },
+  template_warning_changed: { Icon: AlertIcon, className: 'event-icon-warning' },
 };
 
 /**
@@ -33,17 +34,41 @@ const NotificationItem = ({ notification, onOpen, onMarkRead, onDelete, compact 
   // Review decisions have no acting user in the sentence sense: the
   // actor_display_name slot carries the rejection reason code instead.
   const isReviewDecision = n.type === 'template_approved' || n.type === 'template_rejected';
-  const sentence = isReviewDecision
-    ? t(`notifications.event.${n.type}`, {
-        title: n.template_title,
-        reason: n.actor_display_name,
-        defaultValue: `Review decision on "${n.template_title}"`,
-      })
-    : t(`notifications.event.${n.type}`, {
-        actor: n.actor_display_name,
-        title: n.template_title,
-        defaultValue: `${n.actor_display_name} ${n.type} "${n.template_title}"`,
-      });
+  const isWarningChange = n.type === 'template_warning_changed';
+
+  let sentence;
+  if (isReviewDecision) {
+    sentence = t(`notifications.event.${n.type}`, {
+      title: n.template_title,
+      reason: n.actor_display_name,
+      defaultValue: `Review decision on "${n.template_title}"`,
+    });
+  } else if (isWarningChange) {
+    // The actor_display_name slot carries a compact JSON delta payload
+    // {"added":[...],"removed":[...]} (OQ-5). Render it into the localized
+    // sentence.
+    let change = '';
+    try {
+      const delta = JSON.parse(n.actor_display_name || '{}');
+      const parts = [];
+      (delta.added || []).forEach((w) =>
+        parts.push(t('warnings.notify.added', { warning: t(`warnings.type.${w}`, { defaultValue: w }) }))
+      );
+      (delta.removed || []).forEach((w) =>
+        parts.push(t('warnings.notify.removed', { warning: t(`warnings.type.${w}`, { defaultValue: w }) }))
+      );
+      change = parts.join(', ');
+    } catch (e) {
+      change = n.actor_display_name || '';
+    }
+    sentence = t('warnings.notify.changed', { title: n.template_title, change });
+  } else {
+    sentence = t(`notifications.event.${n.type}`, {
+      actor: n.actor_display_name,
+      title: n.template_title,
+      defaultValue: `${n.actor_display_name} ${n.type} "${n.template_title}"`,
+    });
+  }
   const relativeTime = formatRelativeTime(n.created_at, t);
   const absoluteTime = n.created_at ? new Date(n.created_at).toLocaleString() : '';
 

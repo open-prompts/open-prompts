@@ -164,9 +164,15 @@ type Template struct {
 	// everyone else so the value never leaks.
 	ModerationStatus string `protobuf:"bytes,25,opt,name=moderation_status,json=moderationStatus,proto3" json:"moderation_status,omitempty"`
 	// Approval time of the first review approval; null/absent until then.
-	PublishedAt   *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PublishedAt *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	// Active content warnings (self-declared + moderator-applied), keys from
+	// the config-driven taxonomy (mature | violence | profanity | sensitive).
+	ContentWarnings []string `protobuf:"bytes,27,rep,name=content_warnings,json=contentWarnings,proto3" json:"content_warnings,omitempty"`
+	// The subset of content_warnings applied by moderation; creator-immutable.
+	// Only meaningful to the owner and admins.
+	LockedWarnings []string `protobuf:"bytes,28,rep,name=locked_warnings,json=lockedWarnings,proto3" json:"locked_warnings,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Template) Reset() {
@@ -328,6 +334,20 @@ func (x *Template) GetModerationStatus() string {
 func (x *Template) GetPublishedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.PublishedAt
+	}
+	return nil
+}
+
+func (x *Template) GetContentWarnings() []string {
+	if x != nil {
+		return x.ContentWarnings
+	}
+	return nil
+}
+
+func (x *Template) GetLockedWarnings() []string {
+	if x != nil {
+		return x.LockedWarnings
 	}
 	return nil
 }
@@ -660,9 +680,11 @@ type CreateTemplateRequest struct {
 	// Initial content for the first version.
 	Content string `protobuf:"bytes,8,opt,name=content,proto3" json:"content,omitempty"`
 	// Language of the template.
-	Language      string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Language string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
+	// Content warning keys from the taxonomy; validated server-side.
+	ContentWarnings []string `protobuf:"bytes,10,rep,name=content_warnings,json=contentWarnings,proto3" json:"content_warnings,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateTemplateRequest) Reset() {
@@ -758,6 +780,13 @@ func (x *CreateTemplateRequest) GetLanguage() string {
 	return ""
 }
 
+func (x *CreateTemplateRequest) GetContentWarnings() []string {
+	if x != nil {
+		return x.ContentWarnings
+	}
+	return nil
+}
+
 // CreateTemplateResponse is the response message for CreateTemplate.
 type CreateTemplateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -827,9 +856,11 @@ type UpdateTemplateRequest struct {
 	Language string `protobuf:"bytes,9,opt,name=language,proto3" json:"language,omitempty"`
 	// Optional change note for the new version (max 200 chars).
 	// Ignored when content is unchanged (no version is created).
-	ChangeNote    string `protobuf:"bytes,10,opt,name=change_note,json=changeNote,proto3" json:"change_note,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ChangeNote string `protobuf:"bytes,10,opt,name=change_note,json=changeNote,proto3" json:"change_note,omitempty"`
+	// Full desired content-warning set; locked warnings are enforced server-side.
+	ContentWarnings []string `protobuf:"bytes,11,rep,name=content_warnings,json=contentWarnings,proto3" json:"content_warnings,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateTemplateRequest) Reset() {
@@ -930,6 +961,13 @@ func (x *UpdateTemplateRequest) GetChangeNote() string {
 		return x.ChangeNote
 	}
 	return ""
+}
+
+func (x *UpdateTemplateRequest) GetContentWarnings() []string {
+	if x != nil {
+		return x.ContentWarnings
+	}
+	return nil
 }
 
 // UpdateTemplateResponse is the response message for UpdateTemplate.
@@ -1109,7 +1147,9 @@ type ListTemplatesRequest struct {
 	Keyword string `protobuf:"bytes,10,opt,name=keyword,proto3" json:"keyword,omitempty"`
 	// Sort order: newest (default) | most_liked | most_favorited | trending.
 	// Invalid values fall back to newest server-side.
-	Sort          string `protobuf:"bytes,11,opt,name=sort,proto3" json:"sort,omitempty"`
+	Sort string `protobuf:"bytes,11,opt,name=sort,proto3" json:"sort,omitempty"`
+	// When true, filter out templates with any content warning (public stream only).
+	ExcludeWarned bool `protobuf:"varint,12,opt,name=exclude_warned,json=excludeWarned,proto3" json:"exclude_warned,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1219,6 +1259,13 @@ func (x *ListTemplatesRequest) GetSort() string {
 		return x.Sort
 	}
 	return ""
+}
+
+func (x *ListTemplatesRequest) GetExcludeWarned() bool {
+	if x != nil {
+		return x.ExcludeWarned
+	}
+	return false
 }
 
 // ListTemplatesResponse is the response message for ListTemplates.
@@ -2732,13 +2779,15 @@ func (x *ListTagsResponse) GetTags() []*TagStats {
 
 // UpdateProfileRequest is the request message for UpdateProfile.
 type UpdateProfileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
-	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Avatar      string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	Password    string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+	// Viewer preference: skip the blur/interstitial for warned templates.
+	ShowWarnedContent bool `protobuf:"varint,5,opt,name=show_warned_content,json=showWarnedContent,proto3" json:"show_warned_content,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateProfileRequest) Reset() {
@@ -2799,14 +2848,22 @@ func (x *UpdateProfileRequest) GetPassword() string {
 	return ""
 }
 
+func (x *UpdateProfileRequest) GetShowWarnedContent() bool {
+	if x != nil {
+		return x.ShowWarnedContent
+	}
+	return false
+}
+
 // UpdateProfileResponse is the response message for UpdateProfile.
 type UpdateProfileResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName       string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Avatar            string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	ShowWarnedContent bool                   `protobuf:"varint,4,opt,name=show_warned_content,json=showWarnedContent,proto3" json:"show_warned_content,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateProfileResponse) Reset() {
@@ -2860,6 +2917,13 @@ func (x *UpdateProfileResponse) GetAvatar() string {
 	return ""
 }
 
+func (x *UpdateProfileResponse) GetShowWarnedContent() bool {
+	if x != nil {
+		return x.ShowWarnedContent
+	}
+	return false
+}
+
 // GetProfileRequest is the request message for GetProfile.
 type GetProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2907,13 +2971,14 @@ func (x *GetProfileRequest) GetId() string {
 
 // GetProfileResponse is the response message for GetProfile.
 type GetProfileResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Avatar        string                 `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Email             string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	DisplayName       string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Avatar            string                 `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	ShowWarnedContent bool                   `protobuf:"varint,5,opt,name=show_warned_content,json=showWarnedContent,proto3" json:"show_warned_content,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *GetProfileResponse) Reset() {
@@ -2972,6 +3037,13 @@ func (x *GetProfileResponse) GetAvatar() string {
 		return x.Avatar
 	}
 	return ""
+}
+
+func (x *GetProfileResponse) GetShowWarnedContent() bool {
+	if x != nil {
+		return x.ShowWarnedContent
+	}
+	return false
 }
 
 // Alias messages
@@ -4256,7 +4328,7 @@ var File_api_proto_v1_prompt_proto protoreflect.FileDescriptor
 
 const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\n" +
-	"\x19api/proto/v1/prompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x05\n" +
+	"\x19api/proto/v1/prompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaa\x06\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
@@ -4282,7 +4354,9 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\blanguage\x18\x10 \x01(\tR\blanguage\x12#\n" +
 	"\rcomment_count\x18\x11 \x01(\x05R\fcommentCount\x12+\n" +
 	"\x11moderation_status\x18\x19 \x01(\tR\x10moderationStatus\x12=\n" +
-	"\fpublished_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\xf5\x01\n" +
+	"\fpublished_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x12)\n" +
+	"\x10content_warnings\x18\x1b \x03(\tR\x0fcontentWarnings\x12'\n" +
+	"\x0flocked_warnings\x18\x1c \x03(\tR\x0elockedWarnings\"\xf5\x01\n" +
 	"\x0fTemplateVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -4316,7 +4390,7 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\acontent\x18\a \x01(\tR\acontent\x1a<\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa6\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd1\x02\n" +
 	"\x15CreateTemplateRequest\x12\x19\n" +
 	"\bowner_id\x18\x01 \x01(\tR\aownerId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -4328,10 +4402,12 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x04tags\x18\x06 \x03(\tR\x04tags\x12\x1a\n" +
 	"\bcategory\x18\a \x01(\tR\bcategory\x12\x18\n" +
 	"\acontent\x18\b \x01(\tR\acontent\x12\x1a\n" +
-	"\blanguage\x18\t \x01(\tR\blanguage\"q\n" +
+	"\blanguage\x18\t \x01(\tR\blanguage\x12)\n" +
+	"\x10content_warnings\x18\n" +
+	" \x03(\tR\x0fcontentWarnings\"q\n" +
 	"\x16CreateTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x12-\n" +
-	"\aversion\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\aversion\"\xc2\x02\n" +
+	"\aversion\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\aversion\"\xed\x02\n" +
 	"\x15UpdateTemplateRequest\x12\x1f\n" +
 	"\vtemplate_id\x18\x01 \x01(\tR\n" +
 	"templateId\x12\x19\n" +
@@ -4347,7 +4423,8 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\blanguage\x18\t \x01(\tR\blanguage\x12\x1f\n" +
 	"\vchange_note\x18\n" +
 	" \x01(\tR\n" +
-	"changeNote\"x\n" +
+	"changeNote\x12)\n" +
+	"\x10content_warnings\x18\v \x03(\tR\x0fcontentWarnings\"x\n" +
 	"\x16UpdateTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x124\n" +
 	"\vnew_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\n" +
@@ -4356,7 +4433,7 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"{\n" +
 	"\x13GetTemplateResponse\x12(\n" +
 	"\btemplate\x18\x01 \x01(\v2\f.v1.TemplateR\btemplate\x12:\n" +
-	"\x0elatest_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\rlatestVersion\"\xd5\x02\n" +
+	"\x0elatest_version\x18\x02 \x01(\v2\x13.v1.TemplateVersionR\rlatestVersion\"\xfc\x02\n" +
 	"\x14ListTemplatesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -4372,7 +4449,8 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\blanguage\x18\t \x01(\tR\blanguage\x12\x18\n" +
 	"\akeyword\x18\n" +
 	" \x01(\tR\akeyword\x12\x12\n" +
-	"\x04sort\x18\v \x01(\tR\x04sort\"\xae\x02\n" +
+	"\x04sort\x18\v \x01(\tR\x04sort\x12%\n" +
+	"\x0eexclude_warned\x18\f \x01(\bR\rexcludeWarned\"\xae\x02\n" +
 	"\x15ListTemplatesResponse\x12*\n" +
 	"\ttemplates\x18\x01 \x03(\v2\f.v1.TemplateR\ttemplates\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x129\n" +
@@ -4475,23 +4553,26 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\"4\n" +
 	"\x10ListTagsResponse\x12 \n" +
-	"\x04tags\x18\x01 \x03(\v2\f.v1.TagStatsR\x04tags\"}\n" +
+	"\x04tags\x18\x01 \x03(\v2\f.v1.TagStatsR\x04tags\"\xad\x01\n" +
 	"\x14UpdateProfileRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
 	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12\x1a\n" +
-	"\bpassword\x18\x04 \x01(\tR\bpassword\"b\n" +
+	"\bpassword\x18\x04 \x01(\tR\bpassword\x12.\n" +
+	"\x13show_warned_content\x18\x05 \x01(\bR\x11showWarnedContent\"\x92\x01\n" +
 	"\x15UpdateProfileResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
-	"\x06avatar\x18\x03 \x01(\tR\x06avatar\"#\n" +
+	"\x06avatar\x18\x03 \x01(\tR\x06avatar\x12.\n" +
+	"\x13show_warned_content\x18\x04 \x01(\bR\x11showWarnedContent\"#\n" +
 	"\x11GetProfileRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"u\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xa5\x01\n" +
 	"\x12GetProfileResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x16\n" +
-	"\x06avatar\x18\x04 \x01(\tR\x06avatar\"v\n" +
+	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12.\n" +
+	"\x13show_warned_content\x18\x05 \x01(\bR\x11showWarnedContent\"v\n" +
 	"\x05Alias\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +

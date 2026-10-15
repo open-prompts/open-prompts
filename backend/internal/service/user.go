@@ -242,15 +242,19 @@ func (s *UserService) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRe
 		}
 		user.PasswordHash = string(hash)
 	}
+	// Viewer preference: show_warned_content is a full-set boolean; the
+	// client always sends the desired value (defaults to false when absent).
+	user.ShowWarnedContent = req.ShowWarnedContent
 
 	if err := s.Repo.Update(ctx, user); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update user: %v", err)
 	}
 
 	return &pb.UpdateProfileResponse{
-		Id:          user.ID,
-		DisplayName: user.DisplayName,
-		Avatar:      user.Avatar,
+		Id:                user.ID,
+		DisplayName:       user.DisplayName,
+		Avatar:            user.Avatar,
+		ShowWarnedContent: user.ShowWarnedContent,
 	}, nil
 }
 
@@ -266,10 +270,11 @@ func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileRequest)
 	}
 
 	return &pb.GetProfileResponse{
-		Id:          user.ID,
-		Email:       user.Email,
-		DisplayName: user.DisplayName,
-		Avatar:      user.Avatar,
+		Id:                user.ID,
+		Email:             user.Email,
+		DisplayName:       user.DisplayName,
+		Avatar:            user.Avatar,
+		ShowWarnedContent: user.ShowWarnedContent,
 	}, nil
 }
 

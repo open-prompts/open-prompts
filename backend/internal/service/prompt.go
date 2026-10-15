@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,7 +52,13 @@ const (
 	settingApprovalThreshold = "review_approval_threshold"
 	settingRegateCount       = "review_regate_count"
 	settingAgingHours        = "review_aging_hours"
+	settingWarningTaxonomy   = "content_warning_taxonomy"
 )
+
+// defaultWarningTaxonomy is the built-in fallback warning taxonomy used when
+// the platform_settings value is unavailable (fresh installs always seed the
+// row, so this is a resilience fallback).
+var defaultWarningTaxonomy = []string{"mature", "violence", "profanity", "sensitive"}
 
 // defaultReviewSettings are used when the settings store is unavailable
 // (fresh installs always seed the rows, so this is a resilience fallback).
@@ -135,6 +143,27 @@ func (s *PromptService) InvalidateSettingsCache() {
 	defer s.settingsMu.Unlock()
 	s.settingsCache = make(map[string]string)
 	s.settingsExpiry = time.Time{}
+}
+
+// taxonomy returns the config-driven warning keys (from platform_settings,
+// cached 60s). Falls back to the built-in default on cache miss or when the
+// stored value is not a valid JSON array of strings.
+func (s *PromptService) taxonomy(ctx context.Context) []string {
+	if s.ReviewRepo == nil {
+		return defaultWarningTaxonomy
+	}
+	value, err := s.ReviewRepo.GetSetting(ctx, settingWarningTaxonomy)
+	if err != nil || value == "" {
+		return defaultWarningTaxonomy
+	}
+	var keys []string
+	if err := json.Unmarshal([]byte(value), &keys); err != nil {
+		return defaultWarningTaxonomy
+	}
+	if len(keys) == 0 {
+		return defaultWarningTaxonomy
+	}
+	return keys
 }
 
 // isGated returns true when the creator's next publish must enter review.
@@ -261,6 +290,15 @@ func (s *PromptService) CreateTemplate(ctx context.Context, req *pb.CreateTempla
 		}
 	}
 
+	// Validate each requested content warning against the config-driven
+	// taxonomy (constraint 8: never trust the client's strings).
+	taxonomy := s.taxonomy(ctx)
+	for _, w := range req.ContentWarnings {
+		if !slices.Contains(taxonomy, w) {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown content warning %q", w)
+		}
+	}
+
 	template := &models.Template{
 		OwnerID:          userID, // Use the authenticated user ID
 		Title:            req.Title,
@@ -272,6 +310,8 @@ func (s *PromptService) CreateTemplate(ctx context.Context, req *pb.CreateTempla
 		Language:         language,
 		ModerationStatus: moderationStatus,
 		PublishedAt:      publishedAt,
+		ContentWarnings:  pq.StringArray(req.ContentWarnings),
+		LockedWarnings:   nil, // a fresh template has no moderator-applied warnings
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -440,6 +480,27 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 	// Allow clearing Tags by sending empty list
 	// Note: this assumes UpdateTemplate is always called with full tag list
 	template.Tags = req.Tags
+
+	// Content warnings: enforce the creator-immutable lock (FR-8) and
+	// validate the incoming set against the taxonomy (constraint 8).
+	// A locked warning must remain present in the incoming set; the creator
+	// may freely add/remove their own self-declared warnings.
+	locked := template.LockedWarnings
+	incoming := req.ContentWarnings
+	for _, lw := range locked {
+		if !slices.Contains(incoming, lw) {
+			return nil, status.Errorf(codes.PermissionDenied,
+				"warning %q was applied by moderation and cannot be removed", lw)
+		}
+	}
+	taxonomy := s.taxonomy(ctx)
+	for _, w := range incoming {
+		if !slices.Contains(taxonomy, w) {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown content warning %q", w)
+		}
+	}
+	template.ContentWarnings = pq.StringArray(incoming)
+	template.LockedWarnings = locked // preserved; creator cannot change it
 
 	// Pre-publication review gating on the publish transition: a private→public
 	// transition — or a rejected template being re-published (FR-6 resubmission;
@@ -620,6 +681,15 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		filters["sort"] = sort
 	}
 
+	// applyWarnedFilter adds the exclude_warned filter to a public stream.
+	// It is deliberately NOT applied to private streams (a private template's
+	// warnings are only visible to its owner).
+	applyWarnedFilter := func(filters map[string]interface{}) {
+		if req.ExcludeWarned {
+			filters["exclude_warned"] = true
+		}
+	}
+
 	// SPECIAL HANDLING: My Likes / My Favorites (Treat as single stream)
 	if userID != "" && (req.MyLikes || req.MyFavorites) {
 		offset := 0
@@ -643,6 +713,7 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 			filters["tags"] = req.Tags
 		}
 		applySearch(filters)
+		applyWarnedFilter(filters)
 
 		templates, nextToken, err := fetch(limit, offset, filters)
 		if err != nil {
@@ -676,6 +747,7 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 			filters["owner_id"] = req.OwnerId
 		}
 		applySearch(filters)
+		applyWarnedFilter(filters)
 
 		templates, nextToken, err := fetch(limit, offset, filters)
 		if err != nil {
@@ -720,6 +792,11 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 			filters["tags"] = req.Tags
 		}
 		applySearch(filters)
+		// exclude_warned applies to the public stream only (FR-6); a private
+		// listing is untouched.
+		if req.Visibility == pb.Visibility_VISIBILITY_PUBLIC && req.ExcludeWarned {
+			filters["exclude_warned"] = true
+		}
 
 		templates, nextToken, err := fetch(limit, offset, filters)
 		if err != nil {
@@ -772,6 +849,7 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		publicFilters["owner_id"] = req.OwnerId
 	}
 	applySearch(publicFilters)
+	applyWarnedFilter(publicFilters)
 
 	publicTemplates, nextPublicToken, err := fetch(limit, publicOffset, publicFilters)
 	if err != nil {
@@ -1196,6 +1274,8 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 	if m.PublishedAt.Valid {
 		tpl.PublishedAt = timestamppb.New(m.PublishedAt.Time)
 	}
+	tpl.ContentWarnings = m.ContentWarnings
+	tpl.LockedWarnings = m.LockedWarnings
 	return tpl
 }
 

@@ -7,6 +7,7 @@ import { EditIcon, SaveIcon, CloseIcon } from '../components/ui/Icons';
 import { updateProfile, getProfile } from '../services/api';
 import { loginSuccess } from '../store/authSlice';
 import Header from '../components/Header';
+import ShowWarnedToggle from '../components/warnings/ShowWarnedToggle';
 import './Profile.scss';
 
 /**
@@ -28,6 +29,8 @@ const Profile = () => {
   const [displayAvatar, setDisplayAvatar] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showWarnedContent, setShowWarnedContent] = useState(false);
+  const [savingWarnedPref, setSavingWarnedPref] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -43,6 +46,7 @@ const Profile = () => {
             setEmail(data.email || '');
             setAvatar(data.avatar || '');
             setDisplayAvatar(data.avatar || '');
+            setShowWarnedContent(!!data.show_warned_content);
 
             if (user) {
                  dispatch(loginSuccess({
@@ -123,6 +127,28 @@ const Profile = () => {
       setIsEditing(!isEditing);
   };
 
+  // Persist the show_warned_content viewer preference server-side (FR-5).
+  const handleWarnedPrefChange = async (next) => {
+    setSavingWarnedPref(true);
+    try {
+      const response = await updateProfile({ show_warned_content: next });
+      setShowWarnedContent(!!response.data.show_warned_content);
+      if (user) {
+        dispatch(loginSuccess({
+          user: { ...user, show_warned_content: !!response.data.show_warned_content },
+          token,
+        }));
+      }
+      addNotification({ kind: 'success', title: t('common.success'), subtitle: t('profile.success_update') });
+    } catch (err) {
+      console.error(err);
+      setShowWarnedContent(!next); // revert
+      addNotification({ kind: 'error', title: t('common.error'), subtitle: t('profile.error_update') });
+    } finally {
+      setSavingWarnedPref(false);
+    }
+  };
+
   return (
     <div className="layout">
       <Header />
@@ -155,6 +181,15 @@ const Profile = () => {
                           <label>{t('register.email')}</label>
                           <div className="value">{email}</div>
                       </div>
+                  </div>
+
+                  <div className="content-preferences-section">
+                      <h3 className="content-preferences-title">{t('warnings.settings.title')}</h3>
+                      <ShowWarnedToggle
+                        checked={showWarnedContent}
+                        saving={savingWarnedPref}
+                        onChange={handleWarnedPrefChange}
+                      />
                   </div>
 
                   <div className="action-section">

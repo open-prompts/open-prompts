@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { createTemplate, getCategories } from '../services/api';
 import { AlertIcon } from './ui/Icons';
 import PublishReviewModal from './review/PublishReviewModal';
+import WarningCheckboxGroup from './warnings/WarningCheckboxGroup';
 import './CreateTemplateModal.scss';
 
 /**
@@ -26,6 +27,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
     category: '',
     tags: '',
     language: 'en',
+    content_warnings: [],
   });
   const [categories, setCategories] = useState([]);
   const [customCategory, setCustomCategory] = useState('');
@@ -69,6 +71,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
         category: '',
         tags: '',
         language: 'en',
+        content_warnings: [],
       });
       setCustomCategory('');
       setFormErrors({});
@@ -272,6 +275,11 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
             rows={10}
           />
         </Field>
+
+        <WarningCheckboxGroup
+          value={formData.content_warnings}
+          onChange={(warnings) => setFormData((prev) => ({ ...prev, content_warnings: warnings }))}
+        />
       </div>
     </Modal>
     <PublishReviewModal
