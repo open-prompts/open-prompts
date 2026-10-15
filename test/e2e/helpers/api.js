@@ -15,6 +15,13 @@ function request(method, path, body, { token } = {}) {
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
+    // Node's http.request does NOT auto-compute Content-Length when the
+    // body is passed via write() — without this header a DELETE (or any
+    // method) with a body is an invalid HTTP/1.1 frame and Go servers
+    // reject it with 400 before any handler runs.
+    if (payload) {
+      headers['Content-Length'] = Buffer.byteLength(payload);
+    }
     const req = http.request(
       {
         host: API_HOST,
@@ -35,13 +42,14 @@ function request(method, path, body, { token } = {}) {
             parsed = null;
           }
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve({ status: res.statusCode, data: parsed });
+            resolve({ status: res.statusCode, data: parsed, headers: res.headers });
           } else {
             const err = new Error(
               `API ${method} ${path} -> ${res.statusCode}: ${data.slice(0, 300)}`
             );
             err.status = res.statusCode;
             err.body = parsed;
+            err.headers = res.headers;
             reject(err);
           }
         });
@@ -139,8 +147,61 @@ async function createComment(token, templateId, content) {
   return resp.data;
 }
 
-async function listComments(token, templateId, page = 1) {
-  const resp = await request('GET', `/api/v1/templates/${templateId}/comments?page=${page}`, null, { token });
+// page_size defaults to 20 server-side (max 50); newest comments first.
+async function listComments(token, templateId, page = 1, pageSize) {
+  let path = `/api/v1/templates/${templateId}/comments?page=${page}`;
+  if (pageSize) {
+    path += `&page_size=${pageSize}`;
+  }
+  const resp = await request('GET', path, null, { token });
+  return resp.data;
+}
+
+// Edit the caller's own comment within the 15-minute window.
+async function updateComment(token, commentId, content) {
+  const resp = await request('PUT', `/api/v1/comments/${commentId}`, { content }, { token });
+  return resp.data;
+}
+
+// Delete a comment (author or template owner).
+async function deleteComment(token, commentId) {
+  const resp = await request('DELETE', `/api/v1/comments/${commentId}`, null, { token });
+  return resp.data;
+}
+
+async function getTemplate(token, templateId) {
+  const resp = await request('GET', `/api/v1/templates/${templateId}`, null, { token });
+  return resp.data.template;
+}
+
+// owner_id is required by the gateway for DELETE /templates/{id}.
+async function deleteTemplate(token, templateId, ownerId) {
+  const resp = await request('DELETE', `/api/v1/templates/${templateId}?owner_id=${ownerId}`, null, { token });
+  return resp.data;
+}
+
+// Admin comment moderation list. params: { q, templateId, userId, page, perPage }
+async function adminListComments(adminToken, { q = '', templateId = '', userId = '', page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams({ q, template_id: templateId, user_id: userId, page: String(page), per_page: String(perPage) });
+  const resp = await request('GET', `/api/v1/admin/comments?${params.toString()}`, null, { token: adminToken });
+  return resp.data;
+}
+
+// reason: 3-500 chars, required. Writes an audit log entry.
+async function adminDeleteComment(adminToken, commentId, reason) {
+  const resp = await request('DELETE', `/api/v1/admin/comments/${commentId}`, { reason }, { token: adminToken });
+  return resp.data;
+}
+
+// params: { action, actor, page, perPage }
+async function getAuditLogs(adminToken, { action = '', actor = '', page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams({ action, actor, page: String(page), per_page: String(perPage) });
+  const resp = await request('GET', `/api/v1/admin/audit-log?${params.toString()}`, null, { token: adminToken });
+  return resp.data;
+}
+
+async function banUser(adminToken, userId, reason) {
+  const resp = await request('POST', `/api/v1/admin/users/${userId}/ban`, { reason }, { token: adminToken });
   return resp.data;
 }
 
@@ -148,6 +209,70 @@ async function getNotifications(token, { filter = 'all', pageSize = 20, pageToke
   const params = new URLSearchParams({ filter, page_size: String(pageSize) });
   if (pageToken) params.set('page_token', pageToken);
   const resp = await request('GET', `/api/v1/notifications?${params.toString()}`, null, { token });
+  return resp.data;
+}
+
+// Pre-publication review gating: set review_approval_threshold via the admin
+// settings API. 0 disables gating entirely (fresh users publish instantly);
+// the default is 3. Specs that are not about review gating disable it up
+// front, mirroring the FVT legacy suites.
+async function setReviewThreshold(adminToken, value, reason) {
+  const resp = await request('PUT', '/api/v1/admin/settings', {
+    key: 'review_approval_threshold',
+    value: String(value),
+    reason,
+  }, { token: adminToken });
+  return resp.data;
+}
+
+// List the admin review queue (pending pre-publication submissions).
+// params: { category, agingOnly, resubmissionOnly, page, perPage }
+async function listReviewQueue(adminToken, { category = '', agingOnly = false, resubmissionOnly = false, page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  if (category) params.set('category', category);
+  if (agingOnly) params.set('aging', 'true');
+  if (resubmissionOnly) params.set('resubmission_only', 'true');
+  const resp = await request('GET', `/api/v1/admin/review?${params.toString()}`, null, { token: adminToken });
+  return resp.data;
+}
+
+async function getReviewMetrics(adminToken) {
+  const resp = await request('GET', '/api/v1/admin/review/metrics', null, { token: adminToken });
+  return resp.data;
+}
+
+async function getReviewSubmission(adminToken, submissionId) {
+  const resp = await request('GET', `/api/v1/admin/review/${submissionId}`, null, { token: adminToken });
+  return resp.data.submission;
+}
+
+async function approveReviewSubmission(adminToken, submissionId) {
+  const resp = await request('POST', `/api/v1/admin/review/${submissionId}/approve`, null, { token: adminToken });
+  return resp.data;
+}
+
+// reasonCode must be one of: spam, plagiarism, harmful, lowQuality, other.
+async function rejectReviewSubmission(adminToken, submissionId, reasonCode, note = '') {
+  const body = { reason_code: reasonCode };
+  if (note) body.note = note;
+  const resp = await request('POST', `/api/v1/admin/review/${submissionId}/reject`, body, { token: adminToken });
+  return resp.data;
+}
+
+// Search public templates. params: { keyword, q, sort, category, tags,
+// visibility, pageToken, pageSize, myLikes, token }
+async function searchTemplates({ keyword, q, sort, category, tags, visibility, pageToken, pageSize, myLikes, token } = {}) {
+  const params = new URLSearchParams();
+  if (keyword !== undefined) params.set('keyword', keyword);
+  if (q !== undefined) params.set('q', q);
+  if (sort !== undefined) params.set('sort', sort);
+  if (category) params.set('category', category);
+  if (tags && tags.length > 0) tags.forEach((tg) => params.append('tags', tg));
+  if (visibility) params.set('visibility', visibility);
+  if (pageToken) params.set('page_token', pageToken);
+  if (pageSize) params.set('page_size', String(pageSize));
+  if (myLikes) params.set('my_likes', 'true');
+  const resp = await request('GET', `/api/v1/templates?${params.toString()}`, null, token ? { token } : {});
   return resp.data;
 }
 
@@ -165,5 +290,20 @@ module.exports = {
   unfavoriteTemplate,
   createComment,
   listComments,
+  updateComment,
+  deleteComment,
+  getTemplate,
+  deleteTemplate,
+  adminListComments,
+  adminDeleteComment,
+  getAuditLogs,
+  banUser,
   getNotifications,
+  setReviewThreshold,
+  listReviewQueue,
+  getReviewMetrics,
+  getReviewSubmission,
+  approveReviewSubmission,
+  rejectReviewSubmission,
+  searchTemplates,
 };
