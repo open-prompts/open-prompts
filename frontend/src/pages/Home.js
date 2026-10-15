@@ -14,6 +14,7 @@ import HideWarnedFilterChip from '../components/warnings/HideWarnedFilterChip';
 import useTemplateFilters from '../hooks/useTemplateFilters';
 import { getCategories, getTags, getFollowingFeed, getTopCreators } from '../services/api';
 import UserCard from '../components/UserCard';
+import ImportButton from '../components/ImportButton';
 import { usePageAnnouncement } from '../utils/a11y';
 import './Home.scss';
 
@@ -267,6 +268,7 @@ const Home = () => {
             tags={taxonomy.tags}
           />
           <SortDropdown value={filters.sort} onChange={setSort} />
+          {isAuthenticated && <ImportButton />}
         </div>
 
         <FilterChipRow

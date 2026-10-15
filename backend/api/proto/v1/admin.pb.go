@@ -1172,6 +1172,7 @@ type AdminTemplateSummary struct {
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	OwnerId          string                 `protobuf:"bytes,11,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	OwnerDisplayName string                 `protobuf:"bytes,12,opt,name=owner_display_name,json=ownerDisplayName,proto3" json:"owner_display_name,omitempty"`
+	Category         string                 `protobuf:"bytes,13,opt,name=category,proto3" json:"category,omitempty"` // NEW — required for admin export parity (FR-2)
 	// Active content warnings (taxonomy keys).
 	ContentWarnings []string `protobuf:"bytes,15,rep,name=content_warnings,json=contentWarnings,proto3" json:"content_warnings,omitempty"`
 	// The subset applied by moderation; creator-immutable.
@@ -1290,6 +1291,13 @@ func (x *AdminTemplateSummary) GetOwnerId() string {
 func (x *AdminTemplateSummary) GetOwnerDisplayName() string {
 	if x != nil {
 		return x.OwnerDisplayName
+	}
+	return ""
+}
+
+func (x *AdminTemplateSummary) GetCategory() string {
+	if x != nil {
+		return x.Category
 	}
 	return ""
 }
@@ -1578,7 +1586,8 @@ type AdminTemplateVersion struct {
 	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
 	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	AliasName     string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"` // "" if no alias points at this version
+	AliasName     string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`    // "" if no alias points at this version
+	ChangeNote    string                 `protobuf:"bytes,6,opt,name=change_note,json=changeNote,proto3" json:"change_note,omitempty"` // NEW — "" when the version has none
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1644,6 +1653,13 @@ func (x *AdminTemplateVersion) GetCreatedAt() *timestamppb.Timestamp {
 func (x *AdminTemplateVersion) GetAliasName() string {
 	if x != nil {
 		return x.AliasName
+	}
+	return ""
+}
+
+func (x *AdminTemplateVersion) GetChangeNote() string {
+	if x != nil {
+		return x.ChangeNote
 	}
 	return ""
 }
@@ -3845,7 +3861,7 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\">\n" +
 	"\x12UserActionResponse\x12(\n" +
-	"\x04user\x18\x01 \x01(\v2\x14.v1.AdminUserSummaryR\x04user\"\xf9\x03\n" +
+	"\x04user\x18\x01 \x01(\v2\x14.v1.AdminUserSummaryR\x04user\"\x95\x04\n" +
 	"\x14AdminTemplateSummary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1e\n" +
@@ -3864,7 +3880,8 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x19\n" +
 	"\bowner_id\x18\v \x01(\tR\aownerId\x12,\n" +
-	"\x12owner_display_name\x18\f \x01(\tR\x10ownerDisplayName\x12)\n" +
+	"\x12owner_display_name\x18\f \x01(\tR\x10ownerDisplayName\x12\x1a\n" +
+	"\bcategory\x18\r \x01(\tR\bcategory\x12)\n" +
 	"\x10content_warnings\x18\x0f \x03(\tR\x0fcontentWarnings\x12'\n" +
 	"\x0flocked_warnings\x18\x10 \x03(\tR\x0elockedWarnings\"\xcb\x01\n" +
 	"\x19ListAdminTemplatesRequest\x12\x16\n" +
@@ -3887,7 +3904,7 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\x18GetAdminTemplateResponse\x124\n" +
 	"\btemplate\x18\x01 \x01(\v2\x18.v1.AdminTemplateSummaryR\btemplate\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x124\n" +
-	"\bversions\x18\x03 \x03(\v2\x18.v1.AdminTemplateVersionR\bversions\"\xb4\x01\n" +
+	"\bversions\x18\x03 \x03(\v2\x18.v1.AdminTemplateVersionR\bversions\"\xd5\x01\n" +
 	"\x14AdminTemplateVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x12\x18\n" +
@@ -3895,7 +3912,9 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x05 \x01(\tR\taliasName\"\x89\x02\n" +
+	"alias_name\x18\x05 \x01(\tR\taliasName\x12\x1f\n" +
+	"\vchange_note\x18\x06 \x01(\tR\n" +
+	"changeNote\"\x89\x02\n" +
 	"\x12AdminAuditLogEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bactor_id\x18\x02 \x01(\tR\aactorId\x12\x1f\n" +

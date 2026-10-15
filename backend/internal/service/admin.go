@@ -203,6 +203,7 @@ func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
 		UpdatedAt:        timestamppb.New(t.UpdatedAt),
 		OwnerId:          t.OwnerID,
 		OwnerDisplayName: t.OwnerDisplayName,
+		Category:         t.Category,
 		ContentWarnings:  t.ContentWarnings,
 		LockedWarnings:   t.LockedWarnings,
 	}
@@ -700,11 +701,12 @@ func (s *AdminService) GetTemplate(ctx context.Context, req *pb.GetAdminTemplate
 	}
 	for _, v := range versions {
 		resp.Versions = append(resp.Versions, &pb.AdminTemplateVersion{
-			Id:        v.ID,
-			Version:   v.Version,
-			Content:   v.Content,
-			CreatedAt: timestamppb.New(v.CreatedAt),
-			AliasName: v.AliasName,
+			Id:         v.ID,
+			Version:    v.Version,
+			Content:    v.Content,
+			CreatedAt:  timestamppb.New(v.CreatedAt),
+			AliasName:  v.AliasName,
+			ChangeNote: v.ChangeNote.String,
 		})
 	}
 	return resp, nil

@@ -3326,6 +3326,90 @@ def test_follow_creators():
     return True
 
 
+def test_import_export():
+    """Import/export backend read-path enrichment: the admin template detail
+    (GET /api/v1/admin/templates/{id}) must return `category` on the summary
+    and `change_note` per version (NULL -> ""), so admin exports are
+    byte-compatible with user exports (FR-2)."""
+    print("--- Starting Import/Export Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_headers = {"Authorization": f"Bearer {resp.json().get('token')}"}
+
+    # Create a template with a category and a change note on v2
+    ts = int(time.time())
+    owner_id = f"fvt_ie_{ts}"
+    token = get_auth_token(owner_id)
+    headers = {"Authorization": f"Bearer {token}"}
+    create_payload = {
+        "owner_id": owner_id,
+        "title": f"Import Export Test {ts}",
+        "description": "import/export parity",
+        "category": "Writing",
+        "visibility": "VISIBILITY_PUBLIC",
+        "type": "TEMPLATE_TYPE_USER",
+        "content": "v1 content",
+    }
+    resp = requests.post(BASE_URL, json=create_payload, headers=headers)
+    if resp.status_code != 200:
+        print(f"Create failed: {resp.status_code} - {resp.text}")
+        return False
+    template_id = resp.json().get("template", {}).get("id")
+    CREATED_TEMPLATES.append({"id": template_id, "owner_id": owner_id})
+
+    # v2 with a change note
+    resp = requests.put(f"{BASE_URL}/{template_id}", json={
+        "template_id": template_id, "owner_id": owner_id,
+        "title": f"Import Export Test {ts}", "visibility": "VISIBILITY_PUBLIC",
+        "category": "Writing",
+        "content": "v2 content", "change_note": "second revision",
+    }, headers=headers)
+    if resp.status_code != 200:
+        print(f"Update failed: {resp.status_code} - {resp.text}")
+        return False
+
+    # Admin detail must carry category + change_note
+    resp = requests.get(f"{ADMIN}/templates/{template_id}", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Admin template detail failed: {resp.status_code} - {resp.text}")
+        return False
+    detail = resp.json()
+    if detail.get("template", {}).get("category") != "Writing":
+        print(f"Admin summary should carry category 'Writing': {detail.get('template')}")
+        return False
+    versions = detail.get("versions", [])
+    if len(versions) != 2:
+        print(f"Expected 2 versions, got {len(versions)}")
+        return False
+    # newest first
+    if versions[0].get("version") != 2 or versions[0].get("change_note") != "second revision":
+        print(f"v2 should carry change_note 'second revision': {versions[0]}")
+        return False
+    if versions[1].get("version") != 1 or versions[1].get("change_note") != "":
+        print(f"v1 change_note should be empty string: {versions[1]}")
+        return False
+    print("Admin template detail carries category + change_note (NULL -> '').")
+
+    # Non-admin cannot read the admin detail (403)
+    resp = requests.get(f"{ADMIN}/templates/{template_id}", headers=headers)
+    if resp.status_code != 403:
+        print(f"Non-admin on admin detail should be 403, got {resp.status_code}")
+        return False
+    print("Non-admin rejected on admin detail (403).")
+
+    print("--- Import/Export Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -3378,6 +3462,7 @@ def main():
     if success: success = test_pre_publication_review()
     if success: success = test_content_warnings()
     if success: success = test_follow_creators()
+    if success: success = test_import_export()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

@@ -245,14 +245,14 @@ func (r *adminRepository) ListUserIdentities(ctx context.Context, userID string)
 	return identities, nil
 }
 
-const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.content_warnings, t.locked_warnings, t.created_at, t.updated_at`
+const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.category, t.content_warnings, t.locked_warnings, t.created_at, t.updated_at`
 
 func scanAdminTemplate(row interface{ Scan(...interface{}) error }) (*models.AdminTemplate, error) {
 	var t models.AdminTemplate
 	if err := row.Scan(
 		&t.ID, &t.OwnerID, &t.OwnerDisplayName, &t.Title, &t.Description,
 		&t.Visibility, &t.Type, &t.Language, &t.Tags, &t.LikeCount, &t.FavoriteCount,
-		&t.ContentWarnings, &t.LockedWarnings,
+		&t.Category, &t.ContentWarnings, &t.LockedWarnings,
 		&t.CreatedAt, &t.UpdatedAt,
 	); err != nil {
 		return nil, err
@@ -358,7 +358,8 @@ WHERE t.id = $1`
 
 	versionQuery := `
 SELECT tv.id, tv.version, tv.content, tv.created_at,
-	COALESCE((SELECT a.alias_name FROM template_aliases a WHERE a.version_id = tv.id ORDER BY a.created_at ASC LIMIT 1), '') AS alias_name
+	COALESCE((SELECT a.alias_name FROM template_aliases a WHERE a.version_id = tv.id ORDER BY a.created_at ASC LIMIT 1), '') AS alias_name,
+	COALESCE(tv.change_note, '') AS change_note
 FROM template_versions tv
 WHERE tv.template_id = $1
 ORDER BY tv.version DESC
@@ -374,7 +375,7 @@ ORDER BY tv.version DESC
 	var versions []*models.AdminTemplateVersion
 	for rows.Next() {
 		v := &models.AdminTemplateVersion{}
-		if err := rows.Scan(&v.ID, &v.Version, &v.Content, &v.CreatedAt, &v.AliasName); err != nil {
+		if err := rows.Scan(&v.ID, &v.Version, &v.Content, &v.CreatedAt, &v.AliasName, &v.ChangeNote); err != nil {
 			return nil, nil, fmt.Errorf("failed to scan version: %w", err)
 		}
 		versions = append(versions, v)

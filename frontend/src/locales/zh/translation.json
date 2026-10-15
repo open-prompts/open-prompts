@@ -728,6 +728,30 @@
       "removed": "已移除 {{warning}}"
     }
   },
+  "import_export": {
+    "export": "导出",
+    "export_success": "已导出“{{title}}”（{{count}} 个版本）",
+    "export_failed": "导出失败，请重试。",
+    "import": "导入",
+    "import_title": "导入模板",
+    "drop_hint": "将 .json 文件拖放到此处，或",
+    "browse": "浏览文件",
+    "drop_note": "仅支持 open-prompts 模板导出文件（.json，最大 1 MB）。",
+    "error_not_json": "该文件不是有效的 JSON 文件。",
+    "error_too_large": "文件过大，最大为 1 MB。",
+    "error_bad_format": "该文件不是 open-prompts 模板导出文件。",
+    "error_unsupported_version": "此导出文件使用了较新的格式版本（{{version}}），当前应用无法读取。",
+    "error_missing_field": "文件缺少必填字段：{{field}}。",
+    "error_invalid_field": "文件的以下字段值无效：{{field}}。",
+    "warning_truncated_versions": "将仅导入最近 {{kept}} 个版本（共 {{total}} 个）。",
+    "review_summary": "{{file}} — 将导入 {{count}} 个版本（按顺序生成）。",
+    "title_collision": "你已存在同名模板。",
+    "suggested_suffix": "（导入）",
+    "use_suggested": "使用建议标题",
+    "confirm": "导入模板",
+    "import_success": "模板导入成功。",
+    "import_partial": "已导入 {{imported}} / {{total}} 个版本。模板已创建；你可以重试或手动编辑。"
+  },
   "a11y": {
     "skip_to_content": "跳转到主要内容",
     "notifications_region": "通知区域",

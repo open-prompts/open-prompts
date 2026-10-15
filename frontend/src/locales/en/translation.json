@@ -728,6 +728,30 @@
       "removed": "removed {{warning}}"
     }
   },
+  "import_export": {
+    "export": "Export",
+    "export_success": "Exported \"{{title}}\" ({{count}} versions)",
+    "export_failed": "Export failed. Please try again.",
+    "import": "Import",
+    "import_title": "Import template",
+    "drop_hint": "Drag and drop a .json file here, or",
+    "browse": "Browse files",
+    "drop_note": "Only open-prompts template exports (.json, max 1 MB) are supported.",
+    "error_not_json": "This file is not a valid JSON file.",
+    "error_too_large": "File is too large. Maximum size is 1 MB.",
+    "error_bad_format": "This file is not an open-prompts template export.",
+    "error_unsupported_version": "This export uses a newer format version ({{version}}) that this app cannot read.",
+    "error_missing_field": "The file is missing a required field: {{field}}.",
+    "error_invalid_field": "The file has an invalid value for: {{field}}.",
+    "warning_truncated_versions": "Only the most recent {{kept}} of {{total}} versions will be imported.",
+    "review_summary": "{{file}} — {{count}} versions will be imported as sequential versions.",
+    "title_collision": "You already have a template with this title.",
+    "suggested_suffix": "(imported)",
+    "use_suggested": "Use suggested title",
+    "confirm": "Import template",
+    "import_success": "Template imported successfully.",
+    "import_partial": "Imported {{imported}} of {{total}} versions. The template was created; you can retry or edit it manually."
+  },
   "a11y": {
     "skip_to_content": "Skip to content",
     "notifications_region": "Notifications",

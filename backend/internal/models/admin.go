@@ -59,6 +59,7 @@ type AdminTemplate struct {
 	Tags             pq.StringArray `json:"tags"`
 	LikeCount        int32          `json:"like_count"`
 	FavoriteCount    int32          `json:"favorite_count"`
+	Category         string         `json:"category"`
 	ContentWarnings  pq.StringArray `json:"content_warnings"`
 	LockedWarnings   pq.StringArray `json:"locked_warnings"`
 	CreatedAt        time.Time      `json:"created_at"`
@@ -68,9 +69,10 @@ type AdminTemplate struct {
 // AdminTemplateVersion is a template version with its alias (if any) for the
 // admin template detail view.
 type AdminTemplateVersion struct {
-	ID        int32     `json:"id"`
-	Version   int32     `json:"version"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	AliasName string    `json:"alias_name"` // "" if no alias points at this version
+	ID         int32          `json:"id"`
+	Version    int32          `json:"version"`
+	Content    string         `json:"content"`
+	CreatedAt  time.Time      `json:"created_at"`
+	AliasName  string         `json:"alias_name"` // "" if no alias points at this version
+	ChangeNote sql.NullString `json:"change_note"`
 }

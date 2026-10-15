@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -610,15 +611,21 @@ func TestGetTemplate(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc, mockUser, mockAdmin, _, _ := newAdminTestService(t)
 		expectAdminAuth(mockUser, makeAdminUser("admin_1"))
-		tmpl := &models.AdminTemplate{ID: "t1", Title: "T", Visibility: "public"}
-		versions := []*models.AdminTemplateVersion{{ID: 1, Version: 2, Content: "latest"}, {ID: 2, Version: 1, Content: "first"}}
+		tmpl := &models.AdminTemplate{ID: "t1", Title: "T", Visibility: "public", Category: "Writing"}
+		versions := []*models.AdminTemplateVersion{
+			{ID: 1, Version: 2, Content: "latest", ChangeNote: sql.NullString{String: "v2 note", Valid: true}},
+			{ID: 2, Version: 1, Content: "first", ChangeNote: sql.NullString{}},
+		}
 		mockAdmin.On("GetTemplateWithVersions", mock.Anything, "t1").Return(tmpl, versions, nil)
 
 		resp, err := svc.GetTemplate(adminCtx("admin_1"), &pb.GetAdminTemplateRequest{Id: "t1"})
 		assert.NoError(t, err)
 		assert.Equal(t, "t1", resp.Template.Id)
+		assert.Equal(t, "Writing", resp.Template.Category)
 		assert.Len(t, resp.Versions, 2)
 		assert.Equal(t, int32(2), resp.Versions[0].Version)
+		assert.Equal(t, "v2 note", resp.Versions[0].ChangeNote)
+		assert.Equal(t, "", resp.Versions[1].ChangeNote)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {

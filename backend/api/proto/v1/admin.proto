@@ -215,6 +215,7 @@ message AdminTemplateSummary {
   google.protobuf.Timestamp updated_at = 10;
   string owner_id = 11;
   string owner_display_name = 12;
+  string category = 13; // NEW — required for admin export parity (FR-2)
   // Active content warnings (taxonomy keys).
   repeated string content_warnings = 15;
   // The subset applied by moderation; creator-immutable.
@@ -254,6 +255,7 @@ message AdminTemplateVersion {
   string content = 3;
   google.protobuf.Timestamp created_at = 4;
   string alias_name = 5; // "" if no alias points at this version
+  string change_note = 6; // NEW — "" when the version has none
 }
 
 // ---- Audit ----

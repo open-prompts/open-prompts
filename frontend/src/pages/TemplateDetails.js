@@ -28,6 +28,7 @@ import PublishReviewModal from '../components/review/PublishReviewModal';
 import ContentInterstitial, { isWarnedRevealed } from '../components/warnings/ContentInterstitial';
 import WarningCheckboxGroup from '../components/warnings/WarningCheckboxGroup';
 import OwnerChip from '../components/OwnerChip';
+import ExportButton from '../components/ExportButton';
 import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
@@ -897,6 +898,7 @@ const TemplateDetails = () => {
                             </button>
                         )}
                         <button className="action-btn delete" onClick={() => setIsTemplateDeleteModalOpen(true)}>{t('template_details.delete_template')}</button>
+                        <ExportButton template={template} />
                       </>
                   ) : (
                       <button className="action-btn fork" onClick={handleFork}>{t('template_details.fork_template')}</button>
