@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/open-prompts/open-prompts/compare/v1.23.0...v1.24.0) (2026-10-15)
+
+
+### Features
+
+* **a11y:** add accessibility improvements for WCAG 2.1 AA ([78c4294](https://github.com/open-prompts/open-prompts/commit/78c42948e264f66e0c918731aa8e6195850a306f))
+
 # [1.23.0](https://github.com/open-prompts/open-prompts/compare/v1.22.1...v1.23.0) (2026-10-15)
 
 
