@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/open-prompts/open-prompts/compare/v1.21.0...v1.22.0) (2026-10-15)
+
+
+### Features
+
+* **review:** add pre-publication review gating for new creators ([a46c24c](https://github.com/open-prompts/open-prompts/commit/a46c24cefdcafba74835881207ba4ea7926e9da0))
+
 # [1.21.0](https://github.com/open-prompts/open-prompts/compare/v1.20.0...v1.21.0) (2026-10-14)
 
 
