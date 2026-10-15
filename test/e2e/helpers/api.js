@@ -96,22 +96,26 @@ async function adminLogin(email = 'admin@example.com', password = 'Admin_123456'
   return { token: resp.data.token, user: resp.data.user };
 }
 
-async function createTemplate(token, { title, description = 'e2e fixture', content = 'Hello ${name}', visibility = 'public', category = 'general', tags = ['e2e'] } = {}) {
-  const resp = await request('POST', '/api/v1/templates', {
+async function createTemplate(token, { title, description = 'e2e fixture', content = 'Hello ${name}', visibility = 'public', category = 'general', tags = ['e2e'], contentWarnings } = {}) {
+  const body = {
     title: title || `E2E Template ${Date.now()}`,
     description,
     content,
     visibility,
     category,
     tags,
-  }, { token });
+  };
+  if (contentWarnings !== undefined) body.content_warnings = contentWarnings;
+  const resp = await request('POST', '/api/v1/templates', body, { token });
   return resp.data.template;
 }
 
 // Update a template via PUT. A new version is created only when the content
 // differs from the latest version; change_note (<=200 chars) is attached to it.
-async function updateTemplate(token, template, { content, changeNote = '' } = {}) {
-  const resp = await request('PUT', `/api/v1/templates/${template.id}`, {
+// contentWarnings (array) is the full desired set; locked warnings are enforced
+// server-side (403 if a locked warning is dropped).
+async function updateTemplate(token, template, { content, changeNote = '', contentWarnings } = {}) {
+  const body = {
     template_id: template.id,
     owner_id: template.owner_id,
     title: template.title,
@@ -121,7 +125,9 @@ async function updateTemplate(token, template, { content, changeNote = '' } = {}
     tags: template.tags || [],
     content,
     change_note: changeNote,
-  }, { token });
+  };
+  if (contentWarnings !== undefined) body.content_warnings = contentWarnings;
+  const resp = await request('PUT', `/api/v1/templates/${template.id}`, body, { token });
   return resp.data;
 }
 
@@ -260,8 +266,8 @@ async function rejectReviewSubmission(adminToken, submissionId, reasonCode, note
 }
 
 // Search public templates. params: { keyword, q, sort, category, tags,
-// visibility, pageToken, pageSize, myLikes, token }
-async function searchTemplates({ keyword, q, sort, category, tags, visibility, pageToken, pageSize, myLikes, token } = {}) {
+// visibility, pageToken, pageSize, myLikes, excludeWarned, token }
+async function searchTemplates({ keyword, q, sort, category, tags, visibility, pageToken, pageSize, myLikes, excludeWarned, token } = {}) {
   const params = new URLSearchParams();
   if (keyword !== undefined) params.set('keyword', keyword);
   if (q !== undefined) params.set('q', q);
@@ -272,7 +278,58 @@ async function searchTemplates({ keyword, q, sort, category, tags, visibility, p
   if (pageToken) params.set('page_token', pageToken);
   if (pageSize) params.set('page_size', String(pageSize));
   if (myLikes) params.set('my_likes', 'true');
+  if (excludeWarned) params.set('exclude_warned', 'true');
   const resp = await request('GET', `/api/v1/templates?${params.toString()}`, null, token ? { token } : {});
+  return resp.data;
+}
+
+// Admin: add content warnings to a template. reason (3-500 chars) required.
+async function adminAddWarnings(adminToken, templateId, add, reason) {
+  const resp = await request('POST', `/api/v1/admin/templates/${templateId}/warnings`, { add, remove: [], reason }, { token: adminToken });
+  return resp.data;
+}
+
+// Admin: remove content warnings from a template. reason (3-500 chars) required.
+async function adminRemoveWarnings(adminToken, templateId, remove, reason) {
+  const resp = await request('DELETE', `/api/v1/admin/templates/${templateId}/warnings`, { add: [], remove, reason }, { token: adminToken });
+  return resp.data;
+}
+
+// Admin: list warning change history for a template.
+async function getWarningHistory(adminToken, templateId, { page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  const resp = await request('GET', `/api/v1/admin/templates/${templateId}/warnings/history?${params.toString()}`, null, { token: adminToken });
+  return resp.data;
+}
+
+// Admin: list templates with an optional warning-state filter ("" | "none" | a key).
+async function adminListTemplates(adminToken, { warning = '', q = '', page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  if (warning) params.set('warning', warning);
+  if (q) params.set('q', q);
+  const resp = await request('GET', `/api/v1/admin/templates?${params.toString()}`, null, { token: adminToken });
+  return resp.data;
+}
+
+// Admin: set the content_warning_taxonomy platform setting (JSON array string).
+async function setWarningTaxonomy(adminToken, taxonomyArray, reason) {
+  const resp = await request('PUT', '/api/v1/admin/settings', {
+    key: 'content_warning_taxonomy',
+    value: JSON.stringify(taxonomyArray),
+    reason,
+  }, { token: adminToken });
+  return resp.data;
+}
+
+// Get the caller's profile (carries show_warned_content).
+async function getProfile(token) {
+  const resp = await request('GET', '/api/v1/profile', null, { token });
+  return resp.data;
+}
+
+// Set the caller's show_warned_content viewer preference.
+async function setShowWarnedContent(token, value) {
+  const resp = await request('PUT', '/api/v1/profile', { show_warned_content: value }, { token });
   return resp.data;
 }
 
@@ -306,4 +363,11 @@ module.exports = {
   approveReviewSubmission,
   rejectReviewSubmission,
   searchTemplates,
+  adminAddWarnings,
+  adminRemoveWarnings,
+  getWarningHistory,
+  adminListTemplates,
+  setWarningTaxonomy,
+  getProfile,
+  setShowWarnedContent,
 };
