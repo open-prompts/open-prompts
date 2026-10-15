@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/open-prompts/open-prompts/compare/v1.24.0...v1.25.0) (2026-10-15)
+
+
+### Features
+
+* **follow:** add follow creators and following feed ([021ef80](https://github.com/open-prompts/open-prompts/commit/021ef80c246c009ba48e8df3de75426265d7619f))
+
 # [1.24.0](https://github.com/open-prompts/open-prompts/compare/v1.23.0...v1.24.0) (2026-10-15)
 
 
