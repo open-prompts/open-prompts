@@ -62,7 +62,13 @@ const PromptCard = ({ template }) => {
   };
 
   return (
-    <div className="prompt-card" onClick={() => navigate(`/templates/${template.id}`)} style={{ cursor: 'pointer' }}>
+    <div className="prompt-card">
+      <button
+        type="button"
+        className="prompt-card-overlay"
+        aria-label={template.title}
+        onClick={() => navigate(`/templates/${template.id}`)}
+      />
       <div className="card-header">
         <h4 className="title">{template.title}</h4>
         <span className={`badge ${template.visibility === 'VISIBILITY_PUBLIC' ? 'badge-public' : 'badge-private'}`}>
@@ -95,12 +101,26 @@ const PromptCard = ({ template }) => {
           ))}
         </div>
         <div className="stats">
-          <span className="stat-item" onClick={handleLike} title={t('template_details.like')}>
+          <button
+            type="button"
+            className="stat-item"
+            onClick={handleLike}
+            aria-pressed={!!liked}
+            aria-label={t('template_details.like')}
+            title={t('template_details.like')}
+          >
             <HeartIcon size={15} filled={liked} className="emoji" /> {likeCount}
-          </span>
-          <span className="stat-item" onClick={handleFavorite} title={t('template_details.favorite')}>
+          </button>
+          <button
+            type="button"
+            className="stat-item"
+            onClick={handleFavorite}
+            aria-pressed={!!favorited}
+            aria-label={t('template_details.favorite')}
+            title={t('template_details.favorite')}
+          >
             <StarIcon size={15} filled={favorited} className="emoji" /> {favCount}
-          </span>
+          </button>
         </div>
       </div>
     </div>

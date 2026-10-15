@@ -143,19 +143,29 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
       <div className="sidebar-section">
         <h3>{t('dashboard.title')}</h3>
         <ul>
-          <li
-            className={isActive('all-public') ? 'active' : ''}
-            onClick={() => handleCategoryClick(null, 'VISIBILITY_PUBLIC')}
-          >
-            {t('create_template.visibility_public')}
+          <li className={isActive('all-public') ? 'active' : ''}>
+            <button
+              type="button"
+              className="sidebar-item"
+              aria-current={isActive('all-public') ? 'true' : undefined}
+              onClick={() => handleCategoryClick(null, 'VISIBILITY_PUBLIC')}
+            >
+              {t('create_template.visibility_public')}
+            </button>
           </li>
           {displayedCategories.map((cat) => (
             <li
               key={cat.name}
               className={isActive('category', cat.name, 'VISIBILITY_PUBLIC') ? 'active' : ''}
-              onClick={() => handleCategoryClick(cat.name, 'VISIBILITY_PUBLIC')}
             >
-              {cat.name} <span className="count">({cat.count})</span>
+              <button
+                type="button"
+                className="sidebar-item"
+                aria-current={isActive('category', cat.name, 'VISIBILITY_PUBLIC') ? 'true' : undefined}
+                onClick={() => handleCategoryClick(cat.name, 'VISIBILITY_PUBLIC')}
+              >
+                {cat.name} <span className="count">({cat.count})</span>
+              </button>
             </li>
           ))}
         </ul>
@@ -170,23 +180,35 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
         <div className="sidebar-section">
           <h3>{t('dashboard.my_templates')}</h3>
           <ul>
-            <li
-              className={isActive('all-mine') ? 'active' : ''}
-              onClick={handleMyAllClick}
-            >
-              {t('dashboard.all_mine')}
+            <li className={isActive('all-mine') ? 'active' : ''}>
+              <button
+                type="button"
+                className="sidebar-item"
+                aria-current={isActive('all-mine') ? 'true' : undefined}
+                onClick={handleMyAllClick}
+              >
+                {t('dashboard.all_mine')}
+              </button>
             </li>
-            <li
-              className={isActive('likes') ? 'active' : ''}
-              onClick={() => handleSpecialFilterClick('likes')}
-            >
-              {t('dashboard.my_likes')}
+            <li className={isActive('likes') ? 'active' : ''}>
+              <button
+                type="button"
+                className="sidebar-item"
+                aria-current={isActive('likes') ? 'true' : undefined}
+                onClick={() => handleSpecialFilterClick('likes')}
+              >
+                {t('dashboard.my_likes')}
+              </button>
             </li>
-            <li
-              className={isActive('favorites') ? 'active' : ''}
-              onClick={() => handleSpecialFilterClick('favorites')}
-            >
-              {t('dashboard.favorites')}
+            <li className={isActive('favorites') ? 'active' : ''}>
+              <button
+                type="button"
+                className="sidebar-item"
+                aria-current={isActive('favorites') ? 'true' : undefined}
+                onClick={() => handleSpecialFilterClick('favorites')}
+              >
+                {t('dashboard.favorites')}
+              </button>
             </li>
             {/* Private Categories could go here if we filtered them separately,
                 but typically they are just subsets of My Prompts */}

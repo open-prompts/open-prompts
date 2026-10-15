@@ -46,7 +46,12 @@ export const NotificationProvider = ({ children }) => {
     return (
         <NotificationContext.Provider value={{ addNotification }}>
             {children}
-            <div className="notification-container">
+            <div
+                className="notification-container"
+                role="region"
+                aria-label={t('a11y.notifications_region')}
+                aria-live="polite"
+            >
                 {notifications.map((notification) => {
                     const kind = notification.kind || 'info';
                     const IconComponent = ICONS[kind] || InfoIcon;
@@ -54,7 +59,7 @@ export const NotificationProvider = ({ children }) => {
                         <div
                             key={notification.id}
                             className={`notification-toast ${kind}`}
-                            role="status"
+                            role={kind === 'error' ? 'alert' : 'status'}
                         >
                             <span className="notification-icon">
                                 <IconComponent size={18} />

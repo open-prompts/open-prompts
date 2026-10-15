@@ -13,6 +13,7 @@ import ReviewStatusCard from '../components/review/ReviewStatusCard';
 import HideWarnedFilterChip from '../components/warnings/HideWarnedFilterChip';
 import useTemplateFilters from '../hooks/useTemplateFilters';
 import { getCategories, getTags } from '../services/api';
+import { usePageAnnouncement } from '../utils/a11y';
 import './Home.scss';
 
 /**
@@ -24,6 +25,8 @@ const Home = () => {
   const { t } = useTranslation();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [taxonomy, setTaxonomy] = useState({ categories: [], tags: [] });
+
+  usePageAnnouncement('home.title');
 
   const {
     filters,
@@ -117,6 +120,7 @@ const Home = () => {
       availableTags={taxonomy.tags}
     >
       <div className="home-page" onScroll={handleScroll}>
+        <h1 className="visually-hidden">{t('home.title')}</h1>
         <div className="home-search-row">
           <SearchBar
             value={filters.keyword}

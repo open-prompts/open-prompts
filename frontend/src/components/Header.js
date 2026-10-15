@@ -43,6 +43,36 @@ const Header = ({ onMenuClick }) => {
     i18n.changeLanguage(isChinese ? 'en' : 'zh');
   };
 
+  // Menu keyboard pattern: Escape closes + restores focus; ArrowDown/ArrowUp
+  // move between items (wrap).
+  const menuRef = useRef(null);
+  const menuTriggerRef = useRef(null);
+
+  const handleMenuKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsDropdownOpen(false);
+      if (menuTriggerRef.current) menuTriggerRef.current.focus();
+      return;
+    }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const menu = menuRef.current;
+    if (!menu) return;
+    const items = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement);
+    let nextIndex;
+    if (currentIndex === -1) {
+      nextIndex = e.key === 'ArrowDown' ? 0 : items.length - 1;
+    } else if (e.key === 'ArrowDown') {
+      nextIndex = (currentIndex + 1) % items.length;
+    } else {
+      nextIndex = (currentIndex - 1 + items.length) % items.length;
+    }
+    items[nextIndex].focus();
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -115,7 +145,14 @@ const Header = ({ onMenuClick }) => {
         {user && <NotificationBell />}
         {user ? (
           <div className="user-profile" ref={dropdownRef}>
-            <button className="user-name-btn" onClick={toggleDropdown}>
+            <button
+              className="user-name-btn"
+              onClick={toggleDropdown}
+              aria-label={t('header.open_user_menu')}
+              aria-haspopup="menu"
+              aria-expanded={isDropdownOpen}
+              ref={menuTriggerRef}
+            >
               {user.avatar ? (
                 <img src={user.avatar} alt={t('common.avatar_alt')} className="user-avatar" />
               ) : (
@@ -128,7 +165,7 @@ const Header = ({ onMenuClick }) => {
             </button>
 
             {isDropdownOpen && (
-              <div className="profile-dropdown">
+              <div className="profile-dropdown" role="menu" aria-label={t('header.open_user_menu')} ref={menuRef} onKeyDown={handleMenuKeyDown}>
                 <div className="dropdown-header">
                   {user.avatar ? (
                     <img src={user.avatar} alt={t('common.avatar_alt')} className="dropdown-avatar" />
@@ -142,16 +179,16 @@ const Header = ({ onMenuClick }) => {
                     <div className="dropdown-user-email">{user.email || ''}</div>
                   </div>
                 </div>
-                <div className="dropdown-item" onClick={() => { navigate('/profile'); setIsDropdownOpen(false); }}>
+                <button type="button" role="menuitem" className="dropdown-item" onClick={() => { navigate('/profile'); setIsDropdownOpen(false); }}>
                   {t('header.profile')}
-                </div>
-                <div className="dropdown-item" onClick={() => { navigate('/api-keys'); setIsDropdownOpen(false); }}>
+                </button>
+                <button type="button" role="menuitem" className="dropdown-item" onClick={() => { navigate('/api-keys'); setIsDropdownOpen(false); }}>
                   {t('api_keys.title', 'API Keys')}
-                </div>
+                </button>
                 <div className="dropdown-divider" />
-                <div className="dropdown-item logout" onClick={handleLogout}>
+                <button type="button" role="menuitem" className="dropdown-item logout" onClick={handleLogout}>
                   {t('header.logout')}
-                </div>
+                </button>
               </div>
             )}
           </div>

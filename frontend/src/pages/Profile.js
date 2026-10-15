@@ -8,6 +8,7 @@ import { updateProfile, getProfile } from '../services/api';
 import { loginSuccess } from '../store/authSlice';
 import Header from '../components/Header';
 import ShowWarnedToggle from '../components/warnings/ShowWarnedToggle';
+import { usePageAnnouncement } from '../utils/a11y';
 import './Profile.scss';
 
 /**
@@ -20,6 +21,8 @@ const Profile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+
+  usePageAnnouncement('header.profile');
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -155,7 +158,7 @@ const Profile = () => {
       <div className="profile-page">
         <div className="profile-container">
           <div className="profile-header">
-             <h2>{t('header.profile')}</h2>
+             <h1>{t('header.profile')}</h1>
           </div>
 
           {!isEditing ? (
@@ -184,7 +187,7 @@ const Profile = () => {
                   </div>
 
                   <div className="content-preferences-section">
-                      <h3 className="content-preferences-title">{t('warnings.settings.title')}</h3>
+                      <h2 className="content-preferences-title">{t('warnings.settings.title')}</h2>
                       <ShowWarnedToggle
                         checked={showWarnedContent}
                         saving={savingWarnedPref}

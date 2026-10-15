@@ -23,6 +23,22 @@ jobs:
         working-directory: ./frontend
         run: npm run lint
 
+  frontend-a11y:
+    name: Frontend A11y Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24.12.0'
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run axe gate
+        working-directory: ./frontend
+        run: npm run test:a11y
+
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest

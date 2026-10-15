@@ -233,7 +233,8 @@
     "success_meta_update": "模板信息已更新！",
     "error_meta_update": "更新信息失败。",
     "by": "作者：{{owner}}",
-    "sdk_no_vars_comment": "# 无需变量"
+    "sdk_no_vars_comment": "# 无需变量",
+    "copy_code": "复制代码"
   },
   "review": {
     "status": {
@@ -344,6 +345,7 @@
     "login": "登录",
     "logout": "注销",
     "profile": "个人资料",
+    "open_user_menu": "打开用户菜单",
     "switchLanguage": "切换语言",
     "switch_to_light": "切换到浅色主题",
     "switch_to_dark": "切换到深色主题"
@@ -690,5 +692,17 @@
       "added": "已添加 {{warning}}",
       "removed": "已移除 {{warning}}"
     }
+  },
+  "a11y": {
+    "skip_to_content": "跳转到主要内容",
+    "notifications_region": "通知区域",
+    "open_user_menu": "打开用户菜单",
+    "close": "关闭",
+    "like": "点赞",
+    "favorite": "收藏",
+    "copy_code": "复制代码",
+    "back": "返回",
+    "loading": "加载中",
+    "error": "错误"
   }
 }

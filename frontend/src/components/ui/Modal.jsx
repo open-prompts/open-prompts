@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { CloseIcon } from './Icons';
+import { FOCUSABLE } from '../../utils/a11y';
 
 /**
  * Accessible modal dialog (replaces @carbon/react Modal).
@@ -36,6 +37,8 @@ const Modal = ({
 }) => {
   const { t } = useTranslation();
   const dialogRef = useRef(null);
+  const restoreRef = useRef(null);
+  const titleId = useRef(`modal-title-${Math.random().toString(36).substr(2, 9)}`);
   // Keep the latest handler in a ref so the focus/listener effect only runs
   // when `open` toggles. Without this, any inline `onClose` prop (recreated on
   // every parent render, e.g. while typing in a modal input) would re-trigger
@@ -47,6 +50,24 @@ const Modal = ({
       if (e.key === 'Escape' && onClose) {
         e.stopPropagation();
         onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const dlg = dialogRef.current;
+      if (!dlg) return;
+      const items = dlg.querySelectorAll(FOCUSABLE);
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     },
     [onClose]
@@ -58,17 +79,22 @@ const Modal = ({
 
   useEffect(() => {
     if (!open) return undefined;
+    // (a) save the trigger so we can restore focus on close
+    restoreRef.current = document.activeElement;
     const onKeyDown = (e) => {
       if (handleKeyDownRef.current) handleKeyDownRef.current(e);
     };
     document.addEventListener('keydown', onKeyDown, true);
-    // Focus the dialog when opened
+    // (b) focus the dialog when opened
     const t = setTimeout(() => {
       if (dialogRef.current) dialogRef.current.focus();
     }, 0);
     return () => {
       document.removeEventListener('keydown', onKeyDown, true);
       clearTimeout(t);
+      // (c) restore focus to the trigger on close/unmount
+      const el = restoreRef.current;
+      if (el && document.contains(el)) el.focus();
     };
   }, [open]);
 
@@ -81,13 +107,13 @@ const Modal = ({
         className={`modal ${size === 'lg' ? 'modal-lg' : ''} ${className}`}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId.current}
         tabIndex={-1}
       >
         <div className="modal-header">
           <div className="modal-heading">
             {subtitle && <span className="modal-subtitle">{subtitle}</span>}
-            <h3 className="modal-title">{title}</h3>
+            <h3 className="modal-title" id={titleId.current}>{title}</h3>
           </div>
           {onClose && (
             <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>

@@ -7,8 +7,20 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
-  cursor: pointer;
+  position: relative;
   transition: border-color var(--t), box-shadow var(--t), transform var(--t);
+}
+
+/* Overlay button owns card navigation — one tab stop per card. */
+.prompt-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius);
 }
 
 .prompt-card:hover {
@@ -110,6 +122,7 @@
 .stat-item {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   padding: 5px 9px;
   border-radius: var(--radius-pill);
@@ -119,6 +132,10 @@
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
+  position: relative;
+  z-index: 2; /* stay above the overlay → directly clickable */
+  min-width: 24px;
+  min-height: 24px;
   transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
 }
 

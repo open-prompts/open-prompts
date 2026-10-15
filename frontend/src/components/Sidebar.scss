@@ -36,21 +36,39 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 0;
   margin-bottom: 2px;
   border-radius: 8px;
   font-size: 14px;
   color: var(--text-2);
-  cursor: pointer;
   transition: background var(--t-fast), color var(--t-fast);
 }
 
-.sidebar-section li:hover {
+.sidebar-section li .sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.sidebar-section li:hover,
+.sidebar-section li .sidebar-item:hover {
   background: var(--surface-2);
   color: var(--text-1);
 }
 
-.sidebar-section li.active {
+.sidebar-section li.active,
+.sidebar-section li.active .sidebar-item {
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;

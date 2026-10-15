@@ -8,6 +8,7 @@ import { useNotification } from '../context/NotificationContext';
 import { AlertIcon } from '../components/ui/Icons';
 import './Register.scss';
 import AuthBackground from '../components/AuthBackground';
+import { usePageAnnouncement } from '../utils/a11y';
 
 /**
  * Register Page Component
@@ -31,6 +32,8 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
+  usePageAnnouncement('register.title');
 
   // Handle countdown timer
   useEffect(() => {
@@ -130,6 +133,9 @@ const Register = () => {
     if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
         setGeneralError(t('register.error_required_fields'));
+        // Move focus to the first invalid field for screen-reader users.
+        const firstInvalid = document.querySelector('.field-invalid .input');
+        if (firstInvalid) firstInvalid.focus();
         return;
     }
 
@@ -172,7 +178,7 @@ const Register = () => {
       <AuthBackground />
       <div className="auth-card register-card">
         <div className="auth-card-head">
-          <h2>{t('register.title')}</h2>
+          <h1>{t('register.title')}</h1>
           <p className="auth-card-sub">{t('register.subtitle')}</p>
         </div>
         <form onSubmit={handleSubmit} noValidate>
@@ -190,6 +196,7 @@ const Register = () => {
               type="text"
               className="input"
               value={formData.id}
+              autoComplete="username"
               onChange={handleChange}
               placeholder={t('register.ph_id')}
             />
@@ -203,6 +210,7 @@ const Register = () => {
               type="email"
               className="input"
               value={formData.email}
+              autoComplete="email"
               onChange={handleChange}
               placeholder={t('register.ph_email')}
             />
@@ -253,6 +261,7 @@ const Register = () => {
                 type={showPassword ? 'text' : 'password'}
                 className="input"
                 value={formData.password}
+                autoComplete="new-password"
                 onChange={handleChange}
               />
               <button

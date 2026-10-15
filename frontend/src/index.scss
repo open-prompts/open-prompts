@@ -19,7 +19,7 @@
   /* Text */
   --text-1: #eceef5;
   --text-2: #a8afc2;
-  --text-3: #6e768c;
+  --text-3: #8b92a8;
 
   /* Brand */
   --accent: #7c6cf0;
@@ -79,7 +79,7 @@ html.light-theme {
 
   --text-1: #191c28;
   --text-2: #565e73;
-  --text-3: #8b92a8;
+  --text-3: #626b7a;
 
   --accent: #6c5ce7;
   --accent-hover: #5848d6;
@@ -198,6 +198,61 @@ pre {
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   2.1 Accessibility — focus visibility, skip link, forced colors, utilities
+   -------------------------------------------------------------------------- */
+/* Universal focus indicator — 2px accent outline, 2px offset (FR-17/18) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Inputs previously removed the outline entirely; they now keep the soft ring
+   AND the visible outline. */
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Visually hidden but available to screen readers */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+}
+
+/* Skip-to-content link — off-screen until focused */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 0 0 8px 0;
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* Forced colors (Windows High Contrast) */
+@media (forced-colors: active) {
+  .prompt-card { border: 1px solid CanvasText; }
+  .btn { border: 1px solid ButtonText; }
+  .stat-item { forced-color-adjust: none; }
+  .skip-link { border: 1px solid ButtonText; }
 }
 
 /* --------------------------------------------------------------------------
@@ -355,7 +410,6 @@ pre {
 .input:focus,
 .textarea:focus,
 .select:focus {
-  outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
   background: var(--surface-2);

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AddIcon } from './ui/Icons';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import SkipLink from './SkipLink';
 import CreateTemplateModal from './CreateTemplateModal';
 import './Layout.scss';
 
@@ -54,6 +55,7 @@ const Layout = ({
 
   return (
     <div className="app-layout">
+      <SkipLink />
       <Header onMenuClick={toggleMobileSidebar} />
       <div className="app-body">
         {showSidebar && (
@@ -72,7 +74,7 @@ const Layout = ({
             />
           </>
         )}
-        <main className="app-content">
+        <main className="app-content" id="main-content" tabIndex={-1}>
           {children}
         </main>
       </div>

@@ -27,6 +27,7 @@ import ChangeNoteInput from '../components/ChangeNoteInput';
 import PublishReviewModal from '../components/review/PublishReviewModal';
 import ContentInterstitial, { isWarnedRevealed } from '../components/warnings/ContentInterstitial';
 import WarningCheckboxGroup from '../components/warnings/WarningCheckboxGroup';
+import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
 
@@ -35,6 +36,8 @@ const TemplateDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+
+  usePageAnnouncement('template_details.title');
 
   const [template, setTemplate] = useState(null);
   const [versions, setVersions] = useState([]);
@@ -726,11 +729,12 @@ const TemplateDetails = () => {
         <div className="header-actions">
           <div className="title-section">
             <div className="title-row">
-              <h2>{template.title}</h2>
+              <h1>{template.title}</h1>
               <div className="social-actions">
                 <button
                   className={`social-btn like ${isLiked ? 'active' : ''}`}
                   onClick={handleLike}
+                  aria-pressed={!!isLiked}
                   title={isLiked ? t('template_details.unlike') : t('template_details.like')}
                 >
                   <HeartIcon size={17} filled={isLiked} />
@@ -739,6 +743,7 @@ const TemplateDetails = () => {
                 <button
                   className={`social-btn favorite ${isFavorited ? 'active' : ''}`}
                   onClick={handleFavorite}
+                  aria-pressed={!!isFavorited}
                   title={isFavorited ? t('template_details.unfavorite') : t('template_details.favorite')}
                 >
                   <StarIcon size={17} filled={isFavorited} />
@@ -857,7 +862,7 @@ const TemplateDetails = () => {
                     ))}
 
                     {user && user.id === template.owner_id && (
-                       <button onClick={handleEditMetadata} className="icon-btn edit-meta-btn" title={t('template_details.edit_metadata') || "Edit Metadata"}>
+                       <button onClick={handleEditMetadata} className="icon-btn edit-meta-btn" title={t('template_details.edit_metadata') || "Edit Metadata"} aria-label={t('template_details.edit_metadata') || "Edit Metadata"}>
                            <span className="icon">
                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                    <path d="M12 20h9"></path>
@@ -1013,7 +1018,7 @@ const TemplateDetails = () => {
                 </div>
 
                 <div className="generator-actions">
-                    <button className="secondary" onClick={handleCopy}>{t('card.copy')}</button>
+                    <button className="secondary" onClick={handleCopy} aria-label={t('template_details.copy_code')}>{t('card.copy')}</button>
                     <button className="primary" onClick={handleCreatePrompt} disabled={isGenerating || isEditing}>
                       {isGenerating ? t('common.saving') : t('template_details.save_prompt')}
                     </button>
@@ -1064,7 +1069,7 @@ print(prompt)`}
                       navigator.clipboard.writeText(codeStr).then(() => {
                         addNotification({ kind: 'success', title: t('common.success'), subtitle: t('card.copied') });
                       });
-                  }} title={t('card.copy') || 'Copy code'}>
+                  }} title={t('card.copy') || 'Copy code'} aria-label={t('template_details.copy_code')}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>

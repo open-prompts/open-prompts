@@ -7,6 +7,7 @@ import { loginSuccess } from '../store/authSlice';
 import { useNotification } from '../context/NotificationContext';
 import AuthBackground from '../components/AuthBackground';
 import { AlertIcon } from '../components/ui/Icons';
+import { usePageAnnouncement } from '../utils/a11y';
 import './Login.scss';
 
 /**
@@ -24,6 +25,8 @@ const Login = () => {
   const [formErrors, setFormErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  usePageAnnouncement('login.title');
+
   /**
    * Handles the form submission.
    * @param {Event} e - The form submission event.
@@ -39,6 +42,9 @@ const Login = () => {
 
     if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
+        // Move focus to the first invalid field for screen-reader users.
+        const firstInvalid = document.querySelector('.field-invalid .input');
+        if (firstInvalid) firstInvalid.focus();
         return;
     }
 
@@ -74,7 +80,7 @@ const Login = () => {
       <AuthBackground />
       <div className="auth-card login-card">
         <div className="auth-card-head">
-          <h2>{t('login.title')}</h2>
+          <h1>{t('login.title')}</h1>
           <p className="auth-card-sub">{t('login.subtitle')}</p>
         </div>
         <form onSubmit={handleSubmit} noValidate>
@@ -92,6 +98,7 @@ const Login = () => {
               type="email"
               className="input"
               value={email}
+              autoComplete="email"
               onChange={(e) => {
                   setEmail(e.target.value);
                   if (formErrors.email) setFormErrors({...formErrors, email: ''});
@@ -109,6 +116,7 @@ const Login = () => {
                 type={showPassword ? 'text' : 'password'}
                 className="input"
                 value={password}
+                autoComplete="current-password"
                 onChange={(e) => {
                     setPassword(e.target.value);
                     if (formErrors.password) setFormErrors({...formErrors, password: ''});

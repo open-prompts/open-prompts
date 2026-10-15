@@ -233,7 +233,8 @@
     "success_meta_update": "Template info updated!",
     "error_meta_update": "Failed to update info.",
     "by": "By {{owner}}",
-    "sdk_no_vars_comment": "# no variables required"
+    "sdk_no_vars_comment": "# no variables required",
+    "copy_code": "Copy code"
   },
   "review": {
     "status": {
@@ -344,6 +345,7 @@
     "login": "Login",
     "logout": "Logout",
     "profile": "Profile",
+    "open_user_menu": "Open user menu",
     "switchLanguage": "Switch Language",
     "switch_to_light": "Switch to light theme",
     "switch_to_dark": "Switch to dark theme"
@@ -690,5 +692,17 @@
       "added": "added {{warning}}",
       "removed": "removed {{warning}}"
     }
+  },
+  "a11y": {
+    "skip_to_content": "Skip to content",
+    "notifications_region": "Notifications",
+    "open_user_menu": "Open user menu",
+    "close": "Close",
+    "like": "Like",
+    "favorite": "Favorite",
+    "copy_code": "Copy code",
+    "back": "Back",
+    "loading": "Loading",
+    "error": "Error"
   }
 }

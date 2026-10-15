@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNotification } from '../context/NotificationContext';
 import Header from '../components/Header';
 import APIKeyManager from '../components/APIKeyManager';
+import { usePageAnnouncement } from '../utils/a11y';
 import './APIKeys.scss';
 
 const APIKeys = () => {
@@ -12,6 +13,8 @@ const APIKeys = () => {
     const { token } = useSelector((state) => state.auth);
     const navigate = useNavigate();
     const { addNotification } = useNotification();
+
+    usePageAnnouncement('api_keys.title');
 
     useEffect(() => {
         if (!token) {

@@ -34,4 +34,11 @@ i18n
     }
   });
 
+// Keep <html lang> in sync with the active UI language (a11y).
+const setLang = (lng) => {
+  document.documentElement.lang = lng === 'zh' ? 'zh-CN' : 'en';
+};
+setLang(i18n.language);
+i18n.on('languageChanged', setLang);
+
 export default i18n;
