@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/open-prompts/open-prompts/compare/v1.22.1...v1.23.0) (2026-10-15)
+
+
+### Features
+
+* **warnings:** add content warnings with gating and viewer preferences ([0e854e8](https://github.com/open-prompts/open-prompts/commit/0e854e8a993a55b0fbc04438dac1dfc942c87cb8))
+
 ## [1.22.1](https://github.com/open-prompts/open-prompts/compare/v1.22.0...v1.22.1) (2026-10-15)
 
 
