@@ -610,7 +610,14 @@ func main() {
 			}
 			req.PageToken = q.Get("page_token")
 
-			resp, err := svc.ListTemplateVersions(context.Background(), req)
+			ctx := context.Background()
+			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+					ctx = service.ContextWithUserID(ctx, userID)
+				}
+			}
+			resp, err := svc.ListTemplateVersions(ctx, req)
 			if err != nil {
 				writeError(w, err)
 				return

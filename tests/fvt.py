@@ -2367,6 +2367,21 @@ def _run_pre_publication_review_inner(admin_headers, newbie_id, established_id, 
     if resp.status_code != 200 or resp.json()["template"].get("moderation_status") != "in_review":
         print(f"Owner GET should be 200 in_review, got {resp.status_code}")
         return False
+    # Owner can list versions of their own in_review template (Issue #1:
+    # the /versions handler must resolve the auth context so the owner check
+    # in TemplateRepo.Get sees the user id instead of 404ing).
+    resp = requests.get(f"{BASE_URL}/{newbie_tid}/versions", headers=headers_newbie)
+    if resp.status_code != 200:
+        print(f"Owner list versions of gated template should be 200, got {resp.status_code}: {resp.text}")
+        return False
+    if not resp.json().get("versions"):
+        print("Owner list versions of gated template should return at least one version")
+        return False
+    # Non-owner list versions of a gated template 404s
+    resp = requests.get(f"{BASE_URL}/{newbie_tid}/versions", headers=headers_second)
+    if resp.status_code != 404:
+        print(f"Non-owner list versions of gated template should be 404, got {resp.status_code}")
+        return False
     # Fork of a gated template 404s for non-owners
     resp = requests.post(f"{BASE_URL}/{newbie_tid}/fork", headers=headers_second)
     if resp.status_code != 404:
