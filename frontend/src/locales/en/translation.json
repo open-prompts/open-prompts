@@ -235,6 +235,93 @@
     "by": "By {{owner}}",
     "sdk_no_vars_comment": "# no variables required"
   },
+  "review": {
+    "status": {
+      "inReview": "In review",
+      "rejected": "Rejected",
+      "approved": "Live now"
+    },
+    "card": {
+      "submitted": "Submitted {{time}}",
+      "expected": "Expected decision within 24 hours",
+      "rejected_hint": "This template was rejected — fix it and resubmit for review.",
+      "view": "View",
+      "edit": "Edit"
+    },
+    "banner": {
+      "in_review": "This template is in pre-publication review — only you can see it until it is approved.",
+      "rejected": "This template was rejected and is only visible to you."
+    },
+    "modal": {
+      "title": "Submitted for review",
+      "body": "Your template will go live after a quick review — usually within 24 hours. You'll get a notification either way.",
+      "view_status": "View status",
+      "done": "Done"
+    },
+    "queue": {
+      "title": "Review queue",
+      "open": "Open: {{count}}",
+      "median": "Median wait: {{duration}}",
+      "today": "Today: {{count}} decisions",
+      "aging": "Aging >48h",
+      "resubmissions": "Resubmissions",
+      "empty": "Queue is clear",
+      "tab_all": "All",
+      "category": "Category",
+      "review": "Review",
+      "review_aria": "Review {{title}}",
+      "col_age": "Age",
+      "col_template": "Template",
+      "col_creator": "Creator",
+      "col_context": "Context",
+      "context_approved": "{{count}} approved",
+      "context_rejections": "{{count}} rejections",
+      "minutes": "{{count}} min",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    },
+    "row": {
+      "resubmission": "({{n}}th)"
+    },
+    "detail": {
+      "back": "Queue",
+      "submitted": "submitted {{time}}",
+      "template_section": "Template",
+      "author_section": "Author",
+      "author": "Joined {{date}} · {{published}} published · {{rejections}} prior rejections",
+      "banned": "Creator banned",
+      "chain": "Resubmission history",
+      "chain_none": "First submission — no prior attempts.",
+      "chain_rejected": "Rejected: {{reason}}",
+      "kbd_hint": "A approve · R reject · → next"
+    },
+    "action": {
+      "approve": "Approve",
+      "reject": "Reject…"
+    },
+    "reject": {
+      "title": "Reject template",
+      "confirm": "Reject",
+      "reason_label": "Reason (required)",
+      "reasonRequired": "Pick a reason to continue",
+      "note": "Note to creator (optional)",
+      "reason": {
+        "spam": "Spam",
+        "plagiarism": "Plagiarism",
+        "harmful": "Harmful content",
+        "lowQuality": "Low quality",
+        "other": "Other"
+      }
+    },
+    "notify": {
+      "approved": "Your template \"{{title}}\" is live",
+      "rejected": "Your template \"{{title}}\" was rejected: {{reason}}"
+    },
+    "cta": {
+      "resubmit": "Fix and resubmit"
+    },
+    "notFound": "This page doesn't exist"
+  },
   "profile": {
     "error_fetch": "Failed to fetch profile",
     "success_update": "Profile updated successfully!",
@@ -315,6 +402,7 @@
       "dashboard": "Dashboard",
       "users": "Users",
       "templates": "Templates",
+      "review": "Review",
       "audit_log": "Audit Log",
       "back_to_app": "Back to App",
       "brand": "Open Prompts Admin"
@@ -477,7 +565,9 @@
     "event": {
       "like": "{{actor}} liked your template \"{{title}}\"",
       "favorite": "{{actor}} favorited your template \"{{title}}\"",
-      "fork": "{{actor}} forked your template \"{{title}}\""
+      "fork": "{{actor}} forked your template \"{{title}}\"",
+      "template_approved": "Your template \"{{title}}\" is live",
+      "template_rejected": "Your template \"{{title}}\" was rejected: {{reason}}"
     },
     "empty": {
       "all": "No notifications yet — when someone likes, favorites, or forks your templates, you'll see it here.",

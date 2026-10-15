@@ -139,6 +139,11 @@ func (m *MockAdminRepository) DeleteComment(ctx context.Context, id string) (boo
 	return args.Bool(0), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockAdminRepository) SetTemplateModeration(ctx context.Context, templateID string, status string, publish bool) error {
+	args := m.Called(ctx, templateID, status, publish)
+	return args.Error(0)
+}
+
 // MockAPIKeyLister is a mock implementation of service.APIKeyLister.
 type MockAPIKeyLister struct {
 	mock.Mock

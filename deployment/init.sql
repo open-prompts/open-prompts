@@ -383,3 +383,154 @@ CREATE INDEX IF NOT EXISTS idx_template_likes_template_created
     ON template_likes(template_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_template_favorites_template_created
     ON template_favorites(template_id, created_at);
+
+-- -----------------------------------------------------------------------------
+-- Feature: pre-publication-review
+-- Description: gating state, review submissions, platform settings.
+-- -----------------------------------------------------------------------------
+
+-- Gating state on users (OQ-1: denormalized counters). The backfill runs
+-- inside the column-add guard, so it executes exactly once — on first
+-- migration onto this schema.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='approved_template_count') THEN
+        ALTER TABLE users ADD COLUMN approved_template_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN users.approved_template_count IS
+            'Approved templates maintained at review decision time (gating threshold N)';
+        -- Backfill: existing public templates count as approved.
+        UPDATE users u
+        SET approved_template_count = (
+            SELECT COUNT(*) FROM templates t
+            WHERE t.owner_id = u.id AND t.visibility = 'public'
+        );
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='review_gated_remaining') THEN
+        ALTER TABLE users ADD COLUMN review_gated_remaining INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN users.review_gated_remaining IS
+            'Publishes still gated after a moderation takedown/ban (re-gate count M)';
+    END IF;
+END $$;
+
+-- Moderation state + first-approval time on templates. The published_at
+-- backfill runs inside the column-add guard (once, on first migration).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='moderation_status') THEN
+        ALTER TABLE templates ADD COLUMN moderation_status TEXT NOT NULL DEFAULT 'normal';
+        ALTER TABLE templates ADD CONSTRAINT templates_moderation_status_check
+            CHECK (moderation_status IN ('normal', 'in_review', 'rejected'));
+        COMMENT ON COLUMN templates.moderation_status IS
+            'normal | in_review | rejected (admin-template-moderation widens this list later)';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='published_at') THEN
+        ALTER TABLE templates ADD COLUMN published_at TIMESTAMPTZ;
+        COMMENT ON COLUMN templates.published_at IS 'First review-approval time; NULL until approved';
+        -- Backfill: existing public templates are considered published at creation.
+        UPDATE templates SET published_at = created_at
+        WHERE visibility = 'public' AND published_at IS NULL;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_templates_moderation_status
+    ON templates(moderation_status);
+
+-- Review submissions (OQ-2: separate table; chain via UNIQUE(template_id, attempt_number)).
+CREATE TABLE IF NOT EXISTS review_submissions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    creator_id TEXT NOT NULL,
+    attempt_number INT NOT NULL CHECK (attempt_number >= 1),
+    status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    decided_at TIMESTAMPTZ,
+    decided_by TEXT,
+    reject_reason_code TEXT,
+    reject_note TEXT,
+    UNIQUE (template_id, attempt_number)
+);
+
+COMMENT ON TABLE review_submissions IS 'Pre-publication review queue; one row per publish attempt';
+COMMENT ON COLUMN review_submissions.attempt_number IS '1 = first submission; >= 2 = resubmission';
+COMMENT ON COLUMN review_submissions.status IS 'pending | approved | rejected';
+COMMENT ON COLUMN review_submissions.reject_reason_code IS 'spam | plagiarism | harmful | lowQuality | other (NULL for approvals)';
+
+-- Partial index serves the queue: pending only, aging-first + FIFO order.
+CREATE INDEX IF NOT EXISTS idx_review_submissions_pending
+    ON review_submissions (status, submitted_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_review_submissions_template
+    ON review_submissions (template_id);
+CREATE INDEX IF NOT EXISTS idx_review_submissions_creator
+    ON review_submissions (creator_id, status);
+
+-- Platform settings (NFR-5: N/M/aging configurable without deploy).
+CREATE TABLE IF NOT EXISTS platform_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE platform_settings IS 'Admin-editable platform settings (key-value)';
+
+INSERT INTO platform_settings (key, value) VALUES
+    ('review_approval_threshold', '3'),
+    ('review_regate_count', '3'),
+    ('review_aging_hours', '48')
+ON CONFLICT (key) DO NOTHING;
+
+-- Widen admin_audit_logs CHECKs for review decisions (guarded, idempotent).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_action_check';
+    IF def IS NOT NULL AND def NOT LIKE '%review_approve%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_action_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_action_check
+            CHECK (action IN ('ban', 'unban', 'role_change', 'delete_comment',
+                              'review_approve', 'review_reject', 'settings_change'));
+    END IF;
+END $$;
+
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_target_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%template%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_target_type_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_target_type_check
+            CHECK (target_type IN ('user', 'comment', 'template', 'platform'));
+    END IF;
+END $$;
+
+-- Widen notifications.type CHECK for decision notifications (guarded).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%template_approved%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment', 'template_approved', 'template_rejected'));
+    END IF;
+END $$;

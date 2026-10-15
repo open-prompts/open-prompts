@@ -78,6 +78,7 @@ const AdminLayout = () => {
     { to: '/admin', label: t('admin.nav.dashboard'), end: true },
     { to: '/admin/users', label: t('admin.nav.users') },
     { to: '/admin/templates', label: t('admin.nav.templates') },
+    { to: '/admin/review', label: t('admin.nav.review') },
     { to: '/admin/audit-log', label: t('admin.nav.audit_log') },
   ];
 

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,12 +37,18 @@ type APIKeyLister interface {
 type AdminService struct {
 	pb.UnimplementedAdminServiceServer
 
-	UserRepo   repository.UserRepository
-	AdminRepo  repository.AdminRepository
-	APIKeyRepo APIKeyLister
-	Redis      RedisStore
-	JWTSecret  []byte
-	SessionTTL time.Duration
+	UserRepo         repository.UserRepository
+	AdminRepo        repository.AdminRepository
+	APIKeyRepo       APIKeyLister
+	ReviewRepo       repository.ReviewRepository
+	NotificationRepo repository.NotificationRepository
+	Redis            RedisStore
+	JWTSecret        []byte
+	SessionTTL       time.Duration
+
+	// promptSvc is wired post-construction so UpdatePlatformSetting can
+	// invalidate the prompt service's settings cache.
+	promptSvc *PromptService
 }
 
 // NewAdminService creates a new AdminService.
@@ -64,6 +71,24 @@ func NewAdminService(
 		JWTSecret:  []byte(jwtSecret),
 		SessionTTL: sessionTTL,
 	}
+}
+
+// SetReviewRepo wires the review repository (post-construction so existing
+// call sites stay unchanged).
+func (s *AdminService) SetReviewRepo(repo repository.ReviewRepository) {
+	s.ReviewRepo = repo
+}
+
+// SetPromptService wires the prompt service for settings-cache
+// invalidation (post-construction).
+func (s *AdminService) SetPromptService(ps *PromptService) {
+	s.promptSvc = ps
+}
+
+// SetNotificationRepo wires the notification repository (post-construction)
+// used by review-decision notifications.
+func (s *AdminService) SetNotificationRepo(repo repository.NotificationRepository) {
+	s.NotificationRepo = repo
 }
 
 // ---- helpers ----
@@ -404,10 +429,10 @@ func (s *AdminService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb
 	}
 	for _, k := range apiKeys {
 		key := &pb.AdminAPIKeySummary{
-			Id:       k.ID,
-			Name:     k.Name,
-			Prefix:   k.Prefix,
-			IsActive: k.IsActive,
+			Id:        k.ID,
+			Name:      k.Name,
+			Prefix:    k.Prefix,
+			IsActive:  k.IsActive,
 			CreatedAt: timestamppb.New(k.CreatedAt),
 		}
 		if k.LastUsedAt.Valid {
@@ -461,6 +486,19 @@ func (s *AdminService) BanUser(ctx context.Context, req *pb.BanUserRequest) (*pb
 		now := time.Now().Unix()
 		_ = s.Redis.Set(ctx, "user_banned:"+user.ID, "1", adminBanKeyTTL)
 		_ = s.Redis.Set(ctx, "token_revoked_before:"+user.ID, fmt.Sprintf("%d", now), adminBanKeyTTL)
+	}
+
+	// Pre-publication review (FR-2/US-8): re-gate the user's next M publishes
+	// after reinstatement. Best-effort so a review-store failure never
+	// blocks the ban itself.
+	if s.ReviewRepo != nil {
+		regate := defaultReviewSettings[settingRegateCount]
+		if s.promptSvc != nil {
+			regate = s.promptSvc.getSettingInt(ctx, settingRegateCount)
+		}
+		if err := s.ReviewRepo.SetGatedRemaining(ctx, user.ID, int32(regate)); err != nil {
+			zap.S().Warnf("BanUser: failed to set review_gated_remaining for %s: %v", user.ID, err)
+		}
 	}
 
 	s.writeAudit(ctx, actor, "ban", "user", user.ID, req.Reason)
@@ -645,7 +683,7 @@ func (s *AdminService) ListAuditLogs(ctx context.Context, req *pb.ListAuditLogsR
 		return nil, err
 	}
 
-	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" {
+	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" && req.Action != "review_approve" && req.Action != "review_reject" {
 		return nil, status.Error(codes.InvalidArgument, "invalid action filter")
 	}
 
@@ -772,17 +810,17 @@ func (s *AdminService) ListAdminComments(ctx context.Context, req *pb.ListAdminC
 	}
 	for _, e := range entries {
 		resp.Entries = append(resp.Entries, &pb.AdminCommentEntry{
-			Id:                      e.ID,
-			TemplateId:              e.TemplateID,
-			TemplateTitle:           e.TemplateTitle,
-			TemplateOwnerId:         e.TemplateOwnerID,
+			Id:                       e.ID,
+			TemplateId:               e.TemplateID,
+			TemplateTitle:            e.TemplateTitle,
+			TemplateOwnerId:          e.TemplateOwnerID,
 			TemplateOwnerDisplayName: e.OwnerDisplayName,
-			UserId:                  e.UserID,
-			UserDisplayName:         e.UserDisplayName,
-			UserEmail:               e.UserEmail,
-			Content:                 e.Content,
-			CreatedAt:               timestamppb.New(e.CreatedAt),
-			UpdatedAt:               timestamppb.New(e.UpdatedAt),
+			UserId:                   e.UserID,
+			UserDisplayName:          e.UserDisplayName,
+			UserEmail:                e.UserEmail,
+			Content:                  e.Content,
+			CreatedAt:                timestamppb.New(e.CreatedAt),
+			UpdatedAt:                timestamppb.New(e.UpdatedAt),
 		})
 	}
 	return resp, nil
@@ -811,4 +849,382 @@ func (s *AdminService) DeleteAdminComment(ctx context.Context, req *pb.DeleteAdm
 
 	s.writeAudit(ctx, actor, "delete_comment", "comment", req.CommentId, req.Reason)
 	return &pb.DeleteAdminCommentResponse{Success: true}, nil
+}
+
+// ---- Pre-publication review ----
+
+// validRejectReasonCodes is the server-side whitelist of rejection reason
+// codes (constraint 9: the client never defines the set).
+var validRejectReasonCodes = map[string]bool{
+	"spam":       true,
+	"plagiarism": true,
+	"harmful":    true,
+	"lowQuality": true,
+	"other":      true,
+}
+
+// reviewAgingHours resolves the aging window (platform setting, cached in
+// the prompt service) for queue ordering and the aging flag.
+func (s *AdminService) reviewAgingHours(ctx context.Context) int {
+	if s.promptSvc != nil {
+		return s.promptSvc.getSettingInt(ctx, settingAgingHours)
+	}
+	return defaultReviewSettings[settingAgingHours]
+}
+
+// ListReviewQueue returns the pending review queue, aging-first then FIFO.
+func (s *AdminService) ListReviewQueue(ctx context.Context, req *pb.ListReviewQueueRequest) (*pb.ListReviewQueueResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.ReviewRepo.ListQueue(ctx, repository.ReviewQueueFilters{
+		Category:         strings.TrimSpace(req.Category),
+		AgingOnly:        req.AgingOnly,
+		ResubmissionOnly: req.ResubmissionOnly,
+		AgingHours:       s.reviewAgingHours(ctx),
+		Limit:            int(perPage),
+		Offset:           int((page - 1) * perPage),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list review queue: %v", err)
+	}
+
+	items := make([]*pb.ReviewQueueItem, 0, len(rows))
+	for _, r := range rows {
+		items = append(items, &pb.ReviewQueueItem{
+			Id:                     r.ID,
+			TemplateId:             r.TemplateID,
+			TemplateTitle:          r.TemplateTitle,
+			CreatorId:              r.CreatorID,
+			CreatorDisplayName:     r.CreatorName,
+			AttemptNumber:          r.AttemptNumber,
+			IsResubmission:         r.AttemptNumber >= 2,
+			SubmittedAt:            timestamppb.New(r.SubmittedAt),
+			Category:               r.TemplateCategory,
+			Aging:                  r.Aging,
+			CreatorApprovedCount:   r.CreatorApproved,
+			CreatorPriorRejections: r.PriorRejections,
+			CreatorBanned:          r.CreatorBanned,
+		})
+	}
+	return &pb.ListReviewQueueResponse{
+		Items:   items,
+		Total:   total,
+		Page:    page,
+		PerPage: perPage,
+	}, nil
+}
+
+// GetReviewSubmission returns the full detail for one submission.
+func (s *AdminService) GetReviewSubmission(ctx context.Context, req *pb.GetReviewSubmissionRequest) (*pb.GetReviewSubmissionResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "submission id is required")
+	}
+
+	d, err := s.ReviewRepo.GetSubmissionDetail(ctx, req.Id)
+	if err != nil {
+		if err == repository.ErrSubmissionNotFound {
+			return nil, status.Error(codes.NotFound, "submission not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load submission: %v", err)
+	}
+
+	chain := make([]*pb.ReviewChainEntry, 0, len(d.History))
+	for _, h := range d.History {
+		entry := &pb.ReviewChainEntry{
+			AttemptNumber: h.AttemptNumber,
+			Status:        h.Status,
+			SubmittedAt:   timestamppb.New(h.SubmittedAt),
+		}
+		if h.DecidedAt.Valid {
+			entry.DecidedAt = timestamppb.New(h.DecidedAt.Time)
+		}
+		if h.RejectReasonCode.Valid {
+			entry.RejectReasonCode = h.RejectReasonCode.String
+		}
+		if h.RejectNote.Valid {
+			entry.RejectNote = h.RejectNote.String
+		}
+		chain = append(chain, entry)
+	}
+
+	return &pb.GetReviewSubmissionResponse{
+		Submission: &pb.ReviewSubmissionDetail{
+			Id:                     d.ID,
+			TemplateId:             d.TemplateID,
+			TemplateTitle:          d.TemplateTitle,
+			TemplateDescription:    d.TemplateDescription.String,
+			TemplateContent:        d.VersionContent,
+			Tags:                   d.TemplateTags,
+			Category:               d.TemplateCategory.String,
+			Language:               d.TemplateLanguage,
+			CreatorId:              d.CreatorID,
+			CreatorDisplayName:     d.CreatorName,
+			CreatorJoinedAt:        timestamppb.New(d.CreatorCreatedAt),
+			CreatorPublishedCount:  d.CreatorApproved,
+			CreatorPriorRejections: d.PriorRejections,
+			CreatorBanned:          d.CreatorBanned,
+			AttemptNumber:          d.AttemptNumber,
+			SubmittedAt:            timestamppb.New(d.SubmittedAt),
+			Chain:                  chain,
+		},
+	}, nil
+}
+
+// ApproveReviewSubmission approves a pending submission: the template goes
+// live (moderation_status=normal, published_at=now), the creator's approved
+// count increments, and a template_approved notification is emitted
+// (best-effort).
+func (s *AdminService) ApproveReviewSubmission(ctx context.Context, req *pb.ApproveReviewSubmissionRequest) (*pb.ReviewDecisionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "submission id is required")
+	}
+
+	sub, err := s.ReviewRepo.DecideSubmission(ctx, req.Id, "approved", actor.ID, nil, nil)
+	if err != nil {
+		return nil, s.mapDecisionError(err)
+	}
+
+	// Publish the template. The WHERE moderation_status='in_review' guard
+	// makes a double-approve a no-op at the template level.
+	if err := s.AdminRepo.SetTemplateModeration(ctx, sub.TemplateID, "normal", true); err != nil {
+		zap.S().Errorf("ApproveReviewSubmission: failed to publish template %s: %v", sub.TemplateID, err)
+		return nil, status.Errorf(codes.Internal, "failed to publish template: %v", err)
+	}
+	if err := s.ReviewRepo.IncrementApprovedCount(ctx, sub.CreatorID); err != nil {
+		zap.S().Warnf("ApproveReviewSubmission: failed to increment approved count for %s: %v", sub.CreatorID, err)
+	}
+
+	s.writeAudit(ctx, actor, "review_approve", "template", sub.TemplateID, "approved in pre-publication review")
+	s.notifyReviewDecision(ctx, actor, sub.CreatorID, sub.TemplateID, "template_approved", "")
+
+	return &pb.ReviewDecisionResponse{
+		SubmissionId: sub.ID,
+		TemplateId:   sub.TemplateID,
+		Status:       "approved",
+	}, nil
+}
+
+// RejectReviewSubmission rejects a pending submission with a mandatory
+// whitelisted reason code; the template is hidden (moderation_status=rejected)
+// and the creator is notified with the reason (best-effort).
+func (s *AdminService) RejectReviewSubmission(ctx context.Context, req *pb.RejectReviewSubmissionRequest) (*pb.ReviewDecisionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "submission id is required")
+	}
+	reasonCode := strings.TrimSpace(req.ReasonCode)
+	if !validRejectReasonCodes[reasonCode] {
+		return nil, status.Error(codes.InvalidArgument, "reason_code must be one of: spam, plagiarism, harmful, lowQuality, other")
+	}
+	note := strings.TrimSpace(req.Note)
+	if len(note) > 500 {
+		return nil, status.Error(codes.InvalidArgument, "note must be at most 500 characters")
+	}
+
+	var notePtr *string
+	if note != "" {
+		notePtr = &note
+	}
+	sub, err := s.ReviewRepo.DecideSubmission(ctx, req.Id, "rejected", actor.ID, &reasonCode, notePtr)
+	if err != nil {
+		return nil, s.mapDecisionError(err)
+	}
+
+	// Hide the template. The WHERE moderation_status='in_review' guard
+	// keeps concurrent decisions consistent.
+	if err := s.AdminRepo.SetTemplateModeration(ctx, sub.TemplateID, "rejected", false); err != nil {
+		zap.S().Errorf("RejectReviewSubmission: failed to hide template %s: %v", sub.TemplateID, err)
+		return nil, status.Errorf(codes.Internal, "failed to update template: %v", err)
+	}
+
+	reason := reasonCode
+	if note != "" {
+		reason = reasonCode + ": " + note
+	}
+	s.writeAudit(ctx, actor, "review_reject", "template", sub.TemplateID, reason)
+	s.notifyReviewDecision(ctx, actor, sub.CreatorID, sub.TemplateID, "template_rejected", reasonCode)
+
+	return &pb.ReviewDecisionResponse{
+		SubmissionId: sub.ID,
+		TemplateId:   sub.TemplateID,
+		Status:       "rejected",
+	}, nil
+}
+
+// mapDecisionError maps repository decision errors to gRPC codes.
+func (s *AdminService) mapDecisionError(err error) error {
+	if err == repository.ErrAlreadyDecided {
+		return status.Error(codes.FailedPrecondition, "submission already decided")
+	}
+	if err == repository.ErrSubmissionNotFound {
+		return status.Error(codes.NotFound, "submission not found")
+	}
+	return status.Errorf(codes.Internal, "failed to decide submission: %v", err)
+}
+
+// notifyReviewDecision emits the creator notification for a review
+// decision. Best-effort: failures are logged, never fatal (FR-7/FR-11).
+// Actor is the deciding admin (detailed design §3.6); self-decisions are
+// suppressed (no_self_notify backstop). For rejections the reason code is
+// carried in the actor_display_name slot so the client can render the
+// actor-less sentence "rejected: <reason>" (review.notify.rejected).
+func (s *AdminService) notifyReviewDecision(ctx context.Context, actor *models.User, creatorID, templateID, notificationType, reasonCode string) {
+	if s.NotificationRepo == nil {
+		return
+	}
+	if actor == nil || actor.ID == creatorID {
+		// Self-decision (an admin reviewing their own submission): skip.
+		return
+	}
+	displayName := reasonCode
+	if displayName == "" {
+		displayName = actor.DisplayName
+		if displayName == "" {
+			displayName = actor.ID
+		}
+	}
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      creatorID,
+		ActorID:          actor.ID,
+		TemplateID:       templateID,
+		Type:             notificationType,
+		ActorDisplayName: displayName,
+	}); err != nil {
+		zap.S().Errorf("review decision notification: failed to create %s notification (template=%s creator=%s): %v",
+			notificationType, templateID, creatorID, err)
+	}
+}
+
+// GetReviewMetrics returns queue KPIs.
+func (s *AdminService) GetReviewMetrics(ctx context.Context, _ *pb.GetReviewMetricsRequest) (*pb.ReviewMetrics, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+
+	m, err := s.ReviewRepo.GetMetrics(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get review metrics: %v", err)
+	}
+	rates := make([]*pb.RejectionRateEntry, 0, len(m.RejectionRates))
+	for _, e := range m.RejectionRates {
+		rates = append(rates, &pb.RejectionRateEntry{
+			ReasonCode: e.ReasonCode,
+			Count:      e.Count,
+			Rate:       e.Rate,
+		})
+	}
+	return &pb.ReviewMetrics{
+		OpenCount:               int64(m.PendingCount),
+		MedianTimeInReviewHours: m.MedianHours,
+		DecisionsToday:          int64(m.ApprovedToday + m.RejectedToday),
+		RejectionRateByReason:   rates,
+	}, nil
+}
+
+// GetPlatformSettings lists the admin-editable platform settings.
+func (s *AdminService) GetPlatformSettings(ctx context.Context, _ *pb.GetPlatformSettingsRequest) (*pb.GetPlatformSettingsResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+
+	settings, err := s.ReviewRepo.GetSettings(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get platform settings: %v", err)
+	}
+	entries := make([]*pb.PlatformSettingEntry, 0, len(settings))
+	for _, st := range settings {
+		entries = append(entries, &pb.PlatformSettingEntry{
+			Key:       st.Key,
+			Value:     st.Value,
+			UpdatedAt: timestamppb.New(st.UpdatedAt),
+		})
+	}
+	return &pb.GetPlatformSettingsResponse{Settings: entries}, nil
+}
+
+// UpdatePlatformSetting updates one platform setting with a mandatory
+// audit-logged reason, then invalidates the prompt service's settings cache.
+func (s *AdminService) UpdatePlatformSetting(ctx context.Context, req *pb.UpdatePlatformSettingRequest) (*pb.PlatformSettingEntry, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReviewRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "review repository not configured")
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	key := strings.TrimSpace(req.Key)
+	if key != settingApprovalThreshold && key != settingRegateCount && key != settingAgingHours {
+		return nil, status.Errorf(codes.InvalidArgument, "unknown setting key: %s", key)
+	}
+	value, err := strconv.Atoi(strings.TrimSpace(req.Value))
+	if err != nil || value < 0 {
+		return nil, status.Error(codes.InvalidArgument, "value must be a non-negative integer")
+	}
+	// review_approval_threshold = 0 disables gating entirely (every publish
+	// goes live); the other settings are meaningless at 0.
+	if value == 0 && key != settingApprovalThreshold {
+		return nil, status.Error(codes.InvalidArgument, "value must be a positive integer")
+	}
+
+	if err := s.ReviewRepo.UpsertSetting(ctx, key, strconv.Itoa(value)); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update setting: %v", err)
+	}
+
+	// Apply immediately: drop the cached settings in the prompt service.
+	if s.promptSvc != nil {
+		s.promptSvc.InvalidateSettingsCache()
+	}
+
+	s.writeAudit(ctx, actor, "settings_change", "platform", key, req.Reason)
+
+	return &pb.PlatformSettingEntry{
+		Key:       key,
+		Value:     strconv.Itoa(value),
+		UpdatedAt: timestamppb.New(time.Now()),
+	}, nil
 }

@@ -39,13 +39,15 @@ func NewTemplateRepository(db *sql.DB) TemplateRepository {
 func (r *templateRepository) Create(ctx context.Context, t *models.Template) error {
 	query := `
 		INSERT INTO templates (
-			owner_id, title, description, visibility, type, tags, category, language, created_at, updated_at
+			owner_id, title, description, visibility, type, tags, category, language,
+			moderation_status, published_at, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
 		) RETURNING id
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		t.OwnerID, t.Title, t.Description, t.Visibility, t.Type, pq.Array(t.Tags), t.Category, t.Language, t.CreatedAt, t.UpdatedAt,
+		t.OwnerID, t.Title, t.Description, t.Visibility, t.Type, pq.Array(t.Tags), t.Category, t.Language,
+		t.ModerationStatus, t.PublishedAt, t.CreatedAt, t.UpdatedAt,
 	).Scan(&t.ID)
 	if err != nil {
 		return fmt.Errorf("failed to create template: %w", err)
@@ -57,11 +59,13 @@ func (r *templateRepository) Create(ctx context.Context, t *models.Template) err
 func (r *templateRepository) Update(ctx context.Context, t *models.Template) error {
 	query := `
 		UPDATE templates
-		SET title = $1, description = $2, visibility = $3, tags = $4, category = $5, language = $6, updated_at = $7
-		WHERE id = $8
+		SET title = $1, description = $2, visibility = $3, tags = $4, category = $5, language = $6,
+		    moderation_status = $7, published_at = $8, updated_at = $9
+		WHERE id = $10
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		t.Title, t.Description, t.Visibility, pq.Array(t.Tags), t.Category, t.Language, t.UpdatedAt, t.ID,
+		t.Title, t.Description, t.Visibility, pq.Array(t.Tags), t.Category, t.Language,
+		t.ModerationStatus, t.PublishedAt, t.UpdatedAt, t.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update template: %w", err)
@@ -84,7 +88,8 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 	query := `
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
-			t.like_count, t.favorite_count, t.comment_count, t.created_at, t.updated_at,
+			t.like_count, t.favorite_count, t.comment_count, t.moderation_status, t.published_at,
+			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
 		FROM templates t
@@ -95,7 +100,8 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 	var t models.Template
 	err := r.db.QueryRowContext(ctx, query, id, currentUserID).Scan(
 		&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
-		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount, &t.CreatedAt, &t.UpdatedAt,
+		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
+		&t.ModerationStatus, &t.PublishedAt, &t.CreatedAt, &t.UpdatedAt,
 		&t.IsLiked, &t.IsFavorited,
 	)
 	if err != nil {
@@ -114,6 +120,12 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 		if err == nil && banned {
 			return nil, fmt.Errorf("template not found")
 		}
+	}
+	// in_review/rejected templates are visible only to their owner (admins
+	// use the admin repository, which does not filter). 404-equivalent for
+	// everyone else — no status leak.
+	if t.ModerationStatus != "normal" && t.OwnerID != currentUserID {
+		return nil, fmt.Errorf("template not found")
 	}
 	return &t, nil
 }
@@ -206,6 +218,11 @@ func buildTemplateConditions(filters map[string]interface{}, args []interface{},
 	// private listing (owner's own view) is unaffected.
 	if val, ok := filters["visibility"]; !ok || val == "" || val == "public" {
 		query += " AND NOT EXISTS (SELECT 1 FROM users bu WHERE bu.id = t.owner_id AND bu.status = 'banned')"
+		// Moderation filter mirrors the banned-owner pattern: gated
+		// (in_review/rejected) templates are hidden from every public
+		// stream except their owner's. $1 is current_user_id ("" for
+		// anonymous), so the bypass never matches for anonymous callers.
+		query += " AND (t.moderation_status = 'normal' OR t.owner_id = $1)"
 	}
 	// Keyword: case-insensitive phrase match across title, description,
 	// category, individual tag values, and latest-version content. The
@@ -261,7 +278,8 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 	query := `
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
-			t.like_count, t.favorite_count, t.comment_count, t.created_at, t.updated_at,
+			t.like_count, t.favorite_count, t.comment_count, t.moderation_status, t.published_at,
+			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
 	`
@@ -293,7 +311,8 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 		var t models.Template
 		if err := rows.Scan(
 			&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
-			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount, &t.CreatedAt, &t.UpdatedAt,
+			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
+			&t.ModerationStatus, &t.PublishedAt, &t.CreatedAt, &t.UpdatedAt,
 			&t.IsLiked, &t.IsFavorited,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan template: %w", err)

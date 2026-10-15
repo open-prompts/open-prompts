@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -30,7 +31,33 @@ type PromptService struct {
 	NotificationRepo    repository.NotificationRepository
 	UserRepo            repository.UserRepository
 	CommentRepo         repository.CommentRepository
+	ReviewRepo          repository.ReviewRepository
 	Redis               RedisStore
+
+	// settingsCache caches platform settings (review thresholds) for
+	// settingsCacheTTL to keep the publish hot path free of per-request
+	// settings queries. Writes through AdminService invalidate it.
+	settingsMu     sync.Mutex
+	settingsCache  map[string]string
+	settingsExpiry time.Time
+}
+
+// settingsCacheTTL bounds platform-settings staleness (architecture §12).
+const settingsCacheTTL = 60 * time.Second
+
+// Platform setting keys used by the gating logic.
+const (
+	settingApprovalThreshold = "review_approval_threshold"
+	settingRegateCount       = "review_regate_count"
+	settingAgingHours        = "review_aging_hours"
+)
+
+// defaultReviewSettings are used when the settings store is unavailable
+// (fresh installs always seed the rows, so this is a resilience fallback).
+var defaultReviewSettings = map[string]int{
+	settingApprovalThreshold: 3,
+	settingRegateCount:       3,
+	settingAgingHours:        48,
 }
 
 func NewPromptService(
@@ -52,7 +79,113 @@ func NewPromptService(
 		UserRepo:            userRepo,
 		CommentRepo:         commentRepo,
 		Redis:               redis,
+		settingsCache:       make(map[string]string),
 	}
+}
+
+// SetReviewRepo wires the review repository after construction (kept
+// separate from the constructor so existing call sites stay unchanged).
+func (s *PromptService) SetReviewRepo(repo repository.ReviewRepository) {
+	s.settingsMu.Lock()
+	defer s.settingsMu.Unlock()
+	s.ReviewRepo = repo
+}
+
+// getSettingInt returns a platform setting as an int, through the 60s
+// cache. Falls back to the built-in default when the store is unavailable.
+func (s *PromptService) getSettingInt(ctx context.Context, key string) int {
+	s.settingsMu.Lock()
+	if s.settingsCache != nil && time.Now().Before(s.settingsExpiry) {
+		if v, ok := s.settingsCache[key]; ok {
+			s.settingsMu.Unlock()
+			if n, err := strconv.Atoi(v); err == nil {
+				return n
+			}
+			return defaultReviewSettings[key]
+		}
+	}
+	s.settingsMu.Unlock()
+
+	if s.ReviewRepo == nil {
+		return defaultReviewSettings[key]
+	}
+	value, err := s.ReviewRepo.GetSetting(ctx, key)
+	if err != nil || value == "" {
+		return defaultReviewSettings[key]
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 0 {
+		return defaultReviewSettings[key]
+	}
+
+	s.settingsMu.Lock()
+	if s.settingsCache == nil {
+		s.settingsCache = make(map[string]string)
+	}
+	s.settingsCache[key] = value
+	s.settingsExpiry = time.Now().Add(settingsCacheTTL)
+	s.settingsMu.Unlock()
+	return n
+}
+
+// InvalidateSettingsCache clears the platform-settings cache. Called by
+// AdminService.UpdatePlatformSetting so new values apply immediately.
+func (s *PromptService) InvalidateSettingsCache() {
+	s.settingsMu.Lock()
+	defer s.settingsMu.Unlock()
+	s.settingsCache = make(map[string]string)
+	s.settingsExpiry = time.Time{}
+}
+
+// isGated returns true when the creator's next publish must enter review.
+// Gated iff approved_template_count < N OR review_gated_remaining > 0.
+// Creators with no review store wired (e.g. unit tests) are never gated.
+func (s *PromptService) isGated(ctx context.Context, userID string) bool {
+	if s.ReviewRepo == nil {
+		return false
+	}
+	approved, gatedRemaining, err := s.ReviewRepo.GetUserGatingState(ctx, userID)
+	if err != nil {
+		// Fail closed so an infra error cannot silently publish unreviewed
+		// content (the publish then surfaces the error to the caller).
+		zap.S().Warnf("isGated: failed to load gating state for %s: %v", userID, err)
+		return true
+	}
+	threshold := s.getSettingInt(ctx, settingApprovalThreshold)
+	// Threshold 0 disables gating entirely (every publish goes live).
+	if threshold <= 0 {
+		return false
+	}
+	return approved < int32(threshold) || gatedRemaining > 0
+}
+
+// createReviewSubmission inserts the queue row for a gated publish and
+// decrements review_gated_remaining when > 0. A failure here fails the
+// whole publish: a gated template must never exist without its queue row
+// (detailed design §10 constraint 7).
+func (s *PromptService) createReviewSubmission(ctx context.Context, templateID, userID string) error {
+	if s.ReviewRepo == nil {
+		return nil
+	}
+	attempt := int32(1)
+	if latest, err := s.ReviewRepo.GetLatestSubmission(ctx, templateID); err == nil && latest != nil {
+		attempt = latest.AttemptNumber + 1
+	} else if err != nil && err != repository.ErrSubmissionNotFound {
+		return status.Errorf(codes.Internal, "failed to load review history: %v", err)
+	}
+	if err := s.ReviewRepo.CreateSubmission(ctx, &models.ReviewSubmission{
+		TemplateID:    templateID,
+		CreatorID:     userID,
+		AttemptNumber: attempt,
+		Status:        "pending",
+		SubmittedAt:   time.Now(),
+	}); err != nil {
+		return status.Errorf(codes.Internal, "failed to create review submission: %v", err)
+	}
+	if err := s.ReviewRepo.DecrementGatedRemaining(ctx, userID); err != nil {
+		zap.S().Warnf("gated publish: failed to decrement review_gated_remaining for %s: %v", userID, err)
+	}
+	return nil
 }
 
 // createEngagementNotification emits a like/favorite/fork notification to the
@@ -115,17 +248,32 @@ func (s *PromptService) CreateTemplate(ctx context.Context, req *pb.CreateTempla
 		language = "en"
 	}
 
+	// Pre-publication review gating: a public publish by a gated creator
+	// enters the review queue instead of going live. Private creates are
+	// never gated.
+	moderationStatus := "normal"
+	var publishedAt sql.NullTime
+	if visibility == "public" {
+		if s.isGated(ctx, userID) {
+			moderationStatus = "in_review"
+		} else {
+			publishedAt = sql.NullTime{Time: time.Now(), Valid: true}
+		}
+	}
+
 	template := &models.Template{
-		OwnerID:     userID, // Use the authenticated user ID
-		Title:       req.Title,
-		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
-		Visibility:  visibility,
-		Type:        typeStr,
-		Tags:        pq.StringArray(req.Tags),
-		Category:    sql.NullString{String: req.Category, Valid: req.Category != ""},
-		Language:    language,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		OwnerID:          userID, // Use the authenticated user ID
+		Title:            req.Title,
+		Description:      sql.NullString{String: req.Description, Valid: req.Description != ""},
+		Visibility:       visibility,
+		Type:             typeStr,
+		Tags:             pq.StringArray(req.Tags),
+		Category:         sql.NullString{String: req.Category, Valid: req.Category != ""},
+		Language:         language,
+		ModerationStatus: moderationStatus,
+		PublishedAt:      publishedAt,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 
 	if err := s.TemplateRepo.Create(ctx, template); err != nil {
@@ -143,6 +291,14 @@ func (s *PromptService) CreateTemplate(ctx context.Context, req *pb.CreateTempla
 	if err := s.TemplateVersionRepo.Create(ctx, version); err != nil {
 		// Cleanup template? For now, just fail.
 		return nil, status.Errorf(codes.Internal, "failed to create template version: %v", err)
+	}
+
+	// A gated publish must be atomic with its submission row: if the
+	// submission insert fails, the publish fails (constraint 7).
+	if moderationStatus == "in_review" {
+		if err := s.createReviewSubmission(ctx, template.ID, userID); err != nil {
+			return nil, err
+		}
 	}
 
 	// Auto-create 'latest' alias
@@ -188,8 +344,11 @@ func (s *PromptService) ForkTemplate(ctx context.Context, templateID string) (*p
 		Type:        "user",
 		Tags:        sourceTpl.Tags,
 		Category:    sourceTpl.Category,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		// Forks start private and are never gated; moderation_status must
+		// satisfy the CHECK constraint.
+		ModerationStatus: "normal",
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 
 	// Preserve language from source template; default to 'en' if missing
@@ -230,16 +389,23 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 	if len(req.ChangeNote) > 200 {
 		return nil, status.Errorf(codes.InvalidArgument, "change_note must be at most 200 characters")
 	}
-	// Get existing template
-	template, err := s.TemplateRepo.Get(ctx, req.TemplateId, "")
+	// AuthZ: derive the caller from context; never trust client-supplied owner_id.
+	// Fetch with the caller's id so in_review/rejected templates stay visible
+	// (and editable) to their owner (FR-3/FR-6); non-owners still get 404.
+	userID, _ := GetUserIDFromContext(ctx)
+	template, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
 
-	// AuthZ: derive the caller from context; never trust client-supplied owner_id.
 	if err := authorizeOwnerOrAdmin(ctx, template.OwnerID); err != nil {
 		return nil, err
 	}
+
+	// Capture the pre-update visibility BEFORE the field updates below
+	// overwrite it, so a private→public transition is detectable.
+	wasPublic := template.Visibility == "public"
+	wasRejected := template.ModerationStatus == "rejected"
 
 	// Update fields
 	if req.Title != "" {
@@ -275,10 +441,38 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 	// Note: this assumes UpdateTemplate is always called with full tag list
 	template.Tags = req.Tags
 
+	// Pre-publication review gating on the publish transition: a private→public
+	// transition — or a rejected template being re-published (FR-6 resubmission;
+	// a rejected template keeps visibility=public, so the transition is detected
+	// via moderation_status) — by a gated creator enters review. Edits that do
+	// not cross the publish boundary leave moderation_status untouched
+	// (FR-3/FR-6: in_review/rejected stay editable; FR-14: exempt creators'
+	// published edits stay live).
 	template.UpdatedAt = time.Now()
+	transitioningToPublic := !wasPublic && template.Visibility == "public"
+	resubmittingRejected := wasPublic && wasRejected && template.Visibility == "public"
+	if transitioningToPublic || resubmittingRejected {
+		if s.isGated(ctx, userID) {
+			template.ModerationStatus = "in_review"
+			template.PublishedAt = sql.NullTime{}
+		} else {
+			template.ModerationStatus = "normal"
+			if !template.PublishedAt.Valid {
+				template.PublishedAt = sql.NullTime{Time: time.Now(), Valid: true}
+			}
+		}
+	}
 
 	if err := s.TemplateRepo.Update(ctx, template); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update template: %v", err)
+	}
+
+	// A gated publish transition must be atomic with its submission row
+	// (constraint 7): attempt = latest + 1 (or 1 when none).
+	if (transitioningToPublic || resubmittingRejected) && template.ModerationStatus == "in_review" {
+		if err := s.createReviewSubmission(ctx, template.ID, userID); err != nil {
+			return nil, err
+		}
 	}
 
 	// Create new version
@@ -644,7 +838,10 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 
 func (s *PromptService) DeleteTemplate(ctx context.Context, req *pb.DeleteTemplateRequest) (*pb.DeleteTemplateResponse, error) {
 	zap.S().Infof("PromptService.DeleteTemplate: id=%s owner_id=%s", req.Id, req.OwnerId)
-	template, err := s.TemplateRepo.Get(ctx, req.Id, "")
+	// Fetch with the caller's id so owners can delete their in_review/
+	// rejected templates (FR-3/FR-6); non-owners still get 404.
+	userID, _ := GetUserIDFromContext(ctx)
+	template, err := s.TemplateRepo.Get(ctx, req.Id, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
@@ -668,6 +865,13 @@ func (s *PromptService) ToggleLikeTemplate(ctx context.Context, req *pb.ToggleLi
 	}
 	zap.S().Infof("PromptService.ToggleLikeTemplate: user_id=%s template_id=%s", userID, req.TemplateId)
 
+	// Hidden (in_review/rejected) templates are invisible to non-owners —
+	// 404 before touching engagement state (constraint 5).
+	tpl, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
 	isLiked, count, err := s.TemplateRepo.ToggleLike(ctx, userID, req.TemplateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to toggle like: %v", err)
@@ -675,11 +879,7 @@ func (s *PromptService) ToggleLikeTemplate(ctx context.Context, req *pb.ToggleLi
 
 	// Notify the owner when the like was toggled ON (best-effort).
 	if isLiked {
-		if tpl, terr := s.TemplateRepo.Get(ctx, req.TemplateId, userID); terr == nil {
-			s.createEngagementNotification(ctx, "like", req.TemplateId, tpl.OwnerID, userID)
-		} else {
-			zap.S().Warnf("notification hook: failed to load template %s after like: %v", req.TemplateId, terr)
-		}
+		s.createEngagementNotification(ctx, "like", req.TemplateId, tpl.OwnerID, userID)
 	}
 
 	return &pb.ToggleLikeResponse{
@@ -696,6 +896,13 @@ func (s *PromptService) ToggleFavoriteTemplate(ctx context.Context, req *pb.Togg
 	}
 	zap.S().Infof("PromptService.ToggleFavoriteTemplate: user_id=%s template_id=%s", userID, req.TemplateId)
 
+	// Hidden (in_review/rejected) templates are invisible to non-owners —
+	// 404 before touching engagement state (constraint 5).
+	tpl, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
 	isFavorited, count, err := s.TemplateRepo.ToggleFavorite(ctx, userID, req.TemplateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to toggle favorite: %v", err)
@@ -703,11 +910,7 @@ func (s *PromptService) ToggleFavoriteTemplate(ctx context.Context, req *pb.Togg
 
 	// Notify the owner when the favorite was toggled ON (best-effort).
 	if isFavorited {
-		if tpl, terr := s.TemplateRepo.Get(ctx, req.TemplateId, userID); terr == nil {
-			s.createEngagementNotification(ctx, "favorite", req.TemplateId, tpl.OwnerID, userID)
-		} else {
-			zap.S().Warnf("notification hook: failed to load template %s after favorite: %v", req.TemplateId, terr)
-		}
+		s.createEngagementNotification(ctx, "favorite", req.TemplateId, tpl.OwnerID, userID)
 	}
 
 	return &pb.ToggleFavoriteResponse{
@@ -799,6 +1002,13 @@ func (s *PromptService) CreatePrompt(ctx context.Context, req *pb.CreatePromptRe
 		return nil, status.Errorf(codes.NotFound, "template version not found")
 	}
 
+	// Visibility guard: a gated (in_review/rejected) template's content must
+	// not be renderable through the prompt path by non-owners. The
+	// repository Get returns 404-equivalent for hidden templates.
+	if _, err := s.TemplateRepo.Get(ctx, version.TemplateID, userID); err != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
 	renderedContent := version.Content
 	for k, v := range variables {
 		renderedContent = strings.ReplaceAll(renderedContent, fmt.Sprintf("${%s}", k), v)
@@ -860,6 +1070,12 @@ func (s *PromptService) ListPrompts(ctx context.Context, req *pb.ListPromptsRequ
 		filters["owner_id"] = req.OwnerId
 	}
 	if req.TemplateId != "" {
+		// Prompts carry rendered content — hidden (in_review/rejected)
+		// templates expose no prompts to non-owners (constraint 5).
+		userID, _ := GetUserIDFromContext(ctx)
+		if _, terr := s.TemplateRepo.Get(ctx, req.TemplateId, userID); terr != nil {
+			return nil, status.Errorf(codes.NotFound, "template not found")
+		}
 		filters["template_id"] = req.TemplateId
 	}
 
@@ -886,6 +1102,13 @@ func (s *PromptService) ListTemplateVersions(ctx context.Context, req *pb.ListTe
 	zap.S().Infof("PromptService.ListTemplateVersions: template_id=%s page_size=%d", req.TemplateId, req.PageSize)
 	if req.TemplateId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "template_id is required")
+	}
+
+	// Hidden (in_review/rejected) templates expose no version history to
+	// non-owners — 404 before listing (constraint 5).
+	userID, _ := GetUserIDFromContext(ctx)
+	if _, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID); err != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
 
 	limit := int(req.PageSize)
@@ -946,7 +1169,7 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 		vis = pb.Visibility_VISIBILITY_PUBLIC
 	}
 
-	return &pb.Template{
+	tpl := &pb.Template{
 		Id:            m.ID,
 		OwnerId:       m.OwnerID,
 		Title:         m.Title,
@@ -963,6 +1186,17 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 		IsFavorited:   m.IsFavorited,
 		Language:      m.Language,
 	}
+	// Moderation state: default to "normal" for legacy rows / zero values so
+	// the field is always meaningful to clients.
+	moderationStatus := m.ModerationStatus
+	if moderationStatus == "" {
+		moderationStatus = "normal"
+	}
+	tpl.ModerationStatus = moderationStatus
+	if m.PublishedAt.Valid {
+		tpl.PublishedAt = timestamppb.New(m.PublishedAt.Time)
+	}
+	return tpl
 }
 
 func (s *PromptService) versionModelToProto(m *models.TemplateVersion) *pb.TemplateVersion {
@@ -1039,9 +1273,11 @@ func authorizeOwnerOrAdmin(ctx context.Context, ownerID string) error {
 }
 
 // authorizeAliasMutation verifies the caller owns the template an alias
-// operation targets (or is an admin).
+// operation targets (or is an admin). Fetch with the caller's id so owners
+// can manage aliases on their in_review/rejected templates (FR-3/FR-6).
 func (s *PromptService) authorizeAliasMutation(ctx context.Context, templateID string) error {
-	template, err := s.TemplateRepo.Get(ctx, templateID, "")
+	userID, _ := GetUserIDFromContext(ctx)
+	template, err := s.TemplateRepo.Get(ctx, templateID, userID)
 	if err != nil || template == nil {
 		return status.Errorf(codes.NotFound, "template not found")
 	}
@@ -1147,6 +1383,13 @@ func (s *PromptService) GetPromptByAlias(ctx context.Context, req *pb.GetPromptB
 		} else {
 			return nil, status.Errorf(codes.NotFound, "alias not found")
 		}
+	}
+
+	// Hidden (in_review/rejected) templates expose no content through the
+	// alias path — 404 for non-owners (constraint 5).
+	userID, _ := GetUserIDFromContext(ctx)
+	if _, terr := s.TemplateRepo.Get(ctx, alias.TemplateID, userID); terr != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
 
 	version, err := s.TemplateVersionRepo.Get(ctx, alias.VersionID)

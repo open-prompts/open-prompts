@@ -235,6 +235,93 @@
     "by": "作者：{{owner}}",
     "sdk_no_vars_comment": "# 无需变量"
   },
+  "review": {
+    "status": {
+      "inReview": "审核中",
+      "rejected": "已拒绝",
+      "approved": "已上线"
+    },
+    "card": {
+      "submitted": "提交于 {{time}}",
+      "expected": "预计 24 小时内出结果",
+      "rejected_hint": "该模板已被拒绝 —— 修改后重新提交审核。",
+      "view": "查看",
+      "edit": "编辑"
+    },
+    "banner": {
+      "in_review": "该模板正在发布前审核中 —— 通过前仅你自己可见。",
+      "rejected": "该模板已被拒绝，仅你自己可见。"
+    },
+    "modal": {
+      "title": "已提交审核",
+      "body": "你的模板将在快速审核后上线 —— 通常在 24 小时内。无论结果如何你都会收到通知。",
+      "view_status": "查看状态",
+      "done": "完成"
+    },
+    "queue": {
+      "title": "审核队列",
+      "open": "未决：{{count}}",
+      "median": "中位等待：{{duration}}",
+      "today": "今日：{{count}} 个决定",
+      "aging": "超时 >48小时",
+      "resubmissions": "重新提交",
+      "empty": "队列已清空",
+      "tab_all": "全部",
+      "category": "分类",
+      "review": "审核",
+      "review_aria": "审核 {{title}}",
+      "col_age": "等待时长",
+      "col_template": "模板",
+      "col_creator": "创作者",
+      "col_context": "背景",
+      "context_approved": "已通过 {{count}}",
+      "context_rejections": "被拒 {{count}} 次",
+      "minutes": "{{count}} 分钟",
+      "hours": "{{count}} 小时",
+      "days": "{{count}} 天"
+    },
+    "row": {
+      "resubmission": "（第 {{n}} 次）"
+    },
+    "detail": {
+      "back": "队列",
+      "submitted": "提交于 {{time}}",
+      "template_section": "模板",
+      "author_section": "作者",
+      "author": "注册于 {{date}} · 已发布 {{published}} · 既往拒绝 {{rejections}}",
+      "banned": "创作者已被封禁",
+      "chain": "重新提交历史",
+      "chain_none": "首次提交 —— 没有既往记录。",
+      "chain_rejected": "已拒绝：{{reason}}",
+      "kbd_hint": "A 通过 · R 拒绝 · → 下一个"
+    },
+    "action": {
+      "approve": "通过",
+      "reject": "拒绝…"
+    },
+    "reject": {
+      "title": "拒绝模板",
+      "confirm": "拒绝",
+      "reason_label": "原因（必选）",
+      "reasonRequired": "请选择原因后继续",
+      "note": "给创作者的备注（可选）",
+      "reason": {
+        "spam": "垃圾内容",
+        "plagiarism": "抄袭",
+        "harmful": "有害内容",
+        "lowQuality": "质量低下",
+        "other": "其他"
+      }
+    },
+    "notify": {
+      "approved": "你的模板“{{title}}”已上线",
+      "rejected": "你的模板“{{title}}”被拒绝：{{reason}}"
+    },
+    "cta": {
+      "resubmit": "修改并重新提交"
+    },
+    "notFound": "页面不存在"
+  },
   "profile": {
     "error_fetch": "获取个人资料失败",
     "success_update": "个人资料更新成功！",
@@ -315,6 +402,7 @@
       "dashboard": "仪表盘",
       "users": "用户",
       "templates": "模板",
+      "review": "审核",
       "audit_log": "审计日志",
       "back_to_app": "返回应用",
       "brand": "Open Prompts 管理控制台"
@@ -477,7 +565,9 @@
     "event": {
       "like": "{{actor}} 赞了你的模板\"{{title}}\"",
       "favorite": "{{actor}} 收藏了你的模板\"{{title}}\"",
-      "fork": "{{actor}} fork 了你的模板\"{{title}}\""
+      "fork": "{{actor}} fork 了你的模板\"{{title}}\"",
+      "template_approved": "你的模板“{{title}}”已上线",
+      "template_rejected": "你的模板“{{title}}”被拒绝：{{reason}}"
     },
     "empty": {
       "all": "还没有通知 —— 当有人点赞、收藏或 fork 你的模板时，会显示在这里。",

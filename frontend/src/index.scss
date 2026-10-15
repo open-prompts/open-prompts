@@ -489,6 +489,14 @@ pre {
   background: var(--warning-soft);
   color: var(--warning);
 }
+.badge-moderation-in_review {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.badge-moderation-rejected {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
 
 /* --------------------------------------------------------------------------
    6. Cards

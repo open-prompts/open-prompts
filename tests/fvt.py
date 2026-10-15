@@ -2208,6 +2208,494 @@ def test_template_search_filtering():
     return True
 
 
+def test_pre_publication_review():
+    """Pre-publication review gating (AC-1..AC-10):
+    1.  New creators' publishes enter in_review; established creators publish instantly
+    2.  Gated templates are invisible to non-owners (404, lists, search)
+    3.  Admin queue lists submissions oldest-first with aging/resubmission flags
+    4.  Approve publishes the template, sets published_at, notifies, counts toward N
+    5.  Reject requires a reason code (400 without)
+    6.  Reject hides the template and notifies with the reason
+    7.  Rejected template re-publish creates a chained resubmission (attempt 2)
+    8.  Metrics: open count, decisions today, rejection rate by reason
+    9.  Ban re-gates the creator's next publishes
+    10. Platform settings GET/PUT change the threshold live
+    11. Audit log records review decisions
+    """
+    print("\n--- Starting Pre-publication Review Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    NOTIF_URL = f"{APP}/notifications"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    newbie_id = f"fvt_review_newbie_{ts}"
+    established_id = f"fvt_review_established_{ts}"
+    second_id = f"fvt_review_second_{ts}"
+    newbie_token = get_auth_token(newbie_id)
+    established_token = get_auth_token(established_id)
+    second_token = get_auth_token(second_id)
+    if not all([newbie_token, established_token, second_token]):
+        print("Failed to create test users")
+        return False
+    headers_newbie = {"Authorization": f"Bearer {newbie_token}"}
+    headers_established = {"Authorization": f"Bearer {established_token}"}
+    headers_second = {"Authorization": f"Bearer {second_token}"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    if not admin_token:
+        print("Admin login response missing token")
+        return False
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Re-enable gating for this suite (main() disabled it for the legacy
+    # suites); restore 0 on the way out.
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "review_approval_threshold", "value": "3",
+        "reason": "FVT: enable gating for review suite"})
+    if resp.status_code != 200:
+        print(f"Failed to re-enable gating: {resp.status_code} - {resp.text}")
+        return False
+    try:
+        return _run_pre_publication_review_inner(
+            admin_headers, newbie_id, established_id, second_id,
+            headers_newbie, headers_established, headers_second, ts)
+    finally:
+        requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+            "key": "review_approval_threshold", "value": "0",
+            "reason": "FVT: disable gating after review suite"})
+
+
+def _run_pre_publication_review_inner(admin_headers, newbie_id, established_id, second_id,
+                                      headers_newbie, headers_established, headers_second, ts):
+    ADMIN = "http://localhost:8080/api/v1/admin"
+    NOTIF_URL = "http://localhost:8080/api/v1/notifications"
+
+    def create_template(owner_headers, title, category="general", tags=None):
+        payload = {
+            "title": title,
+            "description": f"Review test template {title}",
+            "content": f"Content of {title}",
+            "visibility": "VISIBILITY_PUBLIC",
+            "category": category,
+            "tags": tags or ["reviewtest"],
+        }
+        resp = requests.post(BASE_URL, json=payload, headers=owner_headers)
+        assert resp.status_code == 200, f"create {title} failed {resp.status_code}: {resp.text}"
+        body = resp.json()
+        tid = body["template"]["id"]
+        CREATED_TEMPLATES.append({"id": tid, "owner_id": None})  # owner set by caller
+        return tid, body["template"]
+
+    # --- 1. AC-1/AC-2: gating on create ---
+    print("1. Gating on create (AC-1/AC-2)...")
+    # Bootstrap the "established" creator: a brand-new user is gated too, so
+    # publish 3 templates and approve them to reach the threshold.
+    est_ids = []
+    for i in range(3):
+        tid, tpl = create_template(headers_established, f"Established Bootstrap {i}")
+        CREATED_TEMPLATES[-1]["owner_id"] = established_id
+        est_ids.append(tid)
+        if tpl.get("moderation_status") != "in_review":
+            print(f"Bootstrap publish {i} should be in_review (new creator), got {tpl.get('moderation_status')}")
+            return False
+    resp = requests.get(f"{ADMIN}/review", headers=admin_headers, params={"per_page": 100})
+    items = resp.json().get("items", [])
+    for tid in est_ids:
+        sub = next((i for i in items if i["template_id"] == tid), None)
+        if not sub:
+            print("Bootstrap submission missing from queue")
+            return False
+        resp2 = requests.post(f"{ADMIN}/review/{sub['id']}/approve", headers=admin_headers)
+        if resp2.status_code != 200:
+            print(f"Bootstrap approve failed: {resp2.status_code} - {resp2.text}")
+            return False
+    # With 3 approved templates the established creator publishes instantly
+    tid, tpl = create_template(headers_established, f"Established Instant {ts}")
+    CREATED_TEMPLATES[-1]["owner_id"] = established_id
+    if tpl.get("moderation_status") != "normal":
+        print(f"Established creator's publish should be normal, got {tpl.get('moderation_status')}")
+        return False
+    if not tpl.get("published_at"):
+        print("Established creator's publish should have published_at set")
+        return False
+    # Established template is immediately in the public list
+    resp = requests.get(BASE_URL, params={"keyword": f"Established Instant {ts}"})
+    if resp.status_code != 200 or not any(
+        t["id"] == tid for t in resp.json().get("templates", [])
+    ):
+        print("Established creator's template should be immediately visible in public list")
+        return False
+
+    # Newbie publishes -> in_review, no published_at
+    newbie_tid, newbie_tpl = create_template(headers_newbie, f"Newbie Gated {ts}")
+    CREATED_TEMPLATES[-1]["owner_id"] = newbie_id
+    if newbie_tpl.get("moderation_status") != "in_review":
+        print(f"Newbie publish should be in_review, got {newbie_tpl.get('moderation_status')}")
+        return False
+    if newbie_tpl.get("published_at"):
+        print("Gated template must not have published_at")
+        return False
+    print("   PASS")
+
+    # --- 2. AC-9: gated template invisible to non-owners ---
+    print("2. Hidden from non-owners (AC-9)...")
+    if requests.get(f"{BASE_URL}/{newbie_tid}").status_code != 404:
+        print("Anonymous GET of gated template should be 404")
+        return False
+    if requests.get(f"{BASE_URL}/{newbie_tid}", headers=headers_second).status_code != 404:
+        print("Second-user GET of gated template should be 404")
+        return False
+    resp = requests.get(BASE_URL, params={"keyword": f"Newbie Gated {ts}"})
+    if any(t["id"] == newbie_tid for t in resp.json().get("templates", [])):
+        print("Gated template must be absent from public search")
+        return False
+    resp = requests.get(BASE_URL, params={"keyword": f"Newbie Gated {ts}"}, headers=headers_second)
+    if any(t["id"] == newbie_tid for t in resp.json().get("templates", [])):
+        print("Gated template must be absent from search for other users")
+        return False
+    # Owner still sees it with in_review
+    resp = requests.get(f"{BASE_URL}/{newbie_tid}", headers=headers_newbie)
+    if resp.status_code != 200 or resp.json()["template"].get("moderation_status") != "in_review":
+        print(f"Owner GET should be 200 in_review, got {resp.status_code}")
+        return False
+    # Fork of a gated template 404s for non-owners
+    resp = requests.post(f"{BASE_URL}/{newbie_tid}/fork", headers=headers_second)
+    if resp.status_code != 404:
+        print(f"Fork of gated template should be 404, got {resp.status_code}")
+        return False
+    # Prompts of a gated template 404 for non-owners
+    resp = requests.get(f"{PROMPT_URL}", params={"template_id": newbie_tid}, headers=headers_second)
+    if resp.status_code != 404:
+        print(f"List prompts of gated template should be 404, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 3. FR-8/AC-8: admin queue ---
+    print("3. Admin review queue (FR-8/AC-8)...")
+    # Create a second gated submission to assert relative order
+    newbie_tid2, _ = create_template(headers_newbie, f"Newbie Gated Second {ts}")
+    CREATED_TEMPLATES[-1]["owner_id"] = newbie_id
+
+    resp = requests.get(f"{ADMIN}/review", headers=admin_headers,
+                        params={"per_page": 100})
+    if resp.status_code != 200:
+        print(f"Queue list failed: {resp.status_code} - {resp.text}")
+        return False
+    queue = resp.json()
+    items = queue.get("items", [])
+    sub_ids = [i["id"] for i in items]
+    if not any(i["template_id"] == newbie_tid for i in items):
+        print("Queue must contain newbie's first submission")
+        return False
+    # Oldest-first: first submission appears before the second
+    idx1 = next(i for i, it in enumerate(items) if it["template_id"] == newbie_tid)
+    idx2 = next(i for i, it in enumerate(items) if it["template_id"] == newbie_tid2)
+    if idx1 > idx2:
+        print("Queue must be oldest-first")
+        return False
+    first_item = items[idx1]
+    if first_item.get("is_resubmission") or first_item.get("attempt_number") != 1:
+        print("First submission must be attempt 1, not a resubmission")
+        return False
+    if first_item.get("aging"):
+        print("Fresh submission must not be aging")
+        return False
+    # Access control
+    if requests.get(f"{ADMIN}/review").status_code != 401:
+        print("Queue without token should be 401")
+        return False
+    if requests.get(f"{ADMIN}/review", headers=headers_second).status_code != 403:
+        print("Queue with regular token should be 403")
+        return False
+    print("   PASS")
+
+    # --- 4. AC-3: approve ---
+    print("4. Approve (AC-3)...")
+    sub_id = first_item["id"]
+    resp = requests.post(f"{ADMIN}/review/{sub_id}/approve", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Approve failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("status") != "approved":
+        print("Approve response status should be approved")
+        return False
+    # Template now public
+    resp = requests.get(f"{BASE_URL}/{newbie_tid}")
+    if resp.status_code != 200:
+        print("Approved template must be visible to anonymous users")
+        return False
+    tpl = resp.json()["template"]
+    if tpl.get("moderation_status") != "normal" or not tpl.get("published_at"):
+        print("Approved template must be normal with published_at")
+        return False
+    # Creator notified
+    resp = requests.get(NOTIF_URL, headers=headers_newbie, params={"page_size": 50})
+    notifs = resp.json().get("notifications", [])
+    if not any(n.get("type") == "template_approved" and n.get("template_id") == newbie_tid
+               for n in notifs):
+        print("Creator must receive a template_approved notification")
+        return False
+    # Newbie's next publish is still gated (1 approved < threshold 3)
+    newbie_tid3, tpl3 = create_template(headers_newbie, f"Newbie Gated Third {ts}")
+    CREATED_TEMPLATES[-1]["owner_id"] = newbie_id
+    if tpl3.get("moderation_status") != "in_review":
+        print("Newbie with 1 approved template must still be gated")
+        return False
+    print("   PASS")
+
+    # --- 5. AC-5: reject without reason -> 400 ---
+    print("5. Reject validation (AC-5)...")
+    # Find the pending submission for newbie_tid2
+    resp = requests.get(f"{ADMIN}/review", headers=admin_headers,
+                        params={"per_page": 100})
+    items = resp.json().get("items", [])
+    sub2 = next((i for i in items if i["template_id"] == newbie_tid2), None)
+    if not sub2:
+        print("Second submission missing from queue")
+        return False
+    resp = requests.post(f"{ADMIN}/review/{sub2['id']}/reject", headers=admin_headers, json={})
+    if resp.status_code != 400:
+        print(f"Reject without reason_code must be 400, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{ADMIN}/review/{sub2['id']}/reject", headers=admin_headers,
+                         json={"reason_code": "notAReason"})
+    if resp.status_code != 400:
+        print(f"Reject with unknown reason must be 400, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 6. AC-4: reject with spam ---
+    print("6. Reject with reason (AC-4)...")
+    resp = requests.post(f"{ADMIN}/review/{sub2['id']}/reject", headers=admin_headers,
+                         json={"reason_code": "spam", "note": "Unsolicited bulk content"})
+    if resp.status_code != 200:
+        print(f"Reject failed: {resp.status_code} - {resp.text}")
+        return False
+    # Template hidden again
+    if requests.get(f"{BASE_URL}/{newbie_tid2}").status_code != 404:
+        print("Rejected template must 404 for anonymous users")
+        return False
+    if requests.get(f"{BASE_URL}/{newbie_tid2}", headers=headers_second).status_code != 404:
+        print("Rejected template must 404 for other users")
+        return False
+    resp = requests.get(f"{BASE_URL}/{newbie_tid2}", headers=headers_newbie)
+    if resp.status_code != 200 or resp.json()["template"].get("moderation_status") != "rejected":
+        print("Owner must see rejected template with rejected status")
+        return False
+    # Creator notified with the reason
+    resp = requests.get(NOTIF_URL, headers=headers_newbie, params={"page_size": 50})
+    notifs = resp.json().get("notifications", [])
+    rej = next((n for n in notifs
+                if n.get("type") == "template_rejected" and n.get("template_id") == newbie_tid2), None)
+    if not rej:
+        print("Creator must receive a template_rejected notification")
+        return False
+    if "spam" not in json.dumps(rej):
+        print("Rejection notification must carry the reason")
+        return False
+    print("   PASS")
+
+    # --- 7. AC-6: resubmission chain ---
+    print("7. Resubmission chain (AC-6)...")
+    # Owner edits the rejected template and re-publishes (visibility stays public)
+    resp = requests.put(f"{BASE_URL}/{newbie_tid2}", headers=headers_newbie, json={
+        "title": f"Newbie Gated Second {ts}",
+        "description": "Fixed after rejection",
+        "content": "Much better content now",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["reviewtest", "fixed"],
+    })
+    if resp.status_code != 200:
+        print(f"Re-publish failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json()["template"].get("moderation_status") != "in_review":
+        print("Rejected template re-publish must re-enter review")
+        return False
+    resp = requests.get(f"{ADMIN}/review", headers=admin_headers,
+                        params={"resubmission_only": "true", "per_page": 100})
+    resubs = [i for i in resp.json().get("items", []) if i["template_id"] == newbie_tid2]
+    if not resubs:
+        print("Resubmission filter must contain the re-published template")
+        return False
+    resub = resubs[0]
+    if resub.get("attempt_number") != 2 or not resub.get("is_resubmission"):
+        print(f"Resubmission must be attempt 2, got {resub.get('attempt_number')}")
+        return False
+    # Detail shows the chain with the prior reason
+    resp = requests.get(f"{ADMIN}/review/{resub['id']}", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Submission detail failed: {resp.status_code} - {resp.text}")
+        return False
+    detail = resp.json().get("submission", {})
+    chain = detail.get("chain", [])
+    if not any(c.get("attempt_number") == 1 and c.get("reject_reason_code") == "spam"
+               for c in chain):
+        print("Detail chain must show the prior rejection with its reason")
+        return False
+    # Already-decided submission returns 409
+    resp = requests.post(f"{ADMIN}/review/{sub_id}/approve", headers=admin_headers)
+    if resp.status_code != 409:
+        print(f"Deciding an already-decided submission must be 409, got {resp.status_code}")
+        return False
+    # Unknown submission 404
+    resp = requests.get(f"{ADMIN}/review/00000000-0000-0000-0000-000000000000", headers=admin_headers)
+    if resp.status_code != 404:
+        print(f"Unknown submission detail must be 404, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 8. AC-10: metrics ---
+    print("8. Metrics (AC-10)...")
+    resp = requests.get(f"{ADMIN}/review/metrics", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Metrics failed: {resp.status_code} - {resp.text}")
+        return False
+    metrics = resp.json()
+    # int64 fields arrive as JSON strings
+    # At least the resubmission is still pending
+    if int(metrics.get("open_count", 0)) < 1:
+        print("Metrics open_count must include pending submissions")
+        return False
+    if int(metrics.get("decisions_today", 0)) < 2:
+        print("Metrics decisions_today must count today's decisions")
+        return False
+    rates = metrics.get("rejection_rate_by_reason", [])
+    if not any(r.get("reason_code") == "spam" for r in rates):
+        print("Metrics rejection_rate_by_reason must contain spam")
+        return False
+    print("   PASS")
+
+    # --- 9. FR-2/AC-7: ban re-gates ---
+    print("9. Ban re-gates creator (FR-2/AC-7)...")
+    # Ban the established creator, then unban; next publish must be gated
+    resp = requests.get(f"{ADMIN}/users", headers=admin_headers,
+                        params={"search": established_id})
+    if resp.status_code != 200:
+        print(f"Admin user search failed: {resp.status_code}")
+        return False
+    users = resp.json().get("users", [])
+    target = next((u for u in users if u.get("id") == established_id), None)
+    if not target:
+        print("Established user not found in admin user search")
+        return False
+    resp = requests.post(f"{ADMIN}/users/{target['id']}/ban", headers=admin_headers,
+                         json={"reason": "review regate test"})
+    if resp.status_code != 200:
+        print(f"Ban failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.post(f"{ADMIN}/users/{target['id']}/unban", headers=admin_headers,
+                         json={"reason": "review regate test done"})
+    if resp.status_code != 200:
+        print(f"Unban failed: {resp.status_code} - {resp.text}")
+        return False
+    # Re-login after unban (ban invalidates sessions)
+    established_token2 = get_auth_token(established_id)
+    headers_established2 = {"Authorization": f"Bearer {established_token2}"}
+    tid, tpl = create_template(headers_established2, f"Established Regated {ts}")
+    CREATED_TEMPLATES[-1]["owner_id"] = established_id
+    if tpl.get("moderation_status") != "in_review":
+        print(f"Post-ban publish must be re-gated, got {tpl.get('moderation_status')}")
+        return False
+    print("   PASS")
+
+    # --- 10. NFR-5: platform settings ---
+    print("10. Platform settings (NFR-5)...")
+    resp = requests.get(f"{ADMIN}/settings", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Settings list failed: {resp.status_code} - {resp.text}")
+        return False
+    settings = resp.json().get("settings", [])
+    keys = {s.get("key") for s in settings}
+    for expected in ("review_approval_threshold", "review_regate_count", "review_aging_hours"):
+        if expected not in keys:
+            print(f"Settings must contain {expected}")
+            return False
+    # Lower the threshold to 1: newbie (1 approved) now publishes instantly
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "review_approval_threshold", "value": "1", "reason": "FVT threshold test"})
+    if resp.status_code != 200:
+        print(f"Settings update failed: {resp.status_code} - {resp.text}")
+        return False
+    tid, tpl = create_template(headers_newbie, f"Newbie Ungated {ts}")
+    CREATED_TEMPLATES[-1]["owner_id"] = newbie_id
+    if tpl.get("moderation_status") != "normal":
+        print(f"With threshold 1 and 1 approved, publish must be instant, got {tpl.get('moderation_status')}")
+        return False
+    # Restore threshold
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "review_approval_threshold", "value": "3", "reason": "FVT restore threshold"})
+    if resp.status_code != 200:
+        print(f"Settings restore failed: {resp.status_code} - {resp.text}")
+        return False
+    # Invalid settings rejected (threshold 0 is valid — it disables gating;
+    # zero is invalid for the other keys, as are negative values)
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "review_regate_count", "value": "0", "reason": "FVT invalid value"})
+    if resp.status_code != 400:
+        print(f"Zero value for non-threshold key must be 400, got {resp.status_code}")
+        return False
+    resp = requests.put(f"{ADMIN}/settings", headers=admin_headers, json={
+        "key": "review_approval_threshold", "value": "-1", "reason": "FVT invalid value"})
+    if resp.status_code != 400:
+        print(f"Negative settings value must be 400, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 11. Audit log ---
+    print("11. Audit log...")
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "review_approve", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit log query failed: {resp.status_code}")
+        return False
+    entries = resp.json().get("entries", resp.json().get("logs", []))
+    if not any(e.get("target_id") == newbie_tid for e in entries):
+        print("Audit log must contain the review_approve decision")
+        return False
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "review_reject", "per_page": 50})
+    entries = resp.json().get("entries", resp.json().get("logs", []))
+    if not any(e.get("target_id") == newbie_tid2 for e in entries):
+        print("Audit log must contain the review_reject decision")
+        return False
+    print("   PASS")
+
+    print("--- Pre-publication Review Test PASSED ---")
+    return True
+
+
+def set_review_threshold(value, reason):
+    """Set review_approval_threshold via the admin settings API.
+    0 disables pre-publication gating entirely (used by main() so the legacy
+    suites keep their instant-publish behavior; the review suite re-enables
+    it)."""
+    APP = "http://localhost:8080/api/v1"
+    resp = requests.post(f"{APP}/admin/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        return False
+    admin_token = resp.json().get("token")
+    if not admin_token:
+        return False
+    resp = requests.put(f"{APP}/admin/settings",
+                        headers={"Authorization": f"Bearer {admin_token}"},
+                        json={"key": "review_approval_threshold",
+                              "value": str(value), "reason": reason})
+    return resp.status_code == 200
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -2232,6 +2720,13 @@ def main():
 
     # Run tests
     print("Running tests...")
+    # Pre-publication review gating defaults to 3 approved templates; the
+    # legacy suites publish as fresh users and expect instant visibility, so
+    # disable gating (threshold 0) for them. test_pre_publication_review
+    # re-enables it and restores 0 when done.
+    if not set_review_threshold(0, "FVT: disable gating for legacy suites"):
+        print("Failed to disable review gating for legacy suites")
+        sys.exit(1)
     success = True
     if success: success = test_lifecycle()
     if success: success = test_auth()
@@ -2250,6 +2745,9 @@ def main():
     if success: success = test_admin_user_management()
     if success: success = test_security_authz()
     if success: success = test_template_search_filtering()
+    if success: success = test_pre_publication_review()
+    # Restore the default threshold for post-run manual verification.
+    set_review_threshold(3, "FVT: restore default threshold")
 
     # Cleanup is handled by atexit
 

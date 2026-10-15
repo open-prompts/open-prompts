@@ -2207,6 +2207,1163 @@ func (x *DeleteAdminCommentResponse) GetSuccess() bool {
 	return false
 }
 
+type ListReviewQueueRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Category         string                 `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`                                          // "" = any
+	AgingOnly        bool                   `protobuf:"varint,2,opt,name=aging_only,json=agingOnly,proto3" json:"aging_only,omitempty"`                      // only submissions older than the aging window
+	ResubmissionOnly bool                   `protobuf:"varint,3,opt,name=resubmission_only,json=resubmissionOnly,proto3" json:"resubmission_only,omitempty"` // only attempt_number >= 2
+	Page             int32                  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`                                                 // 1-based, default 1
+	PerPage          int32                  `protobuf:"varint,5,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`                            // default 20, max 100
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ListReviewQueueRequest) Reset() {
+	*x = ListReviewQueueRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewQueueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewQueueRequest) ProtoMessage() {}
+
+func (x *ListReviewQueueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReviewQueueRequest.ProtoReflect.Descriptor instead.
+func (*ListReviewQueueRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ListReviewQueueRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ListReviewQueueRequest) GetAgingOnly() bool {
+	if x != nil {
+		return x.AgingOnly
+	}
+	return false
+}
+
+func (x *ListReviewQueueRequest) GetResubmissionOnly() bool {
+	if x != nil {
+		return x.ResubmissionOnly
+	}
+	return false
+}
+
+func (x *ListReviewQueueRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListReviewQueueRequest) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type ReviewQueueItem struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // submission id
+	TemplateId             string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	TemplateTitle          string                 `protobuf:"bytes,3,opt,name=template_title,json=templateTitle,proto3" json:"template_title,omitempty"`
+	CreatorId              string                 `protobuf:"bytes,4,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	CreatorDisplayName     string                 `protobuf:"bytes,5,opt,name=creator_display_name,json=creatorDisplayName,proto3" json:"creator_display_name,omitempty"`
+	AttemptNumber          int32                  `protobuf:"varint,6,opt,name=attempt_number,json=attemptNumber,proto3" json:"attempt_number,omitempty"`    // >= 2 renders the "(nth)" chip
+	IsResubmission         bool                   `protobuf:"varint,7,opt,name=is_resubmission,json=isResubmission,proto3" json:"is_resubmission,omitempty"` // attempt_number >= 2
+	SubmittedAt            *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
+	Category               string                 `protobuf:"bytes,9,opt,name=category,proto3" json:"category,omitempty"`
+	Aging                  bool                   `protobuf:"varint,10,opt,name=aging,proto3" json:"aging,omitempty"`                                                                   // submitted_at older than the aging window
+	CreatorApprovedCount   int32                  `protobuf:"varint,11,opt,name=creator_approved_count,json=creatorApprovedCount,proto3" json:"creator_approved_count,omitempty"`       // users.approved_template_count
+	CreatorPriorRejections int32                  `protobuf:"varint,12,opt,name=creator_prior_rejections,json=creatorPriorRejections,proto3" json:"creator_prior_rejections,omitempty"` // rejected submissions by this creator
+	CreatorBanned          bool                   `protobuf:"varint,13,opt,name=creator_banned,json=creatorBanned,proto3" json:"creator_banned,omitempty"`                              // banned-mid-review flag
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ReviewQueueItem) Reset() {
+	*x = ReviewQueueItem{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewQueueItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewQueueItem) ProtoMessage() {}
+
+func (x *ReviewQueueItem) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewQueueItem.ProtoReflect.Descriptor instead.
+func (*ReviewQueueItem) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ReviewQueueItem) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReviewQueueItem) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ReviewQueueItem) GetTemplateTitle() string {
+	if x != nil {
+		return x.TemplateTitle
+	}
+	return ""
+}
+
+func (x *ReviewQueueItem) GetCreatorId() string {
+	if x != nil {
+		return x.CreatorId
+	}
+	return ""
+}
+
+func (x *ReviewQueueItem) GetCreatorDisplayName() string {
+	if x != nil {
+		return x.CreatorDisplayName
+	}
+	return ""
+}
+
+func (x *ReviewQueueItem) GetAttemptNumber() int32 {
+	if x != nil {
+		return x.AttemptNumber
+	}
+	return 0
+}
+
+func (x *ReviewQueueItem) GetIsResubmission() bool {
+	if x != nil {
+		return x.IsResubmission
+	}
+	return false
+}
+
+func (x *ReviewQueueItem) GetSubmittedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SubmittedAt
+	}
+	return nil
+}
+
+func (x *ReviewQueueItem) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ReviewQueueItem) GetAging() bool {
+	if x != nil {
+		return x.Aging
+	}
+	return false
+}
+
+func (x *ReviewQueueItem) GetCreatorApprovedCount() int32 {
+	if x != nil {
+		return x.CreatorApprovedCount
+	}
+	return 0
+}
+
+func (x *ReviewQueueItem) GetCreatorPriorRejections() int32 {
+	if x != nil {
+		return x.CreatorPriorRejections
+	}
+	return 0
+}
+
+func (x *ReviewQueueItem) GetCreatorBanned() bool {
+	if x != nil {
+		return x.CreatorBanned
+	}
+	return false
+}
+
+type ListReviewQueueResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*ReviewQueueItem     `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReviewQueueResponse) Reset() {
+	*x = ListReviewQueueResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewQueueResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewQueueResponse) ProtoMessage() {}
+
+func (x *ListReviewQueueResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReviewQueueResponse.ProtoReflect.Descriptor instead.
+func (*ListReviewQueueResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ListReviewQueueResponse) GetItems() []*ReviewQueueItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListReviewQueueResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *ListReviewQueueResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListReviewQueueResponse) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type GetReviewSubmissionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // submission id
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReviewSubmissionRequest) Reset() {
+	*x = GetReviewSubmissionRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReviewSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReviewSubmissionRequest) ProtoMessage() {}
+
+func (x *GetReviewSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReviewSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*GetReviewSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *GetReviewSubmissionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ReviewChainEntry struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	AttemptNumber    int32                  `protobuf:"varint,1,opt,name=attempt_number,json=attemptNumber,proto3" json:"attempt_number,omitempty"`
+	Status           string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // "approved" | "rejected"
+	SubmittedAt      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
+	DecidedAt        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	RejectReasonCode string                 `protobuf:"bytes,5,opt,name=reject_reason_code,json=rejectReasonCode,proto3" json:"reject_reason_code,omitempty"` // empty for approvals
+	RejectNote       string                 `protobuf:"bytes,6,opt,name=reject_note,json=rejectNote,proto3" json:"reject_note,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReviewChainEntry) Reset() {
+	*x = ReviewChainEntry{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewChainEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewChainEntry) ProtoMessage() {}
+
+func (x *ReviewChainEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewChainEntry.ProtoReflect.Descriptor instead.
+func (*ReviewChainEntry) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ReviewChainEntry) GetAttemptNumber() int32 {
+	if x != nil {
+		return x.AttemptNumber
+	}
+	return 0
+}
+
+func (x *ReviewChainEntry) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ReviewChainEntry) GetSubmittedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SubmittedAt
+	}
+	return nil
+}
+
+func (x *ReviewChainEntry) GetDecidedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DecidedAt
+	}
+	return nil
+}
+
+func (x *ReviewChainEntry) GetRejectReasonCode() string {
+	if x != nil {
+		return x.RejectReasonCode
+	}
+	return ""
+}
+
+func (x *ReviewChainEntry) GetRejectNote() string {
+	if x != nil {
+		return x.RejectNote
+	}
+	return ""
+}
+
+type ReviewSubmissionDetail struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TemplateId             string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	TemplateTitle          string                 `protobuf:"bytes,3,opt,name=template_title,json=templateTitle,proto3" json:"template_title,omitempty"`
+	TemplateDescription    string                 `protobuf:"bytes,4,opt,name=template_description,json=templateDescription,proto3" json:"template_description,omitempty"`
+	TemplateContent        string                 `protobuf:"bytes,5,opt,name=template_content,json=templateContent,proto3" json:"template_content,omitempty"` // latest version content
+	Tags                   []string               `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty"`
+	Category               string                 `protobuf:"bytes,7,opt,name=category,proto3" json:"category,omitempty"`
+	Language               string                 `protobuf:"bytes,8,opt,name=language,proto3" json:"language,omitempty"`
+	CreatorId              string                 `protobuf:"bytes,9,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	CreatorDisplayName     string                 `protobuf:"bytes,10,opt,name=creator_display_name,json=creatorDisplayName,proto3" json:"creator_display_name,omitempty"`
+	CreatorJoinedAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=creator_joined_at,json=creatorJoinedAt,proto3" json:"creator_joined_at,omitempty"`
+	CreatorPublishedCount  int32                  `protobuf:"varint,12,opt,name=creator_published_count,json=creatorPublishedCount,proto3" json:"creator_published_count,omitempty"` // approved templates
+	CreatorPriorRejections int32                  `protobuf:"varint,13,opt,name=creator_prior_rejections,json=creatorPriorRejections,proto3" json:"creator_prior_rejections,omitempty"`
+	CreatorBanned          bool                   `protobuf:"varint,14,opt,name=creator_banned,json=creatorBanned,proto3" json:"creator_banned,omitempty"`
+	AttemptNumber          int32                  `protobuf:"varint,15,opt,name=attempt_number,json=attemptNumber,proto3" json:"attempt_number,omitempty"`
+	SubmittedAt            *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
+	Chain                  []*ReviewChainEntry    `protobuf:"bytes,17,rep,name=chain,proto3" json:"chain,omitempty"` // prior attempts, oldest first
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ReviewSubmissionDetail) Reset() {
+	*x = ReviewSubmissionDetail{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewSubmissionDetail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewSubmissionDetail) ProtoMessage() {}
+
+func (x *ReviewSubmissionDetail) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewSubmissionDetail.ProtoReflect.Descriptor instead.
+func (*ReviewSubmissionDetail) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ReviewSubmissionDetail) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetTemplateTitle() string {
+	if x != nil {
+		return x.TemplateTitle
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetTemplateDescription() string {
+	if x != nil {
+		return x.TemplateDescription
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetTemplateContent() string {
+	if x != nil {
+		return x.TemplateContent
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *ReviewSubmissionDetail) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetCreatorId() string {
+	if x != nil {
+		return x.CreatorId
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetCreatorDisplayName() string {
+	if x != nil {
+		return x.CreatorDisplayName
+	}
+	return ""
+}
+
+func (x *ReviewSubmissionDetail) GetCreatorJoinedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatorJoinedAt
+	}
+	return nil
+}
+
+func (x *ReviewSubmissionDetail) GetCreatorPublishedCount() int32 {
+	if x != nil {
+		return x.CreatorPublishedCount
+	}
+	return 0
+}
+
+func (x *ReviewSubmissionDetail) GetCreatorPriorRejections() int32 {
+	if x != nil {
+		return x.CreatorPriorRejections
+	}
+	return 0
+}
+
+func (x *ReviewSubmissionDetail) GetCreatorBanned() bool {
+	if x != nil {
+		return x.CreatorBanned
+	}
+	return false
+}
+
+func (x *ReviewSubmissionDetail) GetAttemptNumber() int32 {
+	if x != nil {
+		return x.AttemptNumber
+	}
+	return 0
+}
+
+func (x *ReviewSubmissionDetail) GetSubmittedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SubmittedAt
+	}
+	return nil
+}
+
+func (x *ReviewSubmissionDetail) GetChain() []*ReviewChainEntry {
+	if x != nil {
+		return x.Chain
+	}
+	return nil
+}
+
+type GetReviewSubmissionResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Submission    *ReviewSubmissionDetail `protobuf:"bytes,1,opt,name=submission,proto3" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReviewSubmissionResponse) Reset() {
+	*x = GetReviewSubmissionResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReviewSubmissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReviewSubmissionResponse) ProtoMessage() {}
+
+func (x *GetReviewSubmissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReviewSubmissionResponse.ProtoReflect.Descriptor instead.
+func (*GetReviewSubmissionResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *GetReviewSubmissionResponse) GetSubmission() *ReviewSubmissionDetail {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+type ApproveReviewSubmissionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // submission id
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveReviewSubmissionRequest) Reset() {
+	*x = ApproveReviewSubmissionRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveReviewSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveReviewSubmissionRequest) ProtoMessage() {}
+
+func (x *ApproveReviewSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveReviewSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*ApproveReviewSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ApproveReviewSubmissionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type RejectReviewSubmissionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                   // submission id
+	ReasonCode    string                 `protobuf:"bytes,2,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"` // required: spam | plagiarism | harmful | lowQuality | other
+	Note          string                 `protobuf:"bytes,3,opt,name=note,proto3" json:"note,omitempty"`                               // optional, <= 500 chars
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectReviewSubmissionRequest) Reset() {
+	*x = RejectReviewSubmissionRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectReviewSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectReviewSubmissionRequest) ProtoMessage() {}
+
+func (x *RejectReviewSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectReviewSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*RejectReviewSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *RejectReviewSubmissionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RejectReviewSubmissionRequest) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *RejectReviewSubmissionRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+type ReviewDecisionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId  string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	TemplateId    string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"` // "approved" | "rejected"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewDecisionResponse) Reset() {
+	*x = ReviewDecisionResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewDecisionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewDecisionResponse) ProtoMessage() {}
+
+func (x *ReviewDecisionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewDecisionResponse.ProtoReflect.Descriptor instead.
+func (*ReviewDecisionResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ReviewDecisionResponse) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *ReviewDecisionResponse) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ReviewDecisionResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type GetReviewMetricsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReviewMetricsRequest) Reset() {
+	*x = GetReviewMetricsRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReviewMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReviewMetricsRequest) ProtoMessage() {}
+
+func (x *GetReviewMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReviewMetricsRequest.ProtoReflect.Descriptor instead.
+func (*GetReviewMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{42}
+}
+
+type RejectionRateEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ReasonCode    string                 `protobuf:"bytes,1,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"`
+	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty"` // share of rejections (not of all decisions)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectionRateEntry) Reset() {
+	*x = RejectionRateEntry{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectionRateEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectionRateEntry) ProtoMessage() {}
+
+func (x *RejectionRateEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectionRateEntry.ProtoReflect.Descriptor instead.
+func (*RejectionRateEntry) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *RejectionRateEntry) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *RejectionRateEntry) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *RejectionRateEntry) GetRate() float64 {
+	if x != nil {
+		return x.Rate
+	}
+	return 0
+}
+
+type ReviewMetrics struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	OpenCount int64                  `protobuf:"varint,1,opt,name=open_count,json=openCount,proto3" json:"open_count,omitempty"`
+	// Median hours a currently-open submission has been waiting.
+	MedianTimeInReviewHours float64               `protobuf:"fixed64,2,opt,name=median_time_in_review_hours,json=medianTimeInReviewHours,proto3" json:"median_time_in_review_hours,omitempty"`
+	DecisionsToday          int64                 `protobuf:"varint,3,opt,name=decisions_today,json=decisionsToday,proto3" json:"decisions_today,omitempty"`
+	RejectionRateByReason   []*RejectionRateEntry `protobuf:"bytes,4,rep,name=rejection_rate_by_reason,json=rejectionRateByReason,proto3" json:"rejection_rate_by_reason,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *ReviewMetrics) Reset() {
+	*x = ReviewMetrics{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewMetrics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewMetrics) ProtoMessage() {}
+
+func (x *ReviewMetrics) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewMetrics.ProtoReflect.Descriptor instead.
+func (*ReviewMetrics) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *ReviewMetrics) GetOpenCount() int64 {
+	if x != nil {
+		return x.OpenCount
+	}
+	return 0
+}
+
+func (x *ReviewMetrics) GetMedianTimeInReviewHours() float64 {
+	if x != nil {
+		return x.MedianTimeInReviewHours
+	}
+	return 0
+}
+
+func (x *ReviewMetrics) GetDecisionsToday() int64 {
+	if x != nil {
+		return x.DecisionsToday
+	}
+	return 0
+}
+
+func (x *ReviewMetrics) GetRejectionRateByReason() []*RejectionRateEntry {
+	if x != nil {
+		return x.RejectionRateByReason
+	}
+	return nil
+}
+
+type GetPlatformSettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPlatformSettingsRequest) Reset() {
+	*x = GetPlatformSettingsRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPlatformSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPlatformSettingsRequest) ProtoMessage() {}
+
+func (x *GetPlatformSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPlatformSettingsRequest.ProtoReflect.Descriptor instead.
+func (*GetPlatformSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{45}
+}
+
+type PlatformSettingEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlatformSettingEntry) Reset() {
+	*x = PlatformSettingEntry{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlatformSettingEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlatformSettingEntry) ProtoMessage() {}
+
+func (x *PlatformSettingEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlatformSettingEntry.ProtoReflect.Descriptor instead.
+func (*PlatformSettingEntry) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *PlatformSettingEntry) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *PlatformSettingEntry) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *PlatformSettingEntry) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type GetPlatformSettingsResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Settings      []*PlatformSettingEntry `protobuf:"bytes,1,rep,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPlatformSettingsResponse) Reset() {
+	*x = GetPlatformSettingsResponse{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPlatformSettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPlatformSettingsResponse) ProtoMessage() {}
+
+func (x *GetPlatformSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPlatformSettingsResponse.ProtoReflect.Descriptor instead.
+func (*GetPlatformSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *GetPlatformSettingsResponse) GetSettings() []*PlatformSettingEntry {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+type UpdatePlatformSettingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`       // must exist in the known-keys whitelist
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`   // integer >= 0 for review_approval_threshold (0 disables gating), >= 1 otherwise
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"` // 3-500 chars, audit-logged
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdatePlatformSettingRequest) Reset() {
+	*x = UpdatePlatformSettingRequest{}
+	mi := &file_api_proto_v1_admin_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePlatformSettingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePlatformSettingRequest) ProtoMessage() {}
+
+func (x *UpdatePlatformSettingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_v1_admin_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePlatformSettingRequest.ProtoReflect.Descriptor instead.
+func (*UpdatePlatformSettingRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_v1_admin_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *UpdatePlatformSettingRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *UpdatePlatformSettingRequest) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *UpdatePlatformSettingRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_api_proto_v1_admin_proto protoreflect.FileDescriptor
 
 const file_api_proto_v1_admin_proto_rawDesc = "" +
@@ -2400,7 +3557,108 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"comment_id\x18\x01 \x01(\tR\tcommentId\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"6\n" +
 	"\x1aDeleteAdminCommentResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\x95\a\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xaf\x01\n" +
+	"\x16ListReviewQueueRequest\x12\x1a\n" +
+	"\bcategory\x18\x01 \x01(\tR\bcategory\x12\x1d\n" +
+	"\n" +
+	"aging_only\x18\x02 \x01(\bR\tagingOnly\x12+\n" +
+	"\x11resubmission_only\x18\x03 \x01(\bR\x10resubmissionOnly\x12\x12\n" +
+	"\x04page\x18\x04 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x05 \x01(\x05R\aperPage\"\x92\x04\n" +
+	"\x0fReviewQueueItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12%\n" +
+	"\x0etemplate_title\x18\x03 \x01(\tR\rtemplateTitle\x12\x1d\n" +
+	"\n" +
+	"creator_id\x18\x04 \x01(\tR\tcreatorId\x120\n" +
+	"\x14creator_display_name\x18\x05 \x01(\tR\x12creatorDisplayName\x12%\n" +
+	"\x0eattempt_number\x18\x06 \x01(\x05R\rattemptNumber\x12'\n" +
+	"\x0fis_resubmission\x18\a \x01(\bR\x0eisResubmission\x12=\n" +
+	"\fsubmitted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt\x12\x1a\n" +
+	"\bcategory\x18\t \x01(\tR\bcategory\x12\x14\n" +
+	"\x05aging\x18\n" +
+	" \x01(\bR\x05aging\x124\n" +
+	"\x16creator_approved_count\x18\v \x01(\x05R\x14creatorApprovedCount\x128\n" +
+	"\x18creator_prior_rejections\x18\f \x01(\x05R\x16creatorPriorRejections\x12%\n" +
+	"\x0ecreator_banned\x18\r \x01(\bR\rcreatorBanned\"\x89\x01\n" +
+	"\x17ListReviewQueueResponse\x12)\n" +
+	"\x05items\x18\x01 \x03(\v2\x13.v1.ReviewQueueItemR\x05items\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x04 \x01(\x05R\aperPage\",\n" +
+	"\x1aGetReviewSubmissionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x9a\x02\n" +
+	"\x10ReviewChainEntry\x12%\n" +
+	"\x0eattempt_number\x18\x01 \x01(\x05R\rattemptNumber\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12=\n" +
+	"\fsubmitted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt\x129\n" +
+	"\n" +
+	"decided_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\x12,\n" +
+	"\x12reject_reason_code\x18\x05 \x01(\tR\x10rejectReasonCode\x12\x1f\n" +
+	"\vreject_note\x18\x06 \x01(\tR\n" +
+	"rejectNote\"\xde\x05\n" +
+	"\x16ReviewSubmissionDetail\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12%\n" +
+	"\x0etemplate_title\x18\x03 \x01(\tR\rtemplateTitle\x121\n" +
+	"\x14template_description\x18\x04 \x01(\tR\x13templateDescription\x12)\n" +
+	"\x10template_content\x18\x05 \x01(\tR\x0ftemplateContent\x12\x12\n" +
+	"\x04tags\x18\x06 \x03(\tR\x04tags\x12\x1a\n" +
+	"\bcategory\x18\a \x01(\tR\bcategory\x12\x1a\n" +
+	"\blanguage\x18\b \x01(\tR\blanguage\x12\x1d\n" +
+	"\n" +
+	"creator_id\x18\t \x01(\tR\tcreatorId\x120\n" +
+	"\x14creator_display_name\x18\n" +
+	" \x01(\tR\x12creatorDisplayName\x12F\n" +
+	"\x11creator_joined_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\x0fcreatorJoinedAt\x126\n" +
+	"\x17creator_published_count\x18\f \x01(\x05R\x15creatorPublishedCount\x128\n" +
+	"\x18creator_prior_rejections\x18\r \x01(\x05R\x16creatorPriorRejections\x12%\n" +
+	"\x0ecreator_banned\x18\x0e \x01(\bR\rcreatorBanned\x12%\n" +
+	"\x0eattempt_number\x18\x0f \x01(\x05R\rattemptNumber\x12=\n" +
+	"\fsubmitted_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt\x12*\n" +
+	"\x05chain\x18\x11 \x03(\v2\x14.v1.ReviewChainEntryR\x05chain\"Y\n" +
+	"\x1bGetReviewSubmissionResponse\x12:\n" +
+	"\n" +
+	"submission\x18\x01 \x01(\v2\x1a.v1.ReviewSubmissionDetailR\n" +
+	"submission\"0\n" +
+	"\x1eApproveReviewSubmissionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"d\n" +
+	"\x1dRejectReviewSubmissionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vreason_code\x18\x02 \x01(\tR\n" +
+	"reasonCode\x12\x12\n" +
+	"\x04note\x18\x03 \x01(\tR\x04note\"v\n" +
+	"\x16ReviewDecisionResponse\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"\x19\n" +
+	"\x17GetReviewMetricsRequest\"_\n" +
+	"\x12RejectionRateEntry\x12\x1f\n" +
+	"\vreason_code\x18\x01 \x01(\tR\n" +
+	"reasonCode\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x12\n" +
+	"\x04rate\x18\x03 \x01(\x01R\x04rate\"\xe6\x01\n" +
+	"\rReviewMetrics\x12\x1d\n" +
+	"\n" +
+	"open_count\x18\x01 \x01(\x03R\topenCount\x12<\n" +
+	"\x1bmedian_time_in_review_hours\x18\x02 \x01(\x01R\x17medianTimeInReviewHours\x12'\n" +
+	"\x0fdecisions_today\x18\x03 \x01(\x03R\x0edecisionsToday\x12O\n" +
+	"\x18rejection_rate_by_reason\x18\x04 \x03(\v2\x16.v1.RejectionRateEntryR\x15rejectionRateByReason\"\x1c\n" +
+	"\x1aGetPlatformSettingsRequest\"y\n" +
+	"\x14PlatformSettingEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x129\n" +
+	"\n" +
+	"updated_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"S\n" +
+	"\x1bGetPlatformSettingsResponse\x124\n" +
+	"\bsettings\x18\x01 \x03(\v2\x18.v1.PlatformSettingEntryR\bsettings\"^\n" +
+	"\x1cUpdatePlatformSettingRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason2\xde\v\n" +
 	"\fAdminService\x12;\n" +
 	"\n" +
 	"AdminLogin\x12\x15.v1.AdminLoginRequest\x1a\x16.v1.AdminLoginResponse\x12V\n" +
@@ -2415,7 +3673,14 @@ const file_api_proto_v1_admin_proto_rawDesc = "" +
 	"\vGetTemplate\x12\x1b.v1.GetAdminTemplateRequest\x1a\x1c.v1.GetAdminTemplateResponse\x12D\n" +
 	"\rListAuditLogs\x12\x18.v1.ListAuditLogsRequest\x1a\x19.v1.ListAuditLogsResponse\x12P\n" +
 	"\x11ListAdminComments\x12\x1c.v1.ListAdminCommentsRequest\x1a\x1d.v1.ListAdminCommentsResponse\x12S\n" +
-	"\x12DeleteAdminComment\x12\x1d.v1.DeleteAdminCommentRequest\x1a\x1e.v1.DeleteAdminCommentResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
+	"\x12DeleteAdminComment\x12\x1d.v1.DeleteAdminCommentRequest\x1a\x1e.v1.DeleteAdminCommentResponse\x12J\n" +
+	"\x0fListReviewQueue\x12\x1a.v1.ListReviewQueueRequest\x1a\x1b.v1.ListReviewQueueResponse\x12V\n" +
+	"\x13GetReviewSubmission\x12\x1e.v1.GetReviewSubmissionRequest\x1a\x1f.v1.GetReviewSubmissionResponse\x12Y\n" +
+	"\x17ApproveReviewSubmission\x12\".v1.ApproveReviewSubmissionRequest\x1a\x1a.v1.ReviewDecisionResponse\x12W\n" +
+	"\x16RejectReviewSubmission\x12!.v1.RejectReviewSubmissionRequest\x1a\x1a.v1.ReviewDecisionResponse\x12B\n" +
+	"\x10GetReviewMetrics\x12\x1b.v1.GetReviewMetricsRequest\x1a\x11.v1.ReviewMetrics\x12V\n" +
+	"\x13GetPlatformSettings\x12\x1e.v1.GetPlatformSettingsRequest\x1a\x1f.v1.GetPlatformSettingsResponse\x12S\n" +
+	"\x15UpdatePlatformSetting\x12 .v1.UpdatePlatformSettingRequest\x1a\x18.v1.PlatformSettingEntryB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
 
 var (
 	file_api_proto_v1_admin_proto_rawDescOnce sync.Once
@@ -2429,48 +3694,65 @@ func file_api_proto_v1_admin_proto_rawDescGZIP() []byte {
 	return file_api_proto_v1_admin_proto_rawDescData
 }
 
-var file_api_proto_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_api_proto_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
 var file_api_proto_v1_admin_proto_goTypes = []any{
-	(*AdminLoginRequest)(nil),           // 0: v1.AdminLoginRequest
-	(*AdminLoginResponse)(nil),          // 1: v1.AdminLoginResponse
-	(*RefreshAdminSessionRequest)(nil),  // 2: v1.RefreshAdminSessionRequest
-	(*RefreshAdminSessionResponse)(nil), // 3: v1.RefreshAdminSessionResponse
-	(*GetAdminStatsRequest)(nil),        // 4: v1.GetAdminStatsRequest
-	(*GetAdminStatsResponse)(nil),       // 5: v1.GetAdminStatsResponse
-	(*AdminUserSummary)(nil),            // 6: v1.AdminUserSummary
-	(*ListUsersRequest)(nil),            // 7: v1.ListUsersRequest
-	(*ListUsersResponse)(nil),           // 8: v1.ListUsersResponse
-	(*GetUserRequest)(nil),              // 9: v1.GetUserRequest
-	(*GetUserResponse)(nil),             // 10: v1.GetUserResponse
-	(*UserStats)(nil),                   // 11: v1.UserStats
-	(*OAuthIdentity)(nil),               // 12: v1.OAuthIdentity
-	(*AdminAPIKeySummary)(nil),          // 13: v1.AdminAPIKeySummary
-	(*BanUserRequest)(nil),              // 14: v1.BanUserRequest
-	(*UnbanUserRequest)(nil),            // 15: v1.UnbanUserRequest
-	(*ChangeUserRoleRequest)(nil),       // 16: v1.ChangeUserRoleRequest
-	(*UserActionResponse)(nil),          // 17: v1.UserActionResponse
-	(*AdminTemplateSummary)(nil),        // 18: v1.AdminTemplateSummary
-	(*ListAdminTemplatesRequest)(nil),   // 19: v1.ListAdminTemplatesRequest
-	(*ListAdminTemplatesResponse)(nil),  // 20: v1.ListAdminTemplatesResponse
-	(*GetAdminTemplateRequest)(nil),     // 21: v1.GetAdminTemplateRequest
-	(*GetAdminTemplateResponse)(nil),    // 22: v1.GetAdminTemplateResponse
-	(*AdminTemplateVersion)(nil),        // 23: v1.AdminTemplateVersion
-	(*AdminAuditLogEntry)(nil),          // 24: v1.AdminAuditLogEntry
-	(*ListAuditLogsRequest)(nil),        // 25: v1.ListAuditLogsRequest
-	(*ListAuditLogsResponse)(nil),       // 26: v1.ListAuditLogsResponse
-	(*AdminCommentEntry)(nil),           // 27: v1.AdminCommentEntry
-	(*ListAdminCommentsRequest)(nil),    // 28: v1.ListAdminCommentsRequest
-	(*ListAdminCommentsResponse)(nil),   // 29: v1.ListAdminCommentsResponse
-	(*DeleteAdminCommentRequest)(nil),   // 30: v1.DeleteAdminCommentRequest
-	(*DeleteAdminCommentResponse)(nil),  // 31: v1.DeleteAdminCommentResponse
-	(*timestamppb.Timestamp)(nil),       // 32: google.protobuf.Timestamp
+	(*AdminLoginRequest)(nil),              // 0: v1.AdminLoginRequest
+	(*AdminLoginResponse)(nil),             // 1: v1.AdminLoginResponse
+	(*RefreshAdminSessionRequest)(nil),     // 2: v1.RefreshAdminSessionRequest
+	(*RefreshAdminSessionResponse)(nil),    // 3: v1.RefreshAdminSessionResponse
+	(*GetAdminStatsRequest)(nil),           // 4: v1.GetAdminStatsRequest
+	(*GetAdminStatsResponse)(nil),          // 5: v1.GetAdminStatsResponse
+	(*AdminUserSummary)(nil),               // 6: v1.AdminUserSummary
+	(*ListUsersRequest)(nil),               // 7: v1.ListUsersRequest
+	(*ListUsersResponse)(nil),              // 8: v1.ListUsersResponse
+	(*GetUserRequest)(nil),                 // 9: v1.GetUserRequest
+	(*GetUserResponse)(nil),                // 10: v1.GetUserResponse
+	(*UserStats)(nil),                      // 11: v1.UserStats
+	(*OAuthIdentity)(nil),                  // 12: v1.OAuthIdentity
+	(*AdminAPIKeySummary)(nil),             // 13: v1.AdminAPIKeySummary
+	(*BanUserRequest)(nil),                 // 14: v1.BanUserRequest
+	(*UnbanUserRequest)(nil),               // 15: v1.UnbanUserRequest
+	(*ChangeUserRoleRequest)(nil),          // 16: v1.ChangeUserRoleRequest
+	(*UserActionResponse)(nil),             // 17: v1.UserActionResponse
+	(*AdminTemplateSummary)(nil),           // 18: v1.AdminTemplateSummary
+	(*ListAdminTemplatesRequest)(nil),      // 19: v1.ListAdminTemplatesRequest
+	(*ListAdminTemplatesResponse)(nil),     // 20: v1.ListAdminTemplatesResponse
+	(*GetAdminTemplateRequest)(nil),        // 21: v1.GetAdminTemplateRequest
+	(*GetAdminTemplateResponse)(nil),       // 22: v1.GetAdminTemplateResponse
+	(*AdminTemplateVersion)(nil),           // 23: v1.AdminTemplateVersion
+	(*AdminAuditLogEntry)(nil),             // 24: v1.AdminAuditLogEntry
+	(*ListAuditLogsRequest)(nil),           // 25: v1.ListAuditLogsRequest
+	(*ListAuditLogsResponse)(nil),          // 26: v1.ListAuditLogsResponse
+	(*AdminCommentEntry)(nil),              // 27: v1.AdminCommentEntry
+	(*ListAdminCommentsRequest)(nil),       // 28: v1.ListAdminCommentsRequest
+	(*ListAdminCommentsResponse)(nil),      // 29: v1.ListAdminCommentsResponse
+	(*DeleteAdminCommentRequest)(nil),      // 30: v1.DeleteAdminCommentRequest
+	(*DeleteAdminCommentResponse)(nil),     // 31: v1.DeleteAdminCommentResponse
+	(*ListReviewQueueRequest)(nil),         // 32: v1.ListReviewQueueRequest
+	(*ReviewQueueItem)(nil),                // 33: v1.ReviewQueueItem
+	(*ListReviewQueueResponse)(nil),        // 34: v1.ListReviewQueueResponse
+	(*GetReviewSubmissionRequest)(nil),     // 35: v1.GetReviewSubmissionRequest
+	(*ReviewChainEntry)(nil),               // 36: v1.ReviewChainEntry
+	(*ReviewSubmissionDetail)(nil),         // 37: v1.ReviewSubmissionDetail
+	(*GetReviewSubmissionResponse)(nil),    // 38: v1.GetReviewSubmissionResponse
+	(*ApproveReviewSubmissionRequest)(nil), // 39: v1.ApproveReviewSubmissionRequest
+	(*RejectReviewSubmissionRequest)(nil),  // 40: v1.RejectReviewSubmissionRequest
+	(*ReviewDecisionResponse)(nil),         // 41: v1.ReviewDecisionResponse
+	(*GetReviewMetricsRequest)(nil),        // 42: v1.GetReviewMetricsRequest
+	(*RejectionRateEntry)(nil),             // 43: v1.RejectionRateEntry
+	(*ReviewMetrics)(nil),                  // 44: v1.ReviewMetrics
+	(*GetPlatformSettingsRequest)(nil),     // 45: v1.GetPlatformSettingsRequest
+	(*PlatformSettingEntry)(nil),           // 46: v1.PlatformSettingEntry
+	(*GetPlatformSettingsResponse)(nil),    // 47: v1.GetPlatformSettingsResponse
+	(*UpdatePlatformSettingRequest)(nil),   // 48: v1.UpdatePlatformSettingRequest
+	(*timestamppb.Timestamp)(nil),          // 49: google.protobuf.Timestamp
 }
 var file_api_proto_v1_admin_proto_depIdxs = []int32{
 	6,  // 0: v1.AdminLoginResponse.user:type_name -> v1.AdminUserSummary
 	6,  // 1: v1.GetAdminStatsResponse.recent_signups:type_name -> v1.AdminUserSummary
 	18, // 2: v1.GetAdminStatsResponse.recent_templates:type_name -> v1.AdminTemplateSummary
-	32, // 3: v1.AdminUserSummary.created_at:type_name -> google.protobuf.Timestamp
-	32, // 4: v1.AdminUserSummary.updated_at:type_name -> google.protobuf.Timestamp
+	49, // 3: v1.AdminUserSummary.created_at:type_name -> google.protobuf.Timestamp
+	49, // 4: v1.AdminUserSummary.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 5: v1.ListUsersResponse.users:type_name -> v1.AdminUserSummary
 	6,  // 6: v1.GetUserResponse.user:type_name -> v1.AdminUserSummary
 	11, // 7: v1.GetUserResponse.stats:type_name -> v1.UserStats
@@ -2478,52 +3760,77 @@ var file_api_proto_v1_admin_proto_depIdxs = []int32{
 	13, // 9: v1.GetUserResponse.api_keys:type_name -> v1.AdminAPIKeySummary
 	18, // 10: v1.GetUserResponse.templates:type_name -> v1.AdminTemplateSummary
 	24, // 11: v1.GetUserResponse.action_history:type_name -> v1.AdminAuditLogEntry
-	32, // 12: v1.OAuthIdentity.created_at:type_name -> google.protobuf.Timestamp
-	32, // 13: v1.AdminAPIKeySummary.created_at:type_name -> google.protobuf.Timestamp
-	32, // 14: v1.AdminAPIKeySummary.last_used_at:type_name -> google.protobuf.Timestamp
+	49, // 12: v1.OAuthIdentity.created_at:type_name -> google.protobuf.Timestamp
+	49, // 13: v1.AdminAPIKeySummary.created_at:type_name -> google.protobuf.Timestamp
+	49, // 14: v1.AdminAPIKeySummary.last_used_at:type_name -> google.protobuf.Timestamp
 	6,  // 15: v1.UserActionResponse.user:type_name -> v1.AdminUserSummary
-	32, // 16: v1.AdminTemplateSummary.created_at:type_name -> google.protobuf.Timestamp
-	32, // 17: v1.AdminTemplateSummary.updated_at:type_name -> google.protobuf.Timestamp
+	49, // 16: v1.AdminTemplateSummary.created_at:type_name -> google.protobuf.Timestamp
+	49, // 17: v1.AdminTemplateSummary.updated_at:type_name -> google.protobuf.Timestamp
 	18, // 18: v1.ListAdminTemplatesResponse.templates:type_name -> v1.AdminTemplateSummary
 	18, // 19: v1.GetAdminTemplateResponse.template:type_name -> v1.AdminTemplateSummary
 	23, // 20: v1.GetAdminTemplateResponse.versions:type_name -> v1.AdminTemplateVersion
-	32, // 21: v1.AdminTemplateVersion.created_at:type_name -> google.protobuf.Timestamp
-	32, // 22: v1.AdminAuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	49, // 21: v1.AdminTemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	49, // 22: v1.AdminAuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
 	24, // 23: v1.ListAuditLogsResponse.entries:type_name -> v1.AdminAuditLogEntry
-	32, // 24: v1.AdminCommentEntry.created_at:type_name -> google.protobuf.Timestamp
-	32, // 25: v1.AdminCommentEntry.updated_at:type_name -> google.protobuf.Timestamp
+	49, // 24: v1.AdminCommentEntry.created_at:type_name -> google.protobuf.Timestamp
+	49, // 25: v1.AdminCommentEntry.updated_at:type_name -> google.protobuf.Timestamp
 	27, // 26: v1.ListAdminCommentsResponse.entries:type_name -> v1.AdminCommentEntry
-	0,  // 27: v1.AdminService.AdminLogin:input_type -> v1.AdminLoginRequest
-	2,  // 28: v1.AdminService.RefreshAdminSession:input_type -> v1.RefreshAdminSessionRequest
-	4,  // 29: v1.AdminService.GetAdminStats:input_type -> v1.GetAdminStatsRequest
-	7,  // 30: v1.AdminService.ListUsers:input_type -> v1.ListUsersRequest
-	9,  // 31: v1.AdminService.GetUser:input_type -> v1.GetUserRequest
-	14, // 32: v1.AdminService.BanUser:input_type -> v1.BanUserRequest
-	15, // 33: v1.AdminService.UnbanUser:input_type -> v1.UnbanUserRequest
-	16, // 34: v1.AdminService.ChangeUserRole:input_type -> v1.ChangeUserRoleRequest
-	19, // 35: v1.AdminService.ListTemplates:input_type -> v1.ListAdminTemplatesRequest
-	21, // 36: v1.AdminService.GetTemplate:input_type -> v1.GetAdminTemplateRequest
-	25, // 37: v1.AdminService.ListAuditLogs:input_type -> v1.ListAuditLogsRequest
-	28, // 38: v1.AdminService.ListAdminComments:input_type -> v1.ListAdminCommentsRequest
-	30, // 39: v1.AdminService.DeleteAdminComment:input_type -> v1.DeleteAdminCommentRequest
-	1,  // 40: v1.AdminService.AdminLogin:output_type -> v1.AdminLoginResponse
-	3,  // 41: v1.AdminService.RefreshAdminSession:output_type -> v1.RefreshAdminSessionResponse
-	5,  // 42: v1.AdminService.GetAdminStats:output_type -> v1.GetAdminStatsResponse
-	8,  // 43: v1.AdminService.ListUsers:output_type -> v1.ListUsersResponse
-	10, // 44: v1.AdminService.GetUser:output_type -> v1.GetUserResponse
-	17, // 45: v1.AdminService.BanUser:output_type -> v1.UserActionResponse
-	17, // 46: v1.AdminService.UnbanUser:output_type -> v1.UserActionResponse
-	17, // 47: v1.AdminService.ChangeUserRole:output_type -> v1.UserActionResponse
-	20, // 48: v1.AdminService.ListTemplates:output_type -> v1.ListAdminTemplatesResponse
-	22, // 49: v1.AdminService.GetTemplate:output_type -> v1.GetAdminTemplateResponse
-	26, // 50: v1.AdminService.ListAuditLogs:output_type -> v1.ListAuditLogsResponse
-	29, // 51: v1.AdminService.ListAdminComments:output_type -> v1.ListAdminCommentsResponse
-	31, // 52: v1.AdminService.DeleteAdminComment:output_type -> v1.DeleteAdminCommentResponse
-	40, // [40:53] is the sub-list for method output_type
-	27, // [27:40] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	49, // 27: v1.ReviewQueueItem.submitted_at:type_name -> google.protobuf.Timestamp
+	33, // 28: v1.ListReviewQueueResponse.items:type_name -> v1.ReviewQueueItem
+	49, // 29: v1.ReviewChainEntry.submitted_at:type_name -> google.protobuf.Timestamp
+	49, // 30: v1.ReviewChainEntry.decided_at:type_name -> google.protobuf.Timestamp
+	49, // 31: v1.ReviewSubmissionDetail.creator_joined_at:type_name -> google.protobuf.Timestamp
+	49, // 32: v1.ReviewSubmissionDetail.submitted_at:type_name -> google.protobuf.Timestamp
+	36, // 33: v1.ReviewSubmissionDetail.chain:type_name -> v1.ReviewChainEntry
+	37, // 34: v1.GetReviewSubmissionResponse.submission:type_name -> v1.ReviewSubmissionDetail
+	43, // 35: v1.ReviewMetrics.rejection_rate_by_reason:type_name -> v1.RejectionRateEntry
+	49, // 36: v1.PlatformSettingEntry.updated_at:type_name -> google.protobuf.Timestamp
+	46, // 37: v1.GetPlatformSettingsResponse.settings:type_name -> v1.PlatformSettingEntry
+	0,  // 38: v1.AdminService.AdminLogin:input_type -> v1.AdminLoginRequest
+	2,  // 39: v1.AdminService.RefreshAdminSession:input_type -> v1.RefreshAdminSessionRequest
+	4,  // 40: v1.AdminService.GetAdminStats:input_type -> v1.GetAdminStatsRequest
+	7,  // 41: v1.AdminService.ListUsers:input_type -> v1.ListUsersRequest
+	9,  // 42: v1.AdminService.GetUser:input_type -> v1.GetUserRequest
+	14, // 43: v1.AdminService.BanUser:input_type -> v1.BanUserRequest
+	15, // 44: v1.AdminService.UnbanUser:input_type -> v1.UnbanUserRequest
+	16, // 45: v1.AdminService.ChangeUserRole:input_type -> v1.ChangeUserRoleRequest
+	19, // 46: v1.AdminService.ListTemplates:input_type -> v1.ListAdminTemplatesRequest
+	21, // 47: v1.AdminService.GetTemplate:input_type -> v1.GetAdminTemplateRequest
+	25, // 48: v1.AdminService.ListAuditLogs:input_type -> v1.ListAuditLogsRequest
+	28, // 49: v1.AdminService.ListAdminComments:input_type -> v1.ListAdminCommentsRequest
+	30, // 50: v1.AdminService.DeleteAdminComment:input_type -> v1.DeleteAdminCommentRequest
+	32, // 51: v1.AdminService.ListReviewQueue:input_type -> v1.ListReviewQueueRequest
+	35, // 52: v1.AdminService.GetReviewSubmission:input_type -> v1.GetReviewSubmissionRequest
+	39, // 53: v1.AdminService.ApproveReviewSubmission:input_type -> v1.ApproveReviewSubmissionRequest
+	40, // 54: v1.AdminService.RejectReviewSubmission:input_type -> v1.RejectReviewSubmissionRequest
+	42, // 55: v1.AdminService.GetReviewMetrics:input_type -> v1.GetReviewMetricsRequest
+	45, // 56: v1.AdminService.GetPlatformSettings:input_type -> v1.GetPlatformSettingsRequest
+	48, // 57: v1.AdminService.UpdatePlatformSetting:input_type -> v1.UpdatePlatformSettingRequest
+	1,  // 58: v1.AdminService.AdminLogin:output_type -> v1.AdminLoginResponse
+	3,  // 59: v1.AdminService.RefreshAdminSession:output_type -> v1.RefreshAdminSessionResponse
+	5,  // 60: v1.AdminService.GetAdminStats:output_type -> v1.GetAdminStatsResponse
+	8,  // 61: v1.AdminService.ListUsers:output_type -> v1.ListUsersResponse
+	10, // 62: v1.AdminService.GetUser:output_type -> v1.GetUserResponse
+	17, // 63: v1.AdminService.BanUser:output_type -> v1.UserActionResponse
+	17, // 64: v1.AdminService.UnbanUser:output_type -> v1.UserActionResponse
+	17, // 65: v1.AdminService.ChangeUserRole:output_type -> v1.UserActionResponse
+	20, // 66: v1.AdminService.ListTemplates:output_type -> v1.ListAdminTemplatesResponse
+	22, // 67: v1.AdminService.GetTemplate:output_type -> v1.GetAdminTemplateResponse
+	26, // 68: v1.AdminService.ListAuditLogs:output_type -> v1.ListAuditLogsResponse
+	29, // 69: v1.AdminService.ListAdminComments:output_type -> v1.ListAdminCommentsResponse
+	31, // 70: v1.AdminService.DeleteAdminComment:output_type -> v1.DeleteAdminCommentResponse
+	34, // 71: v1.AdminService.ListReviewQueue:output_type -> v1.ListReviewQueueResponse
+	38, // 72: v1.AdminService.GetReviewSubmission:output_type -> v1.GetReviewSubmissionResponse
+	41, // 73: v1.AdminService.ApproveReviewSubmission:output_type -> v1.ReviewDecisionResponse
+	41, // 74: v1.AdminService.RejectReviewSubmission:output_type -> v1.ReviewDecisionResponse
+	44, // 75: v1.AdminService.GetReviewMetrics:output_type -> v1.ReviewMetrics
+	47, // 76: v1.AdminService.GetPlatformSettings:output_type -> v1.GetPlatformSettingsResponse
+	46, // 77: v1.AdminService.UpdatePlatformSetting:output_type -> v1.PlatformSettingEntry
+	58, // [58:78] is the sub-list for method output_type
+	38, // [38:58] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_v1_admin_proto_init() }
@@ -2537,7 +3844,7 @@ func file_api_proto_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_v1_admin_proto_rawDesc), len(file_api_proto_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   32,
+			NumMessages:   49,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

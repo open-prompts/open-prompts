@@ -115,6 +115,11 @@ func main() {
 
 	svc := service.NewPromptService(promptRepo, templateRepo, templateVersionRepo, templateAliasRepo, notificationRepo, userRepo, commentRepo, redisClient)
 
+	// Pre-publication review: the review repository backs the gating
+	// checks, the admin review queue, and platform settings.
+	reviewRepo := repository.NewReviewRepository(pgConn.DB)
+	svc.SetReviewRepo(reviewRepo)
+
 	// User Service
 	apiKeyRepo := repository.NewAPIKeyRepository(pgConn.DB)
 
@@ -145,6 +150,9 @@ func main() {
 		}
 	}
 	adminSvc := service.NewAdminService(userRepo, adminRepo, apiKeyRepo, redisClient, jwtSecret, time.Duration(sessionTTLMinutes)*time.Minute)
+	adminSvc.SetReviewRepo(reviewRepo)
+	adminSvc.SetNotificationRepo(notificationRepo)
+	adminSvc.SetPromptService(svc)
 
 	// Notification Service (engagement notifications)
 	notificationReadRetentionDays := 90
@@ -1999,6 +2007,187 @@ func main() {
 		default:
 			http.Error(w, "Unknown action", http.StatusNotFound)
 		}
+	})
+
+	// Pre-publication Review — /api/v1/admin/review (GET queue list)
+	http.HandleFunc("/api/v1/admin/review", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		req := &pb.ListReviewQueueRequest{
+			Category:         r.URL.Query().Get("category"),
+			AgingOnly:        r.URL.Query().Get("aging") == "true",
+			ResubmissionOnly: r.URL.Query().Get("resubmission_only") == "true",
+		}
+		if v, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil {
+			req.Page = int32(v)
+		}
+		if v, err := strconv.Atoi(r.URL.Query().Get("per_page")); err == nil {
+			req.PerPage = int32(v)
+		}
+		resp, err := adminSvc.ListReviewQueue(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	// Pre-publication Review — /api/v1/admin/review/{id}, /api/v1/admin/review/metrics,
+	// /api/v1/admin/review/{id}/approve, /api/v1/admin/review/{id}/reject
+	http.HandleFunc("/api/v1/admin/review/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/review/")
+		parts := strings.Split(rest, "/")
+		if parts[0] == "" {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+
+		// GET /api/v1/admin/review/metrics
+		if r.Method == http.MethodGet && parts[0] == "metrics" {
+			resp, err := adminSvc.GetReviewMetrics(ctx, &pb.GetReviewMetricsRequest{})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// GET /api/v1/admin/review/{id}
+		if r.Method == http.MethodGet && len(parts) == 1 {
+			resp, err := adminSvc.GetReviewSubmission(ctx, &pb.GetReviewSubmissionRequest{Id: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		if r.Method != http.MethodPost || len(parts) != 2 {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+
+		switch parts[1] {
+		case "approve":
+			resp, err := adminSvc.ApproveReviewSubmission(ctx, &pb.ApproveReviewSubmissionRequest{Id: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		case "reject":
+			var req pb.RejectReviewSubmissionRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.Id = parts[0]
+			resp, err := adminSvc.RejectReviewSubmission(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+
+		default:
+			http.Error(w, "Unknown action", http.StatusNotFound)
+		}
+	})
+
+	// Platform Settings — /api/v1/admin/settings (GET list, PUT update)
+	http.HandleFunc("/api/v1/admin/settings", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			resp, err := adminSvc.GetPlatformSettings(ctx, &pb.GetPlatformSettingsRequest{})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		if r.Method != http.MethodPut {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req pb.UpdatePlatformSettingRequest
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+		if err := unmarshaler.Unmarshal(body, &req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		resp, err := adminSvc.UpdatePlatformSetting(ctx, &req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
 	})
 
 	zap.S().Info("HTTP server listening at :8080")

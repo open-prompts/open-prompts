@@ -23,11 +23,11 @@ func TestEscapeLike(t *testing.T) {
 
 func TestTemplateOrderBy(t *testing.T) {
 	cases := map[string]string{
-		"newest":          " ORDER BY t.created_at DESC",
-		"most_liked":      " ORDER BY t.like_count DESC, t.created_at DESC",
-		"most_favorited":  " ORDER BY t.favorite_count DESC, t.created_at DESC",
-		"trending":        " ORDER BY (COALESCE(el.cnt, 0) + COALESCE(ef.cnt, 0)) DESC, t.created_at DESC",
-		"":                " ORDER BY t.created_at DESC",
+		"newest":                  " ORDER BY t.created_at DESC",
+		"most_liked":              " ORDER BY t.like_count DESC, t.created_at DESC",
+		"most_favorited":          " ORDER BY t.favorite_count DESC, t.created_at DESC",
+		"trending":                " ORDER BY (COALESCE(el.cnt, 0) + COALESCE(ef.cnt, 0)) DESC, t.created_at DESC",
+		"":                        " ORDER BY t.created_at DESC",
 		"bogus; DROP TABLE users": " ORDER BY t.created_at DESC",
 	}
 	for sort, want := range cases {
@@ -101,6 +101,33 @@ func TestBuildTemplateConditionsNoKeyword(t *testing.T) {
 	}
 	if !strings.Contains(cond, "banned") {
 		t.Errorf("banned-owner exclusion missing for public listing: %s", cond)
+	}
+}
+
+func TestBuildTemplateConditionsModerationFilter(t *testing.T) {
+	// Public streams hide gated templates except from their owner; the
+	// bypass reuses the already-bound $1 (current_user_id).
+	filters := map[string]interface{}{"visibility": "public"}
+	cond, _, _ := buildTemplateConditions(filters, nil, 2)
+	want := "AND (t.moderation_status = 'normal' OR t.owner_id = $1)"
+	if !strings.Contains(cond, want) {
+		t.Errorf("moderation filter missing for public listing: %s", cond)
+	}
+	// The filter must not add a new bound parameter (it reuses $1).
+	filtersNoKw := map[string]interface{}{"visibility": "public"}
+	_, args, nextID := buildTemplateConditions(filtersNoKw, nil, 2)
+	if len(args) != 1 || nextID != 3 {
+		t.Errorf("moderation filter must not add args: %v nextID=%d", args, nextID)
+	}
+}
+
+func TestBuildTemplateConditionsModerationFilterPrivateStreamUntouched(t *testing.T) {
+	// A private listing (owner's own view) must not filter by moderation
+	// status — private templates are never gated.
+	filters := map[string]interface{}{"visibility": "private"}
+	cond, _, _ := buildTemplateConditions(filters, nil, 2)
+	if strings.Contains(cond, "moderation_status") {
+		t.Errorf("private listing must not filter by moderation status: %s", cond)
 	}
 }
 

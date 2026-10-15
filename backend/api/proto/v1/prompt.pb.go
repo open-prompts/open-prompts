@@ -158,7 +158,13 @@ type Template struct {
 	// Language of the template (e.g. "en", "zh").
 	Language string `protobuf:"bytes,16,opt,name=language,proto3" json:"language,omitempty"`
 	// Number of comments.
-	CommentCount  int32 `protobuf:"varint,17,opt,name=comment_count,json=commentCount,proto3" json:"comment_count,omitempty"`
+	CommentCount int32 `protobuf:"varint,17,opt,name=comment_count,json=commentCount,proto3" json:"comment_count,omitempty"`
+	// Moderation state: "normal" | "in_review" | "rejected".
+	// Only meaningful to the owner and admins; hidden templates 404 for
+	// everyone else so the value never leaks.
+	ModerationStatus string `protobuf:"bytes,25,opt,name=moderation_status,json=moderationStatus,proto3" json:"moderation_status,omitempty"`
+	// Approval time of the first review approval; null/absent until then.
+	PublishedAt   *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -310,6 +316,20 @@ func (x *Template) GetCommentCount() int32 {
 		return x.CommentCount
 	}
 	return 0
+}
+
+func (x *Template) GetModerationStatus() string {
+	if x != nil {
+		return x.ModerationStatus
+	}
+	return ""
+}
+
+func (x *Template) GetPublishedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PublishedAt
+	}
+	return nil
 }
 
 // TemplateVersion represents a specific version of a template's content.
@@ -4236,7 +4256,7 @@ var File_api_proto_v1_prompt_proto protoreflect.FileDescriptor
 
 const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\n" +
-	"\x19api/proto/v1/prompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xea\x04\n" +
+	"\x19api/proto/v1/prompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x05\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
@@ -4260,7 +4280,9 @@ const file_api_proto_v1_prompt_proto_rawDesc = "" +
 	"\bis_liked\x18\x0e \x01(\bR\aisLiked\x12!\n" +
 	"\fis_favorited\x18\x0f \x01(\bR\visFavorited\x12\x1a\n" +
 	"\blanguage\x18\x10 \x01(\tR\blanguage\x12#\n" +
-	"\rcomment_count\x18\x11 \x01(\x05R\fcommentCount\"\xf5\x01\n" +
+	"\rcomment_count\x18\x11 \x01(\x05R\fcommentCount\x12+\n" +
+	"\x11moderation_status\x18\x19 \x01(\tR\x10moderationStatus\x12=\n" +
+	"\fpublished_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\xf5\x01\n" +
 	"\x0fTemplateVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -4717,105 +4739,106 @@ var file_api_proto_v1_prompt_proto_depIdxs = []int32{
 	70, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
 	70, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 4: v1.Template.latest_version:type_name -> v1.TemplateVersion
-	70, // 5: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
-	68, // 7: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
-	70, // 8: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 9: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
-	1,  // 10: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
-	2,  // 11: v1.CreateTemplateResponse.template:type_name -> v1.Template
-	3,  // 12: v1.CreateTemplateResponse.version:type_name -> v1.TemplateVersion
-	0,  // 13: v1.UpdateTemplateRequest.visibility:type_name -> v1.Visibility
-	2,  // 14: v1.UpdateTemplateResponse.template:type_name -> v1.Template
-	3,  // 15: v1.UpdateTemplateResponse.new_version:type_name -> v1.TemplateVersion
-	2,  // 16: v1.GetTemplateResponse.template:type_name -> v1.Template
-	3,  // 17: v1.GetTemplateResponse.latest_version:type_name -> v1.TemplateVersion
-	0,  // 18: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
-	2,  // 19: v1.ListTemplatesResponse.templates:type_name -> v1.Template
-	2,  // 20: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
-	69, // 21: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
-	6,  // 22: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
-	6,  // 23: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
-	6,  // 24: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
-	37, // 25: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
-	40, // 26: v1.ListTagsResponse.tags:type_name -> v1.TagStats
-	46, // 27: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
-	70, // 28: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
-	70, // 29: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
-	70, // 30: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
-	53, // 31: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
-	53, // 32: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
-	70, // 33: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
-	70, // 34: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
-	60, // 35: v1.Comment.author:type_name -> v1.CommentAuthor
-	61, // 36: v1.ListCommentsResponse.comments:type_name -> v1.Comment
-	29, // 37: v1.UserService.Register:input_type -> v1.RegisterRequest
-	31, // 38: v1.UserService.Login:input_type -> v1.LoginRequest
-	33, // 39: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
-	34, // 40: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
-	42, // 41: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
-	44, // 42: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
-	47, // 43: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
-	48, // 44: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
-	50, // 45: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
-	51, // 46: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
-	52, // 47: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
-	54, // 48: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
-	56, // 49: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
-	58, // 50: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
-	7,  // 51: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
-	9,  // 52: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
-	11, // 53: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
-	13, // 54: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
-	15, // 55: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
-	17, // 56: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
-	19, // 57: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
-	21, // 58: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
-	23, // 59: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
-	27, // 60: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
-	36, // 61: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
-	39, // 62: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
-	4,  // 63: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
-	62, // 64: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
-	64, // 65: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
-	65, // 66: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
-	66, // 67: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
-	30, // 68: v1.UserService.Register:output_type -> v1.RegisterResponse
-	32, // 69: v1.UserService.Login:output_type -> v1.LoginResponse
-	32, // 70: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
-	35, // 71: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
-	43, // 72: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
-	45, // 73: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
-	46, // 74: v1.UserService.CreateAlias:output_type -> v1.Alias
-	49, // 75: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
-	46, // 76: v1.UserService.UpdateAlias:output_type -> v1.Alias
-	16, // 77: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
-	3,  // 78: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
-	55, // 79: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
-	57, // 80: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
-	59, // 81: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
-	8,  // 82: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
-	10, // 83: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
-	12, // 84: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
-	14, // 85: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
-	16, // 86: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
-	18, // 87: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
-	20, // 88: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
-	22, // 89: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
-	24, // 90: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
-	28, // 91: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
-	38, // 92: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
-	41, // 93: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
-	5,  // 94: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
-	63, // 95: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
-	61, // 96: v1.PromptService.CreateComment:output_type -> v1.Comment
-	61, // 97: v1.PromptService.UpdateComment:output_type -> v1.Comment
-	67, // 98: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
-	68, // [68:99] is the sub-list for method output_type
-	37, // [37:68] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	70, // 5: v1.Template.published_at:type_name -> google.protobuf.Timestamp
+	70, // 6: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	3,  // 7: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
+	68, // 8: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
+	70, // 9: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 10: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
+	1,  // 11: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
+	2,  // 12: v1.CreateTemplateResponse.template:type_name -> v1.Template
+	3,  // 13: v1.CreateTemplateResponse.version:type_name -> v1.TemplateVersion
+	0,  // 14: v1.UpdateTemplateRequest.visibility:type_name -> v1.Visibility
+	2,  // 15: v1.UpdateTemplateResponse.template:type_name -> v1.Template
+	3,  // 16: v1.UpdateTemplateResponse.new_version:type_name -> v1.TemplateVersion
+	2,  // 17: v1.GetTemplateResponse.template:type_name -> v1.Template
+	3,  // 18: v1.GetTemplateResponse.latest_version:type_name -> v1.TemplateVersion
+	0,  // 19: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
+	2,  // 20: v1.ListTemplatesResponse.templates:type_name -> v1.Template
+	2,  // 21: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
+	69, // 22: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
+	6,  // 23: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
+	6,  // 24: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
+	6,  // 25: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
+	37, // 26: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
+	40, // 27: v1.ListTagsResponse.tags:type_name -> v1.TagStats
+	46, // 28: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
+	70, // 29: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
+	70, // 30: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
+	70, // 31: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
+	53, // 32: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
+	53, // 33: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
+	70, // 34: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
+	70, // 35: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
+	60, // 36: v1.Comment.author:type_name -> v1.CommentAuthor
+	61, // 37: v1.ListCommentsResponse.comments:type_name -> v1.Comment
+	29, // 38: v1.UserService.Register:input_type -> v1.RegisterRequest
+	31, // 39: v1.UserService.Login:input_type -> v1.LoginRequest
+	33, // 40: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
+	34, // 41: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
+	42, // 42: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
+	44, // 43: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
+	47, // 44: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
+	48, // 45: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
+	50, // 46: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
+	51, // 47: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
+	52, // 48: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
+	54, // 49: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
+	56, // 50: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
+	58, // 51: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
+	7,  // 52: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
+	9,  // 53: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
+	11, // 54: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
+	13, // 55: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
+	15, // 56: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
+	17, // 57: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
+	19, // 58: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
+	21, // 59: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
+	23, // 60: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
+	27, // 61: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
+	36, // 62: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
+	39, // 63: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
+	4,  // 64: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
+	62, // 65: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
+	64, // 66: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
+	65, // 67: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
+	66, // 68: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
+	30, // 69: v1.UserService.Register:output_type -> v1.RegisterResponse
+	32, // 70: v1.UserService.Login:output_type -> v1.LoginResponse
+	32, // 71: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
+	35, // 72: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
+	43, // 73: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
+	45, // 74: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
+	46, // 75: v1.UserService.CreateAlias:output_type -> v1.Alias
+	49, // 76: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
+	46, // 77: v1.UserService.UpdateAlias:output_type -> v1.Alias
+	16, // 78: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
+	3,  // 79: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
+	55, // 80: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
+	57, // 81: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
+	59, // 82: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
+	8,  // 83: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
+	10, // 84: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
+	12, // 85: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
+	14, // 86: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
+	16, // 87: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
+	18, // 88: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
+	20, // 89: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
+	22, // 90: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
+	24, // 91: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
+	28, // 92: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
+	38, // 93: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
+	41, // 94: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
+	5,  // 95: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
+	63, // 96: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
+	61, // 97: v1.PromptService.CreateComment:output_type -> v1.Comment
+	61, // 98: v1.PromptService.UpdateComment:output_type -> v1.Comment
+	67, // 99: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
+	69, // [69:100] is the sub-list for method output_type
+	38, // [38:69] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_v1_prompt_proto_init() }

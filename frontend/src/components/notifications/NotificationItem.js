@@ -1,12 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { HeartIcon, StarIcon, ForkIcon } from '../ui/Icons';
+import { HeartIcon, StarIcon, ForkIcon, CheckIcon, AlertIcon } from '../ui/Icons';
 import { formatRelativeTime } from '../../utils/time';
 
 const EVENT_ICONS = {
   like: { Icon: HeartIcon, className: 'event-icon-like' },
   favorite: { Icon: StarIcon, className: 'event-icon-favorite' },
   fork: { Icon: ForkIcon, className: 'event-icon-fork' },
+  template_approved: { Icon: CheckIcon, className: 'event-icon-approved' },
+  template_rejected: { Icon: AlertIcon, className: 'event-icon-rejected' },
 };
 
 /**
@@ -28,11 +30,20 @@ const NotificationItem = ({ notification, onOpen, onMarkRead, onDelete, compact 
   const event = EVENT_ICONS[n.type] || EVENT_ICONS.like;
   const EventIcon = event.Icon;
 
-  const sentence = t(`notifications.event.${n.type}`, {
-    actor: n.actor_display_name,
-    title: n.template_title,
-    defaultValue: `${n.actor_display_name} ${n.type} "${n.template_title}"`,
-  });
+  // Review decisions have no acting user in the sentence sense: the
+  // actor_display_name slot carries the rejection reason code instead.
+  const isReviewDecision = n.type === 'template_approved' || n.type === 'template_rejected';
+  const sentence = isReviewDecision
+    ? t(`notifications.event.${n.type}`, {
+        title: n.template_title,
+        reason: n.actor_display_name,
+        defaultValue: `Review decision on "${n.template_title}"`,
+      })
+    : t(`notifications.event.${n.type}`, {
+        actor: n.actor_display_name,
+        title: n.template_title,
+        defaultValue: `${n.actor_display_name} ${n.type} "${n.template_title}"`,
+      });
   const relativeTime = formatRelativeTime(n.created_at, t);
   const absoluteTime = n.created_at ? new Date(n.created_at).toLocaleString() : '';
 

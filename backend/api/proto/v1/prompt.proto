@@ -147,6 +147,12 @@ message Template {
   string language = 16;
   // Number of comments.
   int32 comment_count = 17;
+  // Moderation state: "normal" | "in_review" | "rejected".
+  // Only meaningful to the owner and admins; hidden templates 404 for
+  // everyone else so the value never leaks.
+  string moderation_status = 25;
+  // Approval time of the first review approval; null/absent until then.
+  google.protobuf.Timestamp published_at = 26;
 }
 
 // TemplateVersion represents a specific version of a template's content.
@@ -588,8 +594,8 @@ message Comment {
 
 message ListCommentsRequest {
   string template_id = 1;
-  int32 page = 2;       // 1-based, default 1
-  int32 page_size = 3;  // default 20, max 50
+  int32 page = 2; // 1-based, default 1
+  int32 page_size = 3; // default 20, max 50
 }
 
 message ListCommentsResponse {
@@ -601,12 +607,12 @@ message ListCommentsResponse {
 
 message CreateCommentRequest {
   string template_id = 1;
-  string content = 2;   // 1-2000 chars after trim
+  string content = 2; // 1-2000 chars after trim
 }
 
 message UpdateCommentRequest {
   string comment_id = 1;
-  string content = 2;   // 1-2000 chars after trim
+  string content = 2; // 1-2000 chars after trim
 }
 
 message DeleteCommentRequest {

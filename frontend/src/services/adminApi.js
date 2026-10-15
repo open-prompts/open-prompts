@@ -96,6 +96,17 @@ export const changeAdminUserRole = (id, role, reason) =>
 // Templates
 export const getAdminTemplates = (params) => adminApi.get('/admin/templates', { params });
 export const getAdminTemplate = (id) => adminApi.get(`/admin/templates/${id}`);
+// Pre-publication review
+export const getReviewQueue = (params) => adminApi.get('/admin/review', { params });
+export const getReviewMetrics = () => adminApi.get('/admin/review/metrics');
+export const getReviewSubmission = (id) => adminApi.get(`/admin/review/${id}`);
+export const approveReviewSubmission = (id) => adminApi.post(`/admin/review/${id}/approve`);
+export const rejectReviewSubmission = (id, reasonCode, note) =>
+  adminApi.post(`/admin/review/${id}/reject`, { reason_code: reasonCode, note });
+// Platform settings
+export const getPlatformSettings = () => adminApi.get('/admin/settings');
+export const updatePlatformSetting = (key, value, reason) =>
+  adminApi.put('/admin/settings', { key, value: String(value), reason });
 // Audit
 export const getAdminAuditLogs = (params) => adminApi.get('/admin/audit-log', { params });
 // Comments

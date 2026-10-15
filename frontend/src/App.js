@@ -19,6 +19,8 @@ const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
 const UserDetailPage = lazy(() => import('./pages/admin/UserDetailPage'));
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'));
 const TemplateDetailPage = lazy(() => import('./pages/admin/TemplateDetailPage'));
+const ReviewPage = lazy(() => import('./pages/admin/ReviewPage'));
+const ReviewDetailPage = lazy(() => import('./pages/admin/ReviewDetailPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
@@ -111,6 +113,22 @@ function App() {
                 element={
                   <Suspense fallback={<PageSpinner />}>
                     <TemplateDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="review"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <ReviewPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="review/:id"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <ReviewDetailPage />
                   </Suspense>
                 }
               />

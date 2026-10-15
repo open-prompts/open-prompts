@@ -164,7 +164,7 @@ message GetPlatformSettingsResponse {
 
 message UpdatePlatformSettingRequest {
     string key = 1;    // 必须存在于已知键白名单
-    string value = 2;  // 十进制字符串形式的 >= 1 整数
+    string value = 2;  // review_approval_threshold 为 >= 0 整数（0 = 关闭门控），其余为 >= 1 整数
     string reason = 3; // 3-500 字符，记入审计
 }
 ```
@@ -592,8 +592,10 @@ RPC 全部以 `requireAdminContext` 开头。
 **`GetPlatformSettings` / `UpdatePlatformSetting`：** 列表读取全部行；
 更新对照已知白名单
 （`review_approval_threshold|review_regate_count|review_aging_hours`）
-校验 `key`、将 `value` 校验为正整数，调用 `UpsertSetting`，使设置缓存
-失效，并 `writeAudit(ctx, actor, "settings_change", "platform", key,
+校验 `key`；`value` 对 `review_approval_threshold` 为非负整数（0 =
+关闭门控 —— 所有发布直接上线），对其余键为正整数；随后调用
+`UpsertSetting`，使设置缓存失效，并
+`writeAudit(ctx, actor, "settings_change", "platform", key,
 reason)` —— `settings_change` 动作与 `platform` target_type 已包含在
 §2 的 CHECK 扩宽中。
 

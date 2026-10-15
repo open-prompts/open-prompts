@@ -165,7 +165,7 @@ message GetPlatformSettingsResponse {
 
 message UpdatePlatformSettingRequest {
     string key = 1;    // must exist in the known-keys whitelist
-    string value = 2;  // integer >= 1 as decimal string
+    string value = 2;  // integer >= 0 for review_approval_threshold (0 disables gating), >= 1 otherwise
     string reason = 3; // 3-500 chars, audit-logged
 }
 ```
@@ -600,10 +600,12 @@ published count = `approved_template_count`, prior rejections).
 **`GetPlatformSettings` / `UpdatePlatformSetting`:** list reads all rows;
 update validates `key` against the known whitelist
 (`review_approval_threshold|review_regate_count|review_aging_hours`) and
-`value` as a positive integer, calls `UpsertSetting`, invalidates the
-settings cache, and `writeAudit(ctx, actor, "settings_change", "platform",
-key, reason)` — the `settings_change` action and `platform` target_type are
-included in the §2 CHECK widenings.
+`value` as a non-negative integer for `review_approval_threshold` (0 =
+gating disabled — every publish goes live) or a positive integer otherwise,
+calls `UpsertSetting`, invalidates the settings cache, and
+`writeAudit(ctx, actor, "settings_change", "platform", key, reason)` —
+the `settings_change` action and `platform` target_type are included in
+the §2 CHECK widenings.
 
 **`BanUser` hook (FR-2/US-8):** after the existing ban succeeds, set
 `review_gated_remaining = M` (`SetGatedRemaining`) so the user's publishes

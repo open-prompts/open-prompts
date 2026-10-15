@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { useNotification } from '../context/NotificationContext';
 import { toggleTemplateLike, toggleTemplateFavorite } from '../services/api';
 import { HeartIcon, StarIcon } from './ui/Icons';
@@ -16,10 +17,17 @@ const PromptCard = ({ template }) => {
   const { t } = useTranslation();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
   const [liked, setLiked] = useState(template.is_liked);
   const [likeCount, setLikeCount] = useState(template.like_count || 0);
   const [favorited, setFavorited] = useState(template.is_favorited);
   const [favCount, setFavCount] = useState(template.favorite_count || 0);
+
+  // Moderation badge only for the owner's own gated templates.
+  const showModeration =
+    user &&
+    template.owner_id === user.id &&
+    (template.moderation_status === 'in_review' || template.moderation_status === 'rejected');
 
   const handleLike = async (e) => {
     e.stopPropagation();
@@ -52,6 +60,13 @@ const PromptCard = ({ template }) => {
         <span className={`badge ${template.visibility === 'VISIBILITY_PUBLIC' ? 'badge-public' : 'badge-private'}`}>
           {template.visibility === 'VISIBILITY_PUBLIC' ? t('create_template.visibility_public') : t('create_template.visibility_private')}
         </span>
+        {showModeration && (
+          <span className={`badge badge-moderation-${template.moderation_status}`}>
+            {template.moderation_status === 'in_review'
+              ? t('review.status.inReview')
+              : t('review.status.rejected')}
+          </span>
+        )}
       </div>
       <p className="card-description">{template.description}</p>
       {template.latest_version && (

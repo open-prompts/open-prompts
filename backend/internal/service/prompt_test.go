@@ -51,15 +51,22 @@ func (m *MockPromptRepository) Delete(ctx context.Context, id string) error {
 // MockTemplateRepository (minimal for Prompt tests)
 type MockTemplateRepository struct {
 	mock.Mock
+	CreateFunc         func(ctx context.Context, t *models.Template) error
 	GetFunc            func(ctx context.Context, id string, currentUserID string) (*models.Template, error)
 	ListFunc           func(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Template, error)
 	ToggleLikeFunc     func(ctx context.Context, userID, templateID string) (bool, int32, error)
 	ToggleFavoriteFunc func(ctx context.Context, userID, templateID string) (bool, int32, error)
 	UpdateFunc         func(ctx context.Context, t *models.Template) error
 	CountTemplatesFunc func(ctx context.Context, filters map[string]interface{}) (int32, error)
+	DeleteFunc         func(ctx context.Context, id string) error
 }
 
-func (m *MockTemplateRepository) Create(ctx context.Context, t *models.Template) error { return nil }
+func (m *MockTemplateRepository) Create(ctx context.Context, t *models.Template) error {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, t)
+	}
+	return nil
+}
 func (m *MockTemplateRepository) Get(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
 	if m.GetFunc != nil {
 		return m.GetFunc(ctx, id, currentUserID)
@@ -78,7 +85,12 @@ func (m *MockTemplateRepository) Update(ctx context.Context, t *models.Template)
 	}
 	return nil
 }
-func (m *MockTemplateRepository) Delete(ctx context.Context, id string) error          { return nil }
+func (m *MockTemplateRepository) Delete(ctx context.Context, id string) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
 func (m *MockTemplateRepository) ToggleLike(ctx context.Context, userID, templateID string) (bool, int32, error) {
 	if m.ToggleLikeFunc != nil {
 		return m.ToggleLikeFunc(ctx, userID, templateID)
@@ -414,17 +426,17 @@ func TestToggleLikeNotificationHook(t *testing.T) {
 		userRepo.AssertNotCalled(t, "GetByID", mock.Anything, mock.Anything)
 	})
 
-	t.Run("TemplateLoadErrorSwallowed", func(t *testing.T) {
+	t.Run("TemplateLoadErrorReturnsNotFound", func(t *testing.T) {
 		notifRepo := new(MockNotificationRepository)
 		userRepo := new(MockUserRepository)
 
 		svc := newSvc(t, nil, errors.New("template gone"), true, notifRepo, userRepo)
-		resp, err := svc.ToggleLikeTemplate(
+		_, err := svc.ToggleLikeTemplate(
 			ContextWithUserID(context.Background(), "actor_1"),
 			&pb.ToggleLikeRequest{TemplateId: "t1"},
 		)
-		assert.NoError(t, err, "hook failure must not fail the like")
-		assert.True(t, resp.IsLiked)
+		assert.Error(t, err, "hidden/missing templates must 404 before toggling")
+		assert.Equal(t, codes.NotFound, status.Code(err))
 		notifRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
 	})
 

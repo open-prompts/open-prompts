@@ -9,6 +9,7 @@ import FilterChipRow from '../components/FilterChipRow';
 import ResultCount from '../components/ResultCount';
 import EmptyState from '../components/EmptyState';
 import SkeletonCards from '../components/SkeletonCards';
+import ReviewStatusCard from '../components/review/ReviewStatusCard';
 import useTemplateFilters from '../hooks/useTemplateFilters';
 import { getCategories, getTags } from '../services/api';
 import './Home.scss';
@@ -83,6 +84,22 @@ const Home = () => {
   const handleRemoveCategory = () => setCategory('');
   const handleRemoveSort = () => setSort('newest');
 
+  // Own templates currently in pre-publication review (or rejected):
+  // surfaced as status cards above the grid so the creator always knows
+  // where their submissions stand.
+  const reviewTemplates = React.useMemo(
+    () =>
+      isAuthenticated
+        ? [...privateTemplates, ...templates].filter(
+            (tpl) =>
+              tpl &&
+              tpl.owner_id === (user && user.id) &&
+              (tpl.moderation_status === 'in_review' || tpl.moderation_status === 'rejected')
+          )
+        : [],
+    [isAuthenticated, privateTemplates, templates, user]
+  );
+
   return (
     <Layout
       onFilterChange={applyFilterChange}
@@ -133,6 +150,14 @@ const Home = () => {
 
         {!isFirstLoading && (
           <>
+            {reviewTemplates.length > 0 && (
+              <div className="home-review-status">
+                {reviewTemplates.map((tpl) => (
+                  <ReviewStatusCard key={tpl.id} template={tpl} />
+                ))}
+              </div>
+            )}
+
             {privateTemplates.length > 0 && (
               <div className="templates-grid private-grid">
                 {privateTemplates.map((template) => (

@@ -8,6 +8,44 @@
   gap: 22px;
 }
 
+/* --- Pre-publication review owner banner --- */
+.review-owner-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.review-owner-banner--in-review {
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  color: var(--warning, #f5a623);
+}
+
+.review-owner-banner--rejected {
+  background: rgba(229, 83, 75, 0.1);
+  border: 1px solid rgba(229, 83, 75, 0.35);
+  color: var(--danger, #e5534b);
+}
+
+.review-owner-banner__cta {
+  margin-left: auto;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--danger, #e5534b);
+  color: #fff;
+}
+
+.review-owner-banner__cta:hover {
+  filter: brightness(1.1);
+}
+
 .loading,
 .not-found {
   padding: 60px 20px;

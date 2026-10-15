@@ -5,6 +5,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useTranslation } from 'react-i18next';
 import { createTemplate, getCategories } from '../services/api';
 import { AlertIcon } from './ui/Icons';
+import PublishReviewModal from './review/PublishReviewModal';
 import './CreateTemplateModal.scss';
 
 /**
@@ -31,6 +32,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [generalError, setGeneralError] = useState('');
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { addNotification } = useNotification();
 
   // Fetch categories when the modal opens
@@ -123,8 +125,17 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
         language: formData.language || 'en',
       };
 
-      await createTemplate(payload);
+      const resp = await createTemplate(payload);
       setLoading(false);
+      const created = resp.data && resp.data.template;
+      if (created && created.moderation_status === 'in_review') {
+        // Gated creator: the publish entered pre-publication review — show
+        // the review confirmation instead of the plain success toast.
+        onRequestClose();
+        if (onSuccess) onSuccess();
+        setReviewModalOpen(true);
+        return;
+      }
       // Notify user of success (localized)
       addNotification({ kind: 'success', title: t('common.success'), subtitle: t('create_template.success_created'), timeout: 4000 });
       onRequestClose();
@@ -138,6 +149,7 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
   };
 
   return (
+    <>
     <Modal
       open={open}
       className="create-template-modal"
@@ -262,6 +274,12 @@ const CreateTemplateModal = ({ open, onRequestClose, onSuccess }) => {
         </Field>
       </div>
     </Modal>
+    <PublishReviewModal
+      open={reviewModalOpen}
+      onViewStatus={() => setReviewModalOpen(false)}
+      onDone={() => setReviewModalOpen(false)}
+    />
+    </>
   );
 };
 

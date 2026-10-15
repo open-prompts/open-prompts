@@ -16,7 +16,7 @@ import {
   getCategories
 } from '../services/api';
 import Modal from '../components/ui/Modal';
-import { HeartIcon, StarIcon } from '../components/ui/Icons';
+import { HeartIcon, StarIcon, ClockIcon, AlertIcon } from '../components/ui/Icons';
 import { useNotification } from '../context/NotificationContext';
 import Layout from '../components/Layout';
 import TemplateAliasManager from '../components/TemplateAliasManager';
@@ -24,6 +24,7 @@ import VersionHistoryPanel from '../components/VersionHistoryPanel';
 import DiffModal from '../components/DiffModal';
 import RestoreConfirmModal from '../components/RestoreConfirmModal';
 import ChangeNoteInput from '../components/ChangeNoteInput';
+import PublishReviewModal from '../components/review/PublishReviewModal';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
 
@@ -80,6 +81,9 @@ const TemplateDetails = () => {
 
   // Template Fork Modal State
   const [isForkModalOpen, setIsForkModalOpen] = useState(false);
+
+  // Pre-publication review: shown when a publish entered review
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   // Metadata Edit State
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
@@ -566,7 +570,12 @@ const TemplateDetails = () => {
         }
       const res = await updateTemplate(template.id, updateData);
       setTemplate(res.data.template); // Update local state
-      addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_details.success_share') });
+      if (res.data.template && res.data.template.moderation_status === 'in_review') {
+        // Gated creator: the publish entered pre-publication review.
+        setIsReviewModalOpen(true);
+      } else {
+        addNotification({ kind: 'success', title: t('common.success'), subtitle: t('template_details.success_share') });
+      }
     } catch (error) {
       console.error("Failed to share template", error);
       addNotification({ kind: 'error', title: t('common.error'), subtitle: t('template_details.error_share') });
@@ -687,6 +696,25 @@ const TemplateDetails = () => {
   return (
     <Layout showSidebar={false} showCreateButton={false}>
       <div className="template-details-page">
+        {isOwner && template.moderation_status === 'in_review' && (
+          <div className="review-owner-banner review-owner-banner--in-review" role="status">
+            <ClockIcon size={16} />
+            <span>{t('review.banner.in_review')}</span>
+          </div>
+        )}
+        {isOwner && template.moderation_status === 'rejected' && (
+          <div className="review-owner-banner review-owner-banner--rejected" role="alert">
+            <AlertIcon size={16} />
+            <span>{t('review.banner.rejected')}</span>
+            <button
+              type="button"
+              className="review-owner-banner__cta"
+              onClick={() => setIsEditingMetadata(true)}
+            >
+              {t('review.cta.resubmit')}
+            </button>
+          </div>
+        )}
         <div className="header-actions">
           <div className="title-section">
             <div className="title-row">
@@ -1139,6 +1167,15 @@ print(prompt)`}
       >
         <p className="modal-confirm-text">{t('template_details.fork_template_confirm')}</p>
       </Modal>
+
+      <PublishReviewModal
+        open={isReviewModalOpen}
+        onViewStatus={() => {
+          setIsReviewModalOpen(false);
+          navigate('/');
+        }}
+        onDone={() => setIsReviewModalOpen(false)}
+      />
 
       <DiffModal
         key={diffState ? `${diffState.aId}-${diffState.bId}` : 'closed'}

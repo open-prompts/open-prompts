@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	ErrAuditLogNotFound = errors.New("audit log not found")
-	ErrTemplateNotFound = errors.New("template not found")
+	ErrAuditLogNotFound    = errors.New("audit log not found")
+	ErrTemplateNotFound    = errors.New("template not found")
+	ErrTemplateNotInReview = errors.New("template not in review")
 )
 
 // UserFilters describes the admin user list query parameters.
@@ -65,6 +66,11 @@ type AdminRepository interface {
 	// Templates (admin view: includes private, includes banned owners)
 	ListTemplates(ctx context.Context, f TemplateFilters) ([]*models.AdminTemplate, int64, error)
 	GetTemplateWithVersions(ctx context.Context, templateID string) (*models.AdminTemplate, []*models.AdminTemplateVersion, error)
+	// SetTemplateModeration transitions a template's moderation status.
+	// publish=true sets moderation_status='normal' + published_at=now();
+	// publish=false sets moderation_status='rejected'. Both are guarded by
+	// WHERE moderation_status='in_review' so concurrent decisions are safe.
+	SetTemplateModeration(ctx context.Context, templateID string, status string, publish bool) error
 	// Comments (moderation)
 	ListComments(ctx context.Context, f CommentFilters) ([]*models.AdminComment, int64, error)
 	DeleteComment(ctx context.Context, id string) (bool, int64, error)
@@ -424,6 +430,41 @@ LIMIT $1`
 		templates = append(templates, t)
 	}
 	return templates, nil
+}
+
+// SetTemplateModeration transitions a template out of in_review. The
+// WHERE moderation_status='in_review' guard makes concurrent decisions
+// idempotent at the template level.
+func (r *adminRepository) SetTemplateModeration(ctx context.Context, templateID string, status string, publish bool) error {
+	var query string
+	var args []interface{}
+	if publish {
+		query = `
+			UPDATE templates
+			SET moderation_status = $1, published_at = now(), updated_at = now()
+			WHERE id = $2 AND moderation_status = 'in_review'
+		`
+		args = []interface{}{status, templateID}
+	} else {
+		query = `
+			UPDATE templates
+			SET moderation_status = $1, updated_at = now()
+			WHERE id = $2 AND moderation_status = 'in_review'
+		`
+		args = []interface{}{status, templateID}
+	}
+	res, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to update template moderation: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to update template moderation: %w", err)
+	}
+	if rows == 0 {
+		return ErrTemplateNotInReview
+	}
+	return nil
 }
 
 // InsertAuditLog appends an entry to the audit trail.

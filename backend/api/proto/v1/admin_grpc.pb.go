@@ -19,19 +19,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminService_AdminLogin_FullMethodName          = "/v1.AdminService/AdminLogin"
-	AdminService_RefreshAdminSession_FullMethodName = "/v1.AdminService/RefreshAdminSession"
-	AdminService_GetAdminStats_FullMethodName       = "/v1.AdminService/GetAdminStats"
-	AdminService_ListUsers_FullMethodName           = "/v1.AdminService/ListUsers"
-	AdminService_GetUser_FullMethodName             = "/v1.AdminService/GetUser"
-	AdminService_BanUser_FullMethodName             = "/v1.AdminService/BanUser"
-	AdminService_UnbanUser_FullMethodName           = "/v1.AdminService/UnbanUser"
-	AdminService_ChangeUserRole_FullMethodName      = "/v1.AdminService/ChangeUserRole"
-	AdminService_ListTemplates_FullMethodName       = "/v1.AdminService/ListTemplates"
-	AdminService_GetTemplate_FullMethodName         = "/v1.AdminService/GetTemplate"
-	AdminService_ListAuditLogs_FullMethodName       = "/v1.AdminService/ListAuditLogs"
-	AdminService_ListAdminComments_FullMethodName   = "/v1.AdminService/ListAdminComments"
-	AdminService_DeleteAdminComment_FullMethodName  = "/v1.AdminService/DeleteAdminComment"
+	AdminService_AdminLogin_FullMethodName              = "/v1.AdminService/AdminLogin"
+	AdminService_RefreshAdminSession_FullMethodName     = "/v1.AdminService/RefreshAdminSession"
+	AdminService_GetAdminStats_FullMethodName           = "/v1.AdminService/GetAdminStats"
+	AdminService_ListUsers_FullMethodName               = "/v1.AdminService/ListUsers"
+	AdminService_GetUser_FullMethodName                 = "/v1.AdminService/GetUser"
+	AdminService_BanUser_FullMethodName                 = "/v1.AdminService/BanUser"
+	AdminService_UnbanUser_FullMethodName               = "/v1.AdminService/UnbanUser"
+	AdminService_ChangeUserRole_FullMethodName          = "/v1.AdminService/ChangeUserRole"
+	AdminService_ListTemplates_FullMethodName           = "/v1.AdminService/ListTemplates"
+	AdminService_GetTemplate_FullMethodName             = "/v1.AdminService/GetTemplate"
+	AdminService_ListAuditLogs_FullMethodName           = "/v1.AdminService/ListAuditLogs"
+	AdminService_ListAdminComments_FullMethodName       = "/v1.AdminService/ListAdminComments"
+	AdminService_DeleteAdminComment_FullMethodName      = "/v1.AdminService/DeleteAdminComment"
+	AdminService_ListReviewQueue_FullMethodName         = "/v1.AdminService/ListReviewQueue"
+	AdminService_GetReviewSubmission_FullMethodName     = "/v1.AdminService/GetReviewSubmission"
+	AdminService_ApproveReviewSubmission_FullMethodName = "/v1.AdminService/ApproveReviewSubmission"
+	AdminService_RejectReviewSubmission_FullMethodName  = "/v1.AdminService/RejectReviewSubmission"
+	AdminService_GetReviewMetrics_FullMethodName        = "/v1.AdminService/GetReviewMetrics"
+	AdminService_GetPlatformSettings_FullMethodName     = "/v1.AdminService/GetPlatformSettings"
+	AdminService_UpdatePlatformSetting_FullMethodName   = "/v1.AdminService/UpdatePlatformSetting"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -67,6 +74,24 @@ type AdminServiceClient interface {
 	ListAdminComments(ctx context.Context, in *ListAdminCommentsRequest, opts ...grpc.CallOption) (*ListAdminCommentsResponse, error)
 	// DeleteAdminComment deletes any comment with a mandatory reason (audited).
 	DeleteAdminComment(ctx context.Context, in *DeleteAdminCommentRequest, opts ...grpc.CallOption) (*DeleteAdminCommentResponse, error)
+	// ListReviewQueue returns the pending pre-publication review queue
+	// (aging-first, then FIFO).
+	ListReviewQueue(ctx context.Context, in *ListReviewQueueRequest, opts ...grpc.CallOption) (*ListReviewQueueResponse, error)
+	// GetReviewSubmission returns full review detail for one submission.
+	GetReviewSubmission(ctx context.Context, in *GetReviewSubmissionRequest, opts ...grpc.CallOption) (*GetReviewSubmissionResponse, error)
+	// ApproveReviewSubmission approves a pending submission; the template
+	// goes live and the creator is notified.
+	ApproveReviewSubmission(ctx context.Context, in *ApproveReviewSubmissionRequest, opts ...grpc.CallOption) (*ReviewDecisionResponse, error)
+	// RejectReviewSubmission rejects a pending submission with a mandatory
+	// reason code; the creator is notified with the reason.
+	RejectReviewSubmission(ctx context.Context, in *RejectReviewSubmissionRequest, opts ...grpc.CallOption) (*ReviewDecisionResponse, error)
+	// GetReviewMetrics returns queue KPIs (open count, median wait,
+	// decisions today, rejection rate by reason).
+	GetReviewMetrics(ctx context.Context, in *GetReviewMetricsRequest, opts ...grpc.CallOption) (*ReviewMetrics, error)
+	// GetPlatformSettings lists the admin-editable platform settings.
+	GetPlatformSettings(ctx context.Context, in *GetPlatformSettingsRequest, opts ...grpc.CallOption) (*GetPlatformSettingsResponse, error)
+	// UpdatePlatformSetting updates one platform setting (reason-audited).
+	UpdatePlatformSetting(ctx context.Context, in *UpdatePlatformSettingRequest, opts ...grpc.CallOption) (*PlatformSettingEntry, error)
 }
 
 type adminServiceClient struct {
@@ -207,6 +232,76 @@ func (c *adminServiceClient) DeleteAdminComment(ctx context.Context, in *DeleteA
 	return out, nil
 }
 
+func (c *adminServiceClient) ListReviewQueue(ctx context.Context, in *ListReviewQueueRequest, opts ...grpc.CallOption) (*ListReviewQueueResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListReviewQueueResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListReviewQueue_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) GetReviewSubmission(ctx context.Context, in *GetReviewSubmissionRequest, opts ...grpc.CallOption) (*GetReviewSubmissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReviewSubmissionResponse)
+	err := c.cc.Invoke(ctx, AdminService_GetReviewSubmission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ApproveReviewSubmission(ctx context.Context, in *ApproveReviewSubmissionRequest, opts ...grpc.CallOption) (*ReviewDecisionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReviewDecisionResponse)
+	err := c.cc.Invoke(ctx, AdminService_ApproveReviewSubmission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) RejectReviewSubmission(ctx context.Context, in *RejectReviewSubmissionRequest, opts ...grpc.CallOption) (*ReviewDecisionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReviewDecisionResponse)
+	err := c.cc.Invoke(ctx, AdminService_RejectReviewSubmission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) GetReviewMetrics(ctx context.Context, in *GetReviewMetricsRequest, opts ...grpc.CallOption) (*ReviewMetrics, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReviewMetrics)
+	err := c.cc.Invoke(ctx, AdminService_GetReviewMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) GetPlatformSettings(ctx context.Context, in *GetPlatformSettingsRequest, opts ...grpc.CallOption) (*GetPlatformSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPlatformSettingsResponse)
+	err := c.cc.Invoke(ctx, AdminService_GetPlatformSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) UpdatePlatformSetting(ctx context.Context, in *UpdatePlatformSettingRequest, opts ...grpc.CallOption) (*PlatformSettingEntry, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlatformSettingEntry)
+	err := c.cc.Invoke(ctx, AdminService_UpdatePlatformSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -240,6 +335,24 @@ type AdminServiceServer interface {
 	ListAdminComments(context.Context, *ListAdminCommentsRequest) (*ListAdminCommentsResponse, error)
 	// DeleteAdminComment deletes any comment with a mandatory reason (audited).
 	DeleteAdminComment(context.Context, *DeleteAdminCommentRequest) (*DeleteAdminCommentResponse, error)
+	// ListReviewQueue returns the pending pre-publication review queue
+	// (aging-first, then FIFO).
+	ListReviewQueue(context.Context, *ListReviewQueueRequest) (*ListReviewQueueResponse, error)
+	// GetReviewSubmission returns full review detail for one submission.
+	GetReviewSubmission(context.Context, *GetReviewSubmissionRequest) (*GetReviewSubmissionResponse, error)
+	// ApproveReviewSubmission approves a pending submission; the template
+	// goes live and the creator is notified.
+	ApproveReviewSubmission(context.Context, *ApproveReviewSubmissionRequest) (*ReviewDecisionResponse, error)
+	// RejectReviewSubmission rejects a pending submission with a mandatory
+	// reason code; the creator is notified with the reason.
+	RejectReviewSubmission(context.Context, *RejectReviewSubmissionRequest) (*ReviewDecisionResponse, error)
+	// GetReviewMetrics returns queue KPIs (open count, median wait,
+	// decisions today, rejection rate by reason).
+	GetReviewMetrics(context.Context, *GetReviewMetricsRequest) (*ReviewMetrics, error)
+	// GetPlatformSettings lists the admin-editable platform settings.
+	GetPlatformSettings(context.Context, *GetPlatformSettingsRequest) (*GetPlatformSettingsResponse, error)
+	// UpdatePlatformSetting updates one platform setting (reason-audited).
+	UpdatePlatformSetting(context.Context, *UpdatePlatformSettingRequest) (*PlatformSettingEntry, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -288,6 +401,27 @@ func (UnimplementedAdminServiceServer) ListAdminComments(context.Context, *ListA
 }
 func (UnimplementedAdminServiceServer) DeleteAdminComment(context.Context, *DeleteAdminCommentRequest) (*DeleteAdminCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAdminComment not implemented")
+}
+func (UnimplementedAdminServiceServer) ListReviewQueue(context.Context, *ListReviewQueueRequest) (*ListReviewQueueResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListReviewQueue not implemented")
+}
+func (UnimplementedAdminServiceServer) GetReviewSubmission(context.Context, *GetReviewSubmissionRequest) (*GetReviewSubmissionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReviewSubmission not implemented")
+}
+func (UnimplementedAdminServiceServer) ApproveReviewSubmission(context.Context, *ApproveReviewSubmissionRequest) (*ReviewDecisionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApproveReviewSubmission not implemented")
+}
+func (UnimplementedAdminServiceServer) RejectReviewSubmission(context.Context, *RejectReviewSubmissionRequest) (*ReviewDecisionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RejectReviewSubmission not implemented")
+}
+func (UnimplementedAdminServiceServer) GetReviewMetrics(context.Context, *GetReviewMetricsRequest) (*ReviewMetrics, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReviewMetrics not implemented")
+}
+func (UnimplementedAdminServiceServer) GetPlatformSettings(context.Context, *GetPlatformSettingsRequest) (*GetPlatformSettingsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlatformSettings not implemented")
+}
+func (UnimplementedAdminServiceServer) UpdatePlatformSetting(context.Context, *UpdatePlatformSettingRequest) (*PlatformSettingEntry, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePlatformSetting not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -544,6 +678,132 @@ func _AdminService_DeleteAdminComment_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_ListReviewQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListReviewQueueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListReviewQueue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListReviewQueue_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListReviewQueue(ctx, req.(*ListReviewQueueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_GetReviewSubmission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReviewSubmissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).GetReviewSubmission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_GetReviewSubmission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).GetReviewSubmission(ctx, req.(*GetReviewSubmissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ApproveReviewSubmission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveReviewSubmissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ApproveReviewSubmission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ApproveReviewSubmission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ApproveReviewSubmission(ctx, req.(*ApproveReviewSubmissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_RejectReviewSubmission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectReviewSubmissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).RejectReviewSubmission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_RejectReviewSubmission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).RejectReviewSubmission(ctx, req.(*RejectReviewSubmissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_GetReviewMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReviewMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).GetReviewMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_GetReviewMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).GetReviewMetrics(ctx, req.(*GetReviewMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_GetPlatformSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlatformSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).GetPlatformSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_GetPlatformSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).GetPlatformSettings(ctx, req.(*GetPlatformSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_UpdatePlatformSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePlatformSettingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UpdatePlatformSetting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UpdatePlatformSetting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UpdatePlatformSetting(ctx, req.(*UpdatePlatformSettingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -602,6 +862,34 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAdminComment",
 			Handler:    _AdminService_DeleteAdminComment_Handler,
+		},
+		{
+			MethodName: "ListReviewQueue",
+			Handler:    _AdminService_ListReviewQueue_Handler,
+		},
+		{
+			MethodName: "GetReviewSubmission",
+			Handler:    _AdminService_GetReviewSubmission_Handler,
+		},
+		{
+			MethodName: "ApproveReviewSubmission",
+			Handler:    _AdminService_ApproveReviewSubmission_Handler,
+		},
+		{
+			MethodName: "RejectReviewSubmission",
+			Handler:    _AdminService_RejectReviewSubmission_Handler,
+		},
+		{
+			MethodName: "GetReviewMetrics",
+			Handler:    _AdminService_GetReviewMetrics_Handler,
+		},
+		{
+			MethodName: "GetPlatformSettings",
+			Handler:    _AdminService_GetPlatformSettings_Handler,
+		},
+		{
+			MethodName: "UpdatePlatformSetting",
+			Handler:    _AdminService_UpdatePlatformSetting_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

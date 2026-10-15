@@ -186,7 +186,12 @@ func TestListTemplateVersionsMapsCounts(t *testing.T) {
 		{ID: 1, Version: 1, PromptCount: 3, ChangeNote: sql.NullString{Valid: false}},
 	}, nil).Once()
 
-	svc := NewPromptService(nil, nil, mockVersionRepo, nil, nil, nil, nil, nil)
+	mockTemplateRepo := &MockTemplateRepository{}
+	mockTemplateRepo.On("Get", mock.Anything, "t1", "").Return(&models.Template{
+		ID: "t1", OwnerID: "owner_1", Visibility: "public", ModerationStatus: "normal",
+	}, nil).Once()
+
+	svc := NewPromptService(nil, mockTemplateRepo, mockVersionRepo, nil, nil, nil, nil, nil)
 	resp, err := svc.ListTemplateVersions(context.Background(), &pb.ListTemplateVersionsRequest{
 		TemplateId: "t1",
 		PageSize:   10,
