@@ -327,6 +327,25 @@ async function getProfile(token) {
   return resp.data;
 }
 
+// Related templates rail. limit is clamped server-side to [3, 8] (default 8).
+// Returns { items: [Template...], basis: "category"|"tag"|"generic" }.
+// Optional auth: pass token to get viewer-scoped like/favorite state.
+async function getRelatedTemplates(token, templateId, limit) {
+  let path = `/api/v1/templates/${templateId}/related`;
+  if (limit !== undefined) path += `?limit=${limit}`;
+  const resp = await request('GET', path, null, token ? { token } : {});
+  return resp.data;
+}
+
+// More-from-author row. limit is clamped server-side to [1, 4] (default 4).
+// Returns { items: [Template...] }.
+async function getMoreFromAuthor(token, templateId, limit) {
+  let path = `/api/v1/templates/${templateId}/more-from-author`;
+  if (limit !== undefined) path += `?limit=${limit}`;
+  const resp = await request('GET', path, null, token ? { token } : {});
+  return resp.data;
+}
+
 // Set the caller's show_warned_content viewer preference.
 async function setShowWarnedContent(token, value) {
   const resp = await request('PUT', '/api/v1/profile', { show_warned_content: value }, { token });
@@ -370,4 +389,6 @@ module.exports = {
   setWarningTaxonomy,
   getProfile,
   setShowWarnedContent,
+  getRelatedTemplates,
+  getMoreFromAuthor,
 };
