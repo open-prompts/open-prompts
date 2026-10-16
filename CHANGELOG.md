@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/open-prompts/open-prompts/compare/v1.30.1...v1.31.0) (2026-10-16)
+
+
+### Features
+
+* **dashboard:** add user dashboard workspace with overview, templates and prompts ([9d11c6f](https://github.com/open-prompts/open-prompts/commit/9d11c6fc2609307b2cffc81894fb012a69b734c5))
+
 ## [1.30.1](https://github.com/open-prompts/open-prompts/compare/v1.30.0...v1.30.1) (2026-10-16)
 
 
