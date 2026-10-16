@@ -23,6 +23,8 @@ type TemplateRepository interface {
 	ToggleLike(ctx context.Context, userID, templateID string) (bool, int32, error)
 	ToggleFavorite(ctx context.Context, userID, templateID string) (bool, int32, error)
 	CountTemplates(ctx context.Context, filters map[string]interface{}) (int32, error)
+	ListRelated(ctx context.Context, templateID string, tpl *models.Template, currentUserID string, limit int) ([]*models.Template, error)
+	ListMoreFromAuthor(ctx context.Context, templateID, ownerID, currentUserID string, limit int) ([]*models.Template, error)
 }
 
 // templateRepository implements TemplateRepository.
@@ -572,4 +574,146 @@ func (r *templateRepository) ToggleFavorite(ctx context.Context, userID, templat
 	}
 
 	return !exists, count, nil
+}
+
+// relatedSelectColumns is the shared SELECT column list (with viewer
+// like/favorite LEFT JOINs) used by the discovery queries. It mirrors the
+// List query's projection so cards render the same shape.
+const relatedSelectColumns = `
+		t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
+		t.like_count, t.favorite_count, t.comment_count, t.view_count, t.use_count,
+		t.moderation_status, t.published_at,
+		t.content_warnings, t.locked_warnings,
+		t.created_at, t.updated_at,
+		CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
+		CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited,
+		ou.display_name AS owner_display_name, COALESCE(ou.avatar, '') AS owner_avatar
+`
+
+// scanTemplateRow scans one row into a *models.Template using the same
+// projection as List. It is shared by ListRelated and ListMoreFromAuthor.
+func scanTemplateRow(scan func(dest ...interface{}) error) (*models.Template, error) {
+	var t models.Template
+	if err := scan(
+		&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
+		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
+		&t.ViewCount, &t.UseCount,
+		&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
+		&t.CreatedAt, &t.UpdatedAt,
+		&t.IsLiked, &t.IsFavorited,
+		&t.OwnerDisplayName, &t.OwnerAvatar,
+	); err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// relatedQuery builds the SQL and bound args for ListRelated. Extracted from
+// the DB call so the parameter order/count and the empty-tags edge can be
+// unit-tested without a live database.
+func relatedQuery(templateID string, tpl *models.Template, currentUserID string, limit int) (string, []interface{}) {
+	query := `
+		SELECT` + relatedSelectColumns + `
+		FROM templates t
+		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $2
+		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $2
+		JOIN users ou ON ou.id = t.owner_id
+		WHERE t.visibility = 'public'
+		  AND t.id != $1
+		  AND NOT EXISTS (SELECT 1 FROM users bu
+		                  WHERE bu.id = t.owner_id AND bu.status = 'banned')
+		ORDER BY
+		    (CASE WHEN t.category = $3 THEN 3 ELSE 0 END
+		    + CASE WHEN t.tags && $4 THEN 2 * cardinality(ARRAY(
+		              SELECT unnest(t.tags) INTERSECT SELECT unnest($4))) ELSE 0 END
+		    + CASE WHEN t.language = $5 THEN 1 ELSE 0 END
+		    + CASE WHEN t.owner_id = $6 THEN 0.5 ELSE 0 END) DESC,
+		    t.like_count DESC,
+		    t.updated_at DESC,
+		    t.id ASC
+		LIMIT $7
+	`
+	args := []interface{}{
+		templateID,
+		currentUserID,
+		tpl.Category.String,
+		pq.Array(tpl.Tags),
+		tpl.Language,
+		tpl.OwnerID,
+		limit,
+	}
+	return query, args
+}
+
+// ListRelated returns up to `limit` public templates related to the given
+// template, scored by shared category (3), shared tags (2 per shared tag),
+// same language (1), and same author (0.5), then like_count DESC, updated_at
+// DESC, id ASC. The current template, private templates, and banned-owner
+// templates are excluded. currentUserID (may be "") drives the viewer
+// like/favorite joins.
+func (r *templateRepository) ListRelated(ctx context.Context, templateID string, tpl *models.Template, currentUserID string, limit int) ([]*models.Template, error) {
+	query, args := relatedQuery(templateID, tpl, currentUserID, limit)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query related templates: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var templates []*models.Template
+	for rows.Next() {
+		t, err := scanTemplateRow(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan related template: %w", err)
+		}
+		templates = append(templates, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+	return templates, nil
+}
+
+// authorQuery builds the SQL and bound args for ListMoreFromAuthor. Extracted
+// for unit testing of parameter order/count.
+func authorQuery(templateID, ownerID, currentUserID string, limit int) (string, []interface{}) {
+	query := `
+		SELECT` + relatedSelectColumns + `
+		FROM templates t
+		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $2
+		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $2
+		JOIN users ou ON ou.id = t.owner_id
+		WHERE t.owner_id = $3
+		  AND t.visibility = 'public'
+		  AND t.id != $1
+		ORDER BY t.like_count DESC, t.updated_at DESC, t.id ASC
+		LIMIT $4
+	`
+	args := []interface{}{templateID, currentUserID, ownerID, limit}
+	return query, args
+}
+
+// ListMoreFromAuthor returns up to `limit` of the author's other public
+// templates, most-liked first. The current template is excluded. The
+// banned-owner exclusion is unnecessary here because the caller reached this
+// code only through Get, which already 404s banned-owner templates.
+func (r *templateRepository) ListMoreFromAuthor(ctx context.Context, templateID, ownerID, currentUserID string, limit int) ([]*models.Template, error) {
+	query, args := authorQuery(templateID, ownerID, currentUserID, limit)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query more from author: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var templates []*models.Template
+	for rows.Next() {
+		t, err := scanTemplateRow(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan author template: %w", err)
+		}
+		templates = append(templates, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+	return templates, nil
 }

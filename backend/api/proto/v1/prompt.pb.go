@@ -5826,6 +5826,209 @@ func (x *GetCreatorStatsResponse) GetTemplateCount() int32 {
 	return 0
 }
 
+type GetRelatedTemplatesRequest struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	// Default 8, clamped to [3, 8].
+	Limit         int32 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRelatedTemplatesRequest) Reset() {
+	*x = GetRelatedTemplatesRequest{}
+	mi := &file_prompt_proto_msgTypes[88]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRelatedTemplatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRelatedTemplatesRequest) ProtoMessage() {}
+
+func (x *GetRelatedTemplatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[88]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRelatedTemplatesRequest.ProtoReflect.Descriptor instead.
+func (*GetRelatedTemplatesRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{88}
+}
+
+func (x *GetRelatedTemplatesRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *GetRelatedTemplatesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type GetRelatedTemplatesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*Template            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// "category" | "tag" | "generic".
+	Basis         string `protobuf:"bytes,2,opt,name=basis,proto3" json:"basis,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRelatedTemplatesResponse) Reset() {
+	*x = GetRelatedTemplatesResponse{}
+	mi := &file_prompt_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRelatedTemplatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRelatedTemplatesResponse) ProtoMessage() {}
+
+func (x *GetRelatedTemplatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRelatedTemplatesResponse.ProtoReflect.Descriptor instead.
+func (*GetRelatedTemplatesResponse) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{89}
+}
+
+func (x *GetRelatedTemplatesResponse) GetItems() []*Template {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *GetRelatedTemplatesResponse) GetBasis() string {
+	if x != nil {
+		return x.Basis
+	}
+	return ""
+}
+
+type ListMoreFromAuthorRequest struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	// Default 4, clamped to [1, 4].
+	Limit         int32 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMoreFromAuthorRequest) Reset() {
+	*x = ListMoreFromAuthorRequest{}
+	mi := &file_prompt_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMoreFromAuthorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMoreFromAuthorRequest) ProtoMessage() {}
+
+func (x *ListMoreFromAuthorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[90]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMoreFromAuthorRequest.ProtoReflect.Descriptor instead.
+func (*ListMoreFromAuthorRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{90}
+}
+
+func (x *ListMoreFromAuthorRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ListMoreFromAuthorRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListMoreFromAuthorResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*Template            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMoreFromAuthorResponse) Reset() {
+	*x = ListMoreFromAuthorResponse{}
+	mi := &file_prompt_proto_msgTypes[91]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMoreFromAuthorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMoreFromAuthorResponse) ProtoMessage() {}
+
+func (x *ListMoreFromAuthorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[91]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMoreFromAuthorResponse.ProtoReflect.Descriptor instead.
+func (*ListMoreFromAuthorResponse) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{91}
+}
+
+func (x *ListMoreFromAuthorResponse) GetItems() []*Template {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_prompt_proto protoreflect.FileDescriptor
 
 const file_prompt_proto_rawDesc = "" +
@@ -6302,7 +6505,20 @@ const file_prompt_proto_rawDesc = "" +
 	"\x06series\x18\x03 \x03(\v2\x14.v1.DailyMetricPointR\x06series\x122\n" +
 	"\fsource_split\x18\x04 \x01(\v2\x0f.v1.SourceSplitR\vsourceSplit\x127\n" +
 	"\rtop_templates\x18\x05 \x03(\v2\x12.v1.TopTemplateRowR\ftopTemplates\x12%\n" +
-	"\x0etemplate_count\x18\x06 \x01(\x05R\rtemplateCount*W\n" +
+	"\x0etemplate_count\x18\x06 \x01(\x05R\rtemplateCount\"S\n" +
+	"\x1aGetRelatedTemplatesRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"W\n" +
+	"\x1bGetRelatedTemplatesResponse\x12\"\n" +
+	"\x05items\x18\x01 \x03(\v2\f.v1.TemplateR\x05items\x12\x14\n" +
+	"\x05basis\x18\x02 \x01(\tR\x05basis\"R\n" +
+	"\x19ListMoreFromAuthorRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"@\n" +
+	"\x1aListMoreFromAuthorResponse\x12\"\n" +
+	"\x05items\x18\x01 \x03(\v2\f.v1.TemplateR\x05items*W\n" +
 	"\n" +
 	"Visibility\x12\x1a\n" +
 	"\x16VISIBILITY_UNSPECIFIED\x10\x00\x12\x16\n" +
@@ -6335,7 +6551,7 @@ const file_prompt_proto_rawDesc = "" +
 	"\rListFollowers\x12\x1c.v1.ListUserRelationsRequest\x1a\x1d.v1.ListUserRelationsResponse\x12L\n" +
 	"\rListFollowing\x12\x1c.v1.ListUserRelationsRequest\x1a\x1d.v1.ListUserRelationsResponse\x12M\n" +
 	"\x10GetFollowingFeed\x12\x1b.v1.GetFollowingFeedRequest\x1a\x1c.v1.GetFollowingFeedResponse\x12J\n" +
-	"\x0fListTopCreators\x12\x1a.v1.ListTopCreatorsRequest\x1a\x1b.v1.ListTopCreatorsResponse2\x8d\v\n" +
+	"\x0fListTopCreators\x12\x1a.v1.ListTopCreatorsRequest\x1a\x1b.v1.ListTopCreatorsResponse2\xba\f\n" +
 	"\rPromptService\x12G\n" +
 	"\x0eCreateTemplate\x12\x19.v1.CreateTemplateRequest\x1a\x1a.v1.CreateTemplateResponse\x12G\n" +
 	"\x0eUpdateTemplate\x12\x19.v1.UpdateTemplateRequest\x1a\x1a.v1.UpdateTemplateResponse\x12>\n" +
@@ -6356,7 +6572,9 @@ const file_prompt_proto_rawDesc = "" +
 	"\rDeleteComment\x12\x18.v1.DeleteCommentRequest\x1a\x19.v1.DeleteCommentResponse\x12V\n" +
 	"\x13RecordTemplateEvent\x12\x1e.v1.RecordTemplateEventRequest\x1a\x1f.v1.RecordTemplateEventResponse\x12M\n" +
 	"\x10GetTemplateStats\x12\x1b.v1.GetTemplateStatsRequest\x1a\x1c.v1.GetTemplateStatsResponse\x12J\n" +
-	"\x0fGetCreatorStats\x12\x1a.v1.GetCreatorStatsRequest\x1a\x1b.v1.GetCreatorStatsResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
+	"\x0fGetCreatorStats\x12\x1a.v1.GetCreatorStatsRequest\x1a\x1b.v1.GetCreatorStatsResponse\x12V\n" +
+	"\x13GetRelatedTemplates\x12\x1e.v1.GetRelatedTemplatesRequest\x1a\x1f.v1.GetRelatedTemplatesResponse\x12S\n" +
+	"\x12ListMoreFromAuthor\x12\x1d.v1.ListMoreFromAuthorRequest\x1a\x1e.v1.ListMoreFromAuthorResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
 
 var (
 	file_prompt_proto_rawDescOnce sync.Once
@@ -6371,7 +6589,7 @@ func file_prompt_proto_rawDescGZIP() []byte {
 }
 
 var file_prompt_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 90)
+var file_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 94)
 var file_prompt_proto_goTypes = []any{
 	(Visibility)(0),                      // 0: v1.Visibility
 	(TemplateType)(0),                    // 1: v1.TemplateType
@@ -6463,21 +6681,25 @@ var file_prompt_proto_goTypes = []any{
 	(*TopTemplateRow)(nil),               // 87: v1.TopTemplateRow
 	(*GetCreatorStatsRequest)(nil),       // 88: v1.GetCreatorStatsRequest
 	(*GetCreatorStatsResponse)(nil),      // 89: v1.GetCreatorStatsResponse
-	nil,                                  // 90: v1.Prompt.VariablesEntry
-	nil,                                  // 91: v1.CreatePromptRequest.VariablesEntry
-	(*timestamppb.Timestamp)(nil),        // 92: google.protobuf.Timestamp
+	(*GetRelatedTemplatesRequest)(nil),   // 90: v1.GetRelatedTemplatesRequest
+	(*GetRelatedTemplatesResponse)(nil),  // 91: v1.GetRelatedTemplatesResponse
+	(*ListMoreFromAuthorRequest)(nil),    // 92: v1.ListMoreFromAuthorRequest
+	(*ListMoreFromAuthorResponse)(nil),   // 93: v1.ListMoreFromAuthorResponse
+	nil,                                  // 94: v1.Prompt.VariablesEntry
+	nil,                                  // 95: v1.CreatePromptRequest.VariablesEntry
+	(*timestamppb.Timestamp)(nil),        // 96: google.protobuf.Timestamp
 }
 var file_prompt_proto_depIdxs = []int32{
 	0,  // 0: v1.Template.visibility:type_name -> v1.Visibility
 	1,  // 1: v1.Template.type:type_name -> v1.TemplateType
-	92, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
-	92, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
+	96, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
+	96, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 4: v1.Template.latest_version:type_name -> v1.TemplateVersion
-	92, // 5: v1.Template.published_at:type_name -> google.protobuf.Timestamp
-	92, // 6: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	96, // 5: v1.Template.published_at:type_name -> google.protobuf.Timestamp
+	96, // 6: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
 	3,  // 7: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
-	90, // 8: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
-	92, // 9: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
+	94, // 8: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
+	96, // 9: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 10: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
 	1,  // 11: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
 	2,  // 12: v1.CreateTemplateResponse.template:type_name -> v1.Template
@@ -6491,24 +6713,24 @@ var file_prompt_proto_depIdxs = []int32{
 	0,  // 20: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
 	2,  // 21: v1.ListTemplatesResponse.templates:type_name -> v1.Template
 	2,  // 22: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
-	91, // 23: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
+	95, // 23: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
 	6,  // 24: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
 	6,  // 25: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
 	6,  // 26: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
 	37, // 27: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
 	40, // 28: v1.ListTagsResponse.tags:type_name -> v1.TagStats
-	92, // 29: v1.GetCreatorProfileResponse.created_at:type_name -> google.protobuf.Timestamp
+	96, // 29: v1.GetCreatorProfileResponse.created_at:type_name -> google.protobuf.Timestamp
 	51, // 30: v1.ListUserRelationsResponse.users:type_name -> v1.UserCard
 	2,  // 31: v1.GetFollowingFeedResponse.templates:type_name -> v1.Template
 	51, // 32: v1.ListTopCreatorsResponse.users:type_name -> v1.UserCard
 	58, // 33: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
-	92, // 34: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
-	92, // 35: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
-	92, // 36: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
+	96, // 34: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
+	96, // 35: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
+	96, // 36: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
 	65, // 37: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
 	65, // 38: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
-	92, // 39: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
-	92, // 40: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
+	96, // 39: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
+	96, // 40: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
 	72, // 41: v1.Comment.author:type_name -> v1.CommentAuthor
 	73, // 42: v1.ListCommentsResponse.comments:type_name -> v1.Comment
 	82, // 43: v1.GetTemplateStatsResponse.current:type_name -> v1.TemplateStatsSummary
@@ -6520,93 +6742,99 @@ var file_prompt_proto_depIdxs = []int32{
 	83, // 49: v1.GetCreatorStatsResponse.series:type_name -> v1.DailyMetricPoint
 	84, // 50: v1.GetCreatorStatsResponse.source_split:type_name -> v1.SourceSplit
 	87, // 51: v1.GetCreatorStatsResponse.top_templates:type_name -> v1.TopTemplateRow
-	29, // 52: v1.UserService.Register:input_type -> v1.RegisterRequest
-	31, // 53: v1.UserService.Login:input_type -> v1.LoginRequest
-	33, // 54: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
-	34, // 55: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
-	42, // 56: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
-	44, // 57: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
-	59, // 58: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
-	60, // 59: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
-	62, // 60: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
-	63, // 61: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
-	64, // 62: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
-	66, // 63: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
-	68, // 64: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
-	70, // 65: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
-	46, // 66: v1.UserService.FollowUser:input_type -> v1.FollowUserRequest
-	46, // 67: v1.UserService.UnfollowUser:input_type -> v1.FollowUserRequest
-	48, // 68: v1.UserService.GetCreatorProfile:input_type -> v1.GetCreatorProfileRequest
-	50, // 69: v1.UserService.ListFollowers:input_type -> v1.ListUserRelationsRequest
-	50, // 70: v1.UserService.ListFollowing:input_type -> v1.ListUserRelationsRequest
-	53, // 71: v1.UserService.GetFollowingFeed:input_type -> v1.GetFollowingFeedRequest
-	55, // 72: v1.UserService.ListTopCreators:input_type -> v1.ListTopCreatorsRequest
-	7,  // 73: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
-	9,  // 74: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
-	11, // 75: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
-	13, // 76: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
-	15, // 77: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
-	17, // 78: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
-	19, // 79: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
-	21, // 80: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
-	23, // 81: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
-	27, // 82: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
-	36, // 83: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
-	39, // 84: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
-	4,  // 85: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
-	74, // 86: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
-	76, // 87: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
-	77, // 88: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
-	78, // 89: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
-	80, // 90: v1.PromptService.RecordTemplateEvent:input_type -> v1.RecordTemplateEventRequest
-	85, // 91: v1.PromptService.GetTemplateStats:input_type -> v1.GetTemplateStatsRequest
-	88, // 92: v1.PromptService.GetCreatorStats:input_type -> v1.GetCreatorStatsRequest
-	30, // 93: v1.UserService.Register:output_type -> v1.RegisterResponse
-	32, // 94: v1.UserService.Login:output_type -> v1.LoginResponse
-	32, // 95: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
-	35, // 96: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
-	43, // 97: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
-	45, // 98: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
-	58, // 99: v1.UserService.CreateAlias:output_type -> v1.Alias
-	61, // 100: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
-	58, // 101: v1.UserService.UpdateAlias:output_type -> v1.Alias
-	16, // 102: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
-	3,  // 103: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
-	67, // 104: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
-	69, // 105: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
-	71, // 106: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
-	47, // 107: v1.UserService.FollowUser:output_type -> v1.FollowUserResponse
-	47, // 108: v1.UserService.UnfollowUser:output_type -> v1.FollowUserResponse
-	49, // 109: v1.UserService.GetCreatorProfile:output_type -> v1.GetCreatorProfileResponse
-	52, // 110: v1.UserService.ListFollowers:output_type -> v1.ListUserRelationsResponse
-	52, // 111: v1.UserService.ListFollowing:output_type -> v1.ListUserRelationsResponse
-	54, // 112: v1.UserService.GetFollowingFeed:output_type -> v1.GetFollowingFeedResponse
-	56, // 113: v1.UserService.ListTopCreators:output_type -> v1.ListTopCreatorsResponse
-	8,  // 114: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
-	10, // 115: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
-	12, // 116: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
-	14, // 117: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
-	16, // 118: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
-	18, // 119: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
-	20, // 120: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
-	22, // 121: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
-	24, // 122: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
-	28, // 123: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
-	38, // 124: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
-	41, // 125: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
-	5,  // 126: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
-	75, // 127: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
-	73, // 128: v1.PromptService.CreateComment:output_type -> v1.Comment
-	73, // 129: v1.PromptService.UpdateComment:output_type -> v1.Comment
-	79, // 130: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
-	81, // 131: v1.PromptService.RecordTemplateEvent:output_type -> v1.RecordTemplateEventResponse
-	86, // 132: v1.PromptService.GetTemplateStats:output_type -> v1.GetTemplateStatsResponse
-	89, // 133: v1.PromptService.GetCreatorStats:output_type -> v1.GetCreatorStatsResponse
-	93, // [93:134] is the sub-list for method output_type
-	52, // [52:93] is the sub-list for method input_type
-	52, // [52:52] is the sub-list for extension type_name
-	52, // [52:52] is the sub-list for extension extendee
-	0,  // [0:52] is the sub-list for field type_name
+	2,  // 52: v1.GetRelatedTemplatesResponse.items:type_name -> v1.Template
+	2,  // 53: v1.ListMoreFromAuthorResponse.items:type_name -> v1.Template
+	29, // 54: v1.UserService.Register:input_type -> v1.RegisterRequest
+	31, // 55: v1.UserService.Login:input_type -> v1.LoginRequest
+	33, // 56: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
+	34, // 57: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
+	42, // 58: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
+	44, // 59: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
+	59, // 60: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
+	60, // 61: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
+	62, // 62: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
+	63, // 63: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
+	64, // 64: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
+	66, // 65: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
+	68, // 66: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
+	70, // 67: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
+	46, // 68: v1.UserService.FollowUser:input_type -> v1.FollowUserRequest
+	46, // 69: v1.UserService.UnfollowUser:input_type -> v1.FollowUserRequest
+	48, // 70: v1.UserService.GetCreatorProfile:input_type -> v1.GetCreatorProfileRequest
+	50, // 71: v1.UserService.ListFollowers:input_type -> v1.ListUserRelationsRequest
+	50, // 72: v1.UserService.ListFollowing:input_type -> v1.ListUserRelationsRequest
+	53, // 73: v1.UserService.GetFollowingFeed:input_type -> v1.GetFollowingFeedRequest
+	55, // 74: v1.UserService.ListTopCreators:input_type -> v1.ListTopCreatorsRequest
+	7,  // 75: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
+	9,  // 76: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
+	11, // 77: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
+	13, // 78: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
+	15, // 79: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
+	17, // 80: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
+	19, // 81: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
+	21, // 82: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
+	23, // 83: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
+	27, // 84: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
+	36, // 85: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
+	39, // 86: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
+	4,  // 87: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
+	74, // 88: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
+	76, // 89: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
+	77, // 90: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
+	78, // 91: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
+	80, // 92: v1.PromptService.RecordTemplateEvent:input_type -> v1.RecordTemplateEventRequest
+	85, // 93: v1.PromptService.GetTemplateStats:input_type -> v1.GetTemplateStatsRequest
+	88, // 94: v1.PromptService.GetCreatorStats:input_type -> v1.GetCreatorStatsRequest
+	90, // 95: v1.PromptService.GetRelatedTemplates:input_type -> v1.GetRelatedTemplatesRequest
+	92, // 96: v1.PromptService.ListMoreFromAuthor:input_type -> v1.ListMoreFromAuthorRequest
+	30, // 97: v1.UserService.Register:output_type -> v1.RegisterResponse
+	32, // 98: v1.UserService.Login:output_type -> v1.LoginResponse
+	32, // 99: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
+	35, // 100: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
+	43, // 101: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
+	45, // 102: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
+	58, // 103: v1.UserService.CreateAlias:output_type -> v1.Alias
+	61, // 104: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
+	58, // 105: v1.UserService.UpdateAlias:output_type -> v1.Alias
+	16, // 106: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
+	3,  // 107: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
+	67, // 108: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
+	69, // 109: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
+	71, // 110: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
+	47, // 111: v1.UserService.FollowUser:output_type -> v1.FollowUserResponse
+	47, // 112: v1.UserService.UnfollowUser:output_type -> v1.FollowUserResponse
+	49, // 113: v1.UserService.GetCreatorProfile:output_type -> v1.GetCreatorProfileResponse
+	52, // 114: v1.UserService.ListFollowers:output_type -> v1.ListUserRelationsResponse
+	52, // 115: v1.UserService.ListFollowing:output_type -> v1.ListUserRelationsResponse
+	54, // 116: v1.UserService.GetFollowingFeed:output_type -> v1.GetFollowingFeedResponse
+	56, // 117: v1.UserService.ListTopCreators:output_type -> v1.ListTopCreatorsResponse
+	8,  // 118: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
+	10, // 119: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
+	12, // 120: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
+	14, // 121: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
+	16, // 122: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
+	18, // 123: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
+	20, // 124: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
+	22, // 125: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
+	24, // 126: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
+	28, // 127: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
+	38, // 128: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
+	41, // 129: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
+	5,  // 130: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
+	75, // 131: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
+	73, // 132: v1.PromptService.CreateComment:output_type -> v1.Comment
+	73, // 133: v1.PromptService.UpdateComment:output_type -> v1.Comment
+	79, // 134: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
+	81, // 135: v1.PromptService.RecordTemplateEvent:output_type -> v1.RecordTemplateEventResponse
+	86, // 136: v1.PromptService.GetTemplateStats:output_type -> v1.GetTemplateStatsResponse
+	89, // 137: v1.PromptService.GetCreatorStats:output_type -> v1.GetCreatorStatsResponse
+	91, // 138: v1.PromptService.GetRelatedTemplates:output_type -> v1.GetRelatedTemplatesResponse
+	93, // 139: v1.PromptService.ListMoreFromAuthor:output_type -> v1.ListMoreFromAuthorResponse
+	97, // [97:140] is the sub-list for method output_type
+	54, // [54:97] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_prompt_proto_init() }
@@ -6620,7 +6848,7 @@ func file_prompt_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_prompt_proto_rawDesc), len(file_prompt_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   90,
+			NumMessages:   94,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

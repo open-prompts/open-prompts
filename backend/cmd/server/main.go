@@ -889,6 +889,76 @@ func main() {
 			return
 		}
 
+		// /api/v1/templates/{template_id}/related — GET (public, optional
+		// auth; invalid token -> 401, matching the detail GET).
+		if len(parts) == 2 && parts[1] == "related" {
+			templateID := parts[0]
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			ctx := context.Background()
+			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+					ctx = service.ContextWithUserID(ctx, userID)
+				} else {
+					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					return
+				}
+			}
+			req := &pb.GetRelatedTemplatesRequest{TemplateId: templateID}
+			if v := r.URL.Query().Get("limit"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.Limit = int32(i)
+				}
+			}
+			resp, err := svc.GetRelatedTemplates(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/templates/{template_id}/more-from-author — GET (public,
+		// optional auth; invalid token -> 401).
+		if len(parts) == 2 && parts[1] == "more-from-author" {
+			templateID := parts[0]
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			ctx := context.Background()
+			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+					ctx = service.ContextWithUserID(ctx, userID)
+				} else {
+					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					return
+				}
+			}
+			req := &pb.ListMoreFromAuthorRequest{TemplateId: templateID}
+			if v := r.URL.Query().Get("limit"); v != "" {
+				if i, err := strconv.Atoi(v); err == nil {
+					req.Limit = int32(i)
+				}
+			}
+			resp, err := svc.ListMoreFromAuthor(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			ctx := context.Background()

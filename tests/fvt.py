@@ -3600,6 +3600,239 @@ def test_template_analytics():
     return True
 
 
+def test_related_templates():
+    """Related templates & discovery:
+    1.  Related rail returns up to 8 public templates, ranked: same-category
+        ahead of tag-only ahead of language-only ahead of unrelated; author
+        templates appear but do not dominate (0.5 weight).
+    2.  Score ties break by like_count DESC, then updated_at DESC.
+    3.  Current template never in its own rail; private templates never
+        appear; banned-owner templates never appear.
+    4.  basis is "category" when the top item shares the category; "tag"
+        when tag-driven; "generic" otherwise.
+    5.  Fewer than 3 candidates -> items: [] (200, not an error).
+    6.  More-from-author: up to 4, most-liked first, current template
+        excluded, only public; empty when the author has none.
+    7.  404 for nonexistent id, private id (anonymous, non-owner, and owner),
+        banned-owner public id.
+    8.  limit clamping: limit=100 -> 8 items max; limit=1 on related -> still
+        >=3-or-empty (clamped to 3).
+    9.  Two identical calls within the TTL return identical responses
+        (determinism).
+    10. Invalid Bearer token -> 401.
+    """
+    print("\n--- Starting Related Templates Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    alice = f"fvt_rel_alice_{ts}"
+    bob = f"fvt_rel_bob_{ts}"
+    carol = f"fvt_rel_carol_{ts}"
+    alice_token = get_auth_token(alice)
+    bob_token = get_auth_token(bob)
+    carol_token = get_auth_token(carol)
+    if not alice_token or not bob_token or not carol_token:
+        print("Failed to create test users")
+        return False
+    headers_alice = {"Authorization": f"Bearer {alice_token}"}
+    headers_bob = {"Authorization": f"Bearer {bob_token}"}
+    headers_carol = {"Authorization": f"Bearer {carol_token}"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    def create_tpl(owner, headers, title, category="", tags=None, language="en",
+                   visibility="VISIBILITY_PUBLIC"):
+        payload = {
+            "owner_id": owner,
+            "title": title,
+            "description": "related test",
+            "category": category,
+            "visibility": visibility,
+            "type": "TEMPLATE_TYPE_USER",
+            "content": "related content",
+            "language": language,
+        }
+        if tags:
+            payload["tags"] = tags
+        r = requests.post(f"{APP}/templates", json=payload, headers=headers)
+        if r.status_code != 200:
+            print(f"Create template failed: {r.status_code} - {r.text}")
+            return None
+        tpl = r.json().get("template", {})
+        CREATED_TEMPLATES.append({"id": tpl.get("id"), "owner_id": owner})
+        return tpl.get("id")
+
+    # --- Fixtures ---
+    # alice's category cluster (Customer Support) — the anchor template.
+    anchor = create_tpl(alice, headers_alice, f"Anchor {ts}", category="Customer Support",
+                        tags=["support", "email"], language="en")
+    if not anchor:
+        return False
+    # Same-category templates (alice + bob).
+    cat_a1 = create_tpl(alice, headers_alice, f"Cat A1 {ts}", category="Customer Support",
+                        tags=["support"], language="en")
+    cat_a2 = create_tpl(alice, headers_alice, f"Cat A2 {ts}", category="Customer Support",
+                        tags=["support"], language="en")
+    cat_b1 = create_tpl(bob, headers_bob, f"Cat B1 {ts}", category="Customer Support",
+                        tags=["support"], language="en")
+    # Tag-only cluster (shared tag "writing", different category).
+    tag_t1 = create_tpl(bob, headers_bob, f"Tag T1 {ts}", category="Marketing",
+                        tags=["writing", "email"], language="en")
+    tag_t2 = create_tpl(bob, headers_bob, f"Tag T2 {ts}", category="Marketing",
+                        tags=["writing"], language="en")
+    # Language-only cluster (same language, unrelated category/tags).
+    lang_l1 = create_tpl(bob, headers_bob, f"Lang L1 {ts}", category="DevOps",
+                         tags=["deploy"], language="en")
+    # Unrelated template.
+    unrelated = create_tpl(bob, headers_bob, f"Unrelated {ts}", category="DevOps",
+                           tags=["deploy"], language="zh")
+    # Private template (alice).
+    private = create_tpl(alice, headers_alice, f"Private {ts}", category="Customer Support",
+                         tags=["support"], language="en", visibility="VISIBILITY_PRIVATE")
+    # carol's public template (will be banned).
+    carol_tpl = create_tpl(carol, headers_carol, f"Carol {ts}", category="Customer Support",
+                           tags=["support"], language="en")
+    if not all([cat_a1, cat_a2, cat_b1, tag_t1, tag_t2, lang_l1, unrelated, private, carol_tpl]):
+        return False
+
+    # Ban carol so her public template must never appear in any rail.
+    resp = requests.post(f"{ADMIN}/users/{carol}/ban", headers=admin_headers, json={
+        "reason": "FVT: ban carol for related test",
+    })
+    if resp.status_code != 200:
+        print(f"Ban carol failed: {resp.status_code} - {resp.text}")
+        return False
+
+    # --- 1. Related rail: up to 8, ranked category > tag > language > unrelated ---
+    print("1. Related rail ranking (AC-1)...")
+    resp = requests.get(f"{APP}/templates/{anchor}/related?limit=8")
+    if resp.status_code != 200:
+        print(f"Related failed: {resp.status_code} - {resp.text}")
+        return False
+    data = resp.json()
+    items = data.get("items", [])
+    if len(items) > 8:
+        print(f"Related should return at most 8, got {len(items)}")
+        return False
+    if len(items) < 3:
+        print(f"Expected >=3 related items, got {len(items)}")
+        return False
+    # Top item should be same-category (category weight 3 dominates).
+    top = items[0]
+    if top.get("category") != "Customer Support":
+        print(f"Top related item should be same-category, got {top.get('category')}")
+        return False
+    # basis should be "category".
+    if data.get("basis") != "category":
+        print(f"Expected basis 'category', got {data.get('basis')}")
+        return False
+    print("   PASS")
+
+    # --- 2. Current template never in its own rail; private/banned never appear ---
+    print("2. Exclusions (AC-3)...")
+    ids = [i.get("id") for i in items]
+    if anchor in ids:
+        print("Current template must not appear in its own rail")
+        return False
+    if private in ids:
+        print("Private template must not appear in the rail")
+        return False
+    if carol_tpl in ids:
+        print("Banned-owner template must not appear in the rail")
+        return False
+    print("   PASS")
+
+    # --- 3. More-from-author: up to 4, most-liked first, current excluded ---
+    print("3. More from author (AC-6)...")
+    resp = requests.get(f"{APP}/templates/{anchor}/more-from-author?limit=4")
+    if resp.status_code != 200:
+        print(f"More-from-author failed: {resp.status_code} - {resp.text}")
+        return False
+    author_items = resp.json().get("items", [])
+    if len(author_items) > 4:
+        print(f"More-from-author should return at most 4, got {len(author_items)}")
+        return False
+    # alice has cat_a1, cat_a2, private (excluded) -> 2 public others.
+    if len(author_items) != 2:
+        print(f"Expected 2 more-from-author items (alice's public others), got {len(author_items)}")
+        return False
+    author_ids = [i.get("id") for i in author_items]
+    if anchor in author_ids:
+        print("Current template must not appear in more-from-author")
+        return False
+    if private in author_ids:
+        print("Private template must not appear in more-from-author")
+        return False
+    print("   PASS")
+
+    # --- 4. 404s: nonexistent, private (anon/non-owner/owner), banned-owner ---
+    print("4. 404 handling (AC-7)...")
+    missing = "00000000-0000-0000-0000-000000000000"
+    for url in [f"{APP}/templates/{missing}/related", f"{APP}/templates/{missing}/more-from-author"]:
+        resp = requests.get(url)
+        if resp.status_code != 404:
+            print(f"Nonexistent id should 404, got {resp.status_code}")
+            return False
+    # Private template: anonymous, non-owner, and owner all 404.
+    for headers in [None, headers_bob, headers_alice]:
+        h = headers or {}
+        for url in [f"{APP}/templates/{private}/related", f"{APP}/templates/{private}/more-from-author"]:
+            resp = requests.get(url, headers=h)
+            if resp.status_code != 404:
+                print(f"Private template should 404 (headers={bool(headers)}), got {resp.status_code}")
+                return False
+    # Banned-owner public template -> 404 after ban.
+    resp = requests.get(f"{APP}/templates/{carol_tpl}/related")
+    if resp.status_code != 404:
+        print(f"Banned-owner template should 404, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 5. limit clamping ---
+    print("5. Limit clamping (AC-8)...")
+    resp = requests.get(f"{APP}/templates/{anchor}/related?limit=100")
+    if resp.status_code != 200 or len(resp.json().get("items", [])) > 8:
+        print(f"limit=100 should clamp to 8, got {resp.status_code} len={len(resp.json().get('items', []))}")
+        return False
+    resp = requests.get(f"{APP}/templates/{anchor}/related?limit=1")
+    if resp.status_code != 200:
+        print(f"limit=1 should still 200 (clamped to 3), got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 6. Determinism within TTL ---
+    print("6. Determinism (AC-9)...")
+    r1 = requests.get(f"{APP}/templates/{anchor}/related?limit=8")
+    r2 = requests.get(f"{APP}/templates/{anchor}/related?limit=8")
+    if r1.text != r2.text:
+        print("Two identical calls within TTL should return identical responses")
+        return False
+    print("   PASS")
+
+    # --- 7. Invalid Bearer token -> 401 ---
+    print("7. Invalid token (AC-10)...")
+    resp = requests.get(f"{APP}/templates/{anchor}/related",
+                        headers={"Authorization": "Bearer invalid.token.here"})
+    if resp.status_code != 401:
+        print(f"Invalid token should 401, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    print("--- Related Templates Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -3654,6 +3887,7 @@ def main():
     if success: success = test_follow_creators()
     if success: success = test_import_export()
     if success: success = test_template_analytics()
+    if success: success = test_related_templates()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

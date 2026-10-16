@@ -782,5 +782,17 @@
     "back": "返回",
     "loading": "加载中",
     "error": "错误"
+  },
+  "related": {
+    "title": {
+      "category": "相关 · {{category}}",
+      "tag": "相关 · {{tag}}",
+      "generic": "相关提示词"
+    },
+    "moreFromAuthor": "来自 {{author}} 的更多",
+    "aria": {
+      "rail": "相关提示词区块",
+      "authorRow": "来自此作者的更多"
+    }
   }
 }

@@ -51,14 +51,16 @@ func (m *MockPromptRepository) Delete(ctx context.Context, id string) error {
 // MockTemplateRepository (minimal for Prompt tests)
 type MockTemplateRepository struct {
 	mock.Mock
-	CreateFunc         func(ctx context.Context, t *models.Template) error
-	GetFunc            func(ctx context.Context, id string, currentUserID string) (*models.Template, error)
-	ListFunc           func(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Template, error)
-	ToggleLikeFunc     func(ctx context.Context, userID, templateID string) (bool, int32, error)
-	ToggleFavoriteFunc func(ctx context.Context, userID, templateID string) (bool, int32, error)
-	UpdateFunc         func(ctx context.Context, t *models.Template) error
-	CountTemplatesFunc func(ctx context.Context, filters map[string]interface{}) (int32, error)
-	DeleteFunc         func(ctx context.Context, id string) error
+	CreateFunc             func(ctx context.Context, t *models.Template) error
+	GetFunc                func(ctx context.Context, id string, currentUserID string) (*models.Template, error)
+	ListFunc               func(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Template, error)
+	ToggleLikeFunc         func(ctx context.Context, userID, templateID string) (bool, int32, error)
+	ToggleFavoriteFunc     func(ctx context.Context, userID, templateID string) (bool, int32, error)
+	UpdateFunc             func(ctx context.Context, t *models.Template) error
+	CountTemplatesFunc     func(ctx context.Context, filters map[string]interface{}) (int32, error)
+	DeleteFunc             func(ctx context.Context, id string) error
+	ListRelatedFunc        func(ctx context.Context, templateID string, tpl *models.Template, currentUserID string, limit int) ([]*models.Template, error)
+	ListMoreFromAuthorFunc func(ctx context.Context, templateID, ownerID, currentUserID string, limit int) ([]*models.Template, error)
 }
 
 func (m *MockTemplateRepository) Create(ctx context.Context, t *models.Template) error {
@@ -122,6 +124,18 @@ func (m *MockTemplateRepository) CountTemplates(ctx context.Context, filters map
 		return m.CountTemplatesFunc(ctx, filters)
 	}
 	return 0, nil
+}
+func (m *MockTemplateRepository) ListRelated(ctx context.Context, templateID string, tpl *models.Template, currentUserID string, limit int) ([]*models.Template, error) {
+	if m.ListRelatedFunc != nil {
+		return m.ListRelatedFunc(ctx, templateID, tpl, currentUserID, limit)
+	}
+	return nil, nil
+}
+func (m *MockTemplateRepository) ListMoreFromAuthor(ctx context.Context, templateID, ownerID, currentUserID string, limit int) ([]*models.Template, error) {
+	if m.ListMoreFromAuthorFunc != nil {
+		return m.ListMoreFromAuthorFunc(ctx, templateID, ownerID, currentUserID, limit)
+	}
+	return nil, nil
 }
 
 // MockTemplateVersionRepository

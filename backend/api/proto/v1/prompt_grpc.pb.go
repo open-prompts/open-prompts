@@ -923,6 +923,8 @@ const (
 	PromptService_RecordTemplateEvent_FullMethodName    = "/v1.PromptService/RecordTemplateEvent"
 	PromptService_GetTemplateStats_FullMethodName       = "/v1.PromptService/GetTemplateStats"
 	PromptService_GetCreatorStats_FullMethodName        = "/v1.PromptService/GetCreatorStats"
+	PromptService_GetRelatedTemplates_FullMethodName    = "/v1.PromptService/GetRelatedTemplates"
+	PromptService_ListMoreFromAuthor_FullMethodName     = "/v1.PromptService/ListMoreFromAuthor"
 )
 
 // PromptServiceClient is the client API for PromptService service.
@@ -972,6 +974,12 @@ type PromptServiceClient interface {
 	GetTemplateStats(ctx context.Context, in *GetTemplateStatsRequest, opts ...grpc.CallOption) (*GetTemplateStatsResponse, error)
 	// GetCreatorStats returns aggregate analytics for the caller's templates.
 	GetCreatorStats(ctx context.Context, in *GetCreatorStatsRequest, opts ...grpc.CallOption) (*GetCreatorStatsResponse, error)
+	// GetRelatedTemplates returns explainable related templates for a public
+	// template (category/tags/language/author metadata scoring).
+	GetRelatedTemplates(ctx context.Context, in *GetRelatedTemplatesRequest, opts ...grpc.CallOption) (*GetRelatedTemplatesResponse, error)
+	// ListMoreFromAuthor returns the author's other public templates,
+	// most-liked first.
+	ListMoreFromAuthor(ctx context.Context, in *ListMoreFromAuthorRequest, opts ...grpc.CallOption) (*ListMoreFromAuthorResponse, error)
 }
 
 type promptServiceClient struct {
@@ -1182,6 +1190,26 @@ func (c *promptServiceClient) GetCreatorStats(ctx context.Context, in *GetCreato
 	return out, nil
 }
 
+func (c *promptServiceClient) GetRelatedTemplates(ctx context.Context, in *GetRelatedTemplatesRequest, opts ...grpc.CallOption) (*GetRelatedTemplatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRelatedTemplatesResponse)
+	err := c.cc.Invoke(ctx, PromptService_GetRelatedTemplates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) ListMoreFromAuthor(ctx context.Context, in *ListMoreFromAuthorRequest, opts ...grpc.CallOption) (*ListMoreFromAuthorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMoreFromAuthorResponse)
+	err := c.cc.Invoke(ctx, PromptService_ListMoreFromAuthor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PromptServiceServer is the server API for PromptService service.
 // All implementations must embed UnimplementedPromptServiceServer
 // for forward compatibility.
@@ -1229,6 +1257,12 @@ type PromptServiceServer interface {
 	GetTemplateStats(context.Context, *GetTemplateStatsRequest) (*GetTemplateStatsResponse, error)
 	// GetCreatorStats returns aggregate analytics for the caller's templates.
 	GetCreatorStats(context.Context, *GetCreatorStatsRequest) (*GetCreatorStatsResponse, error)
+	// GetRelatedTemplates returns explainable related templates for a public
+	// template (category/tags/language/author metadata scoring).
+	GetRelatedTemplates(context.Context, *GetRelatedTemplatesRequest) (*GetRelatedTemplatesResponse, error)
+	// ListMoreFromAuthor returns the author's other public templates,
+	// most-liked first.
+	ListMoreFromAuthor(context.Context, *ListMoreFromAuthorRequest) (*ListMoreFromAuthorResponse, error)
 	mustEmbedUnimplementedPromptServiceServer()
 }
 
@@ -1298,6 +1332,12 @@ func (UnimplementedPromptServiceServer) GetTemplateStats(context.Context, *GetTe
 }
 func (UnimplementedPromptServiceServer) GetCreatorStats(context.Context, *GetCreatorStatsRequest) (*GetCreatorStatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCreatorStats not implemented")
+}
+func (UnimplementedPromptServiceServer) GetRelatedTemplates(context.Context, *GetRelatedTemplatesRequest) (*GetRelatedTemplatesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRelatedTemplates not implemented")
+}
+func (UnimplementedPromptServiceServer) ListMoreFromAuthor(context.Context, *ListMoreFromAuthorRequest) (*ListMoreFromAuthorResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMoreFromAuthor not implemented")
 }
 func (UnimplementedPromptServiceServer) mustEmbedUnimplementedPromptServiceServer() {}
 func (UnimplementedPromptServiceServer) testEmbeddedByValue()                       {}
@@ -1680,6 +1720,42 @@ func _PromptService_GetCreatorStats_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PromptService_GetRelatedTemplates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRelatedTemplatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).GetRelatedTemplates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_GetRelatedTemplates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).GetRelatedTemplates(ctx, req.(*GetRelatedTemplatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_ListMoreFromAuthor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMoreFromAuthorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).ListMoreFromAuthor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_ListMoreFromAuthor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).ListMoreFromAuthor(ctx, req.(*ListMoreFromAuthorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PromptService_ServiceDesc is the grpc.ServiceDesc for PromptService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1766,6 +1842,14 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCreatorStats",
 			Handler:    _PromptService_GetCreatorStats_Handler,
+		},
+		{
+			MethodName: "GetRelatedTemplates",
+			Handler:    _PromptService_GetRelatedTemplates_Handler,
+		},
+		{
+			MethodName: "ListMoreFromAuthor",
+			Handler:    _PromptService_ListMoreFromAuthor_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

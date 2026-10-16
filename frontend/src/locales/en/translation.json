@@ -782,5 +782,17 @@
     "back": "Back",
     "loading": "Loading",
     "error": "Error"
+  },
+  "related": {
+    "title": {
+      "category": "Related · {{category}}",
+      "tag": "Related · {{tag}}",
+      "generic": "Related prompts"
+    },
+    "moreFromAuthor": "More from {{author}}",
+    "aria": {
+      "rail": "Related prompts section",
+      "authorRow": "More from this author"
+    }
   }
 }

@@ -32,6 +32,8 @@ import OwnerChip from '../components/OwnerChip';
 import ExportButton from '../components/ExportButton';
 import PublicCounters from '../components/analytics/PublicCounters';
 import OwnerStatsSection from '../components/analytics/OwnerStatsSection';
+import RelatedRail from '../components/related/RelatedRail';
+import MoreFromAuthorRow from '../components/related/MoreFromAuthorRow';
 import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
@@ -1184,6 +1186,20 @@ print(prompt)`}
             </div>
 
             {isOwner && <OwnerStatsSection templateId={id} />}
+
+            {template.visibility === 'VISIBILITY_PUBLIC' && (
+              <>
+                <RelatedRail
+                  templateId={id}
+                  category={template.category}
+                  tags={template.tags}
+                />
+                <MoreFromAuthorRow
+                  templateId={id}
+                  authorName={template.owner_display_name || template.owner_id}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

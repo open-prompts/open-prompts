@@ -1,8 +1,11 @@
 package repository
 
 import (
+	"database/sql"
 	"strings"
 	"testing"
+
+	"open-prompts/backend/internal/models"
 )
 
 func TestEscapeLike(t *testing.T) {
@@ -188,5 +191,117 @@ func TestBuildTemplateConditionsExcludeWarnedOff(t *testing.T) {
 	cond, _, _ := buildTemplateConditions(filters, nil, 2)
 	if strings.Contains(cond, "content_warnings") {
 		t.Errorf("exclude_warned off must add no filter: %s", cond)
+	}
+}
+
+func TestRelatedQueryParameterOrder(t *testing.T) {
+	tpl := &models.Template{
+		ID:         "tpl-1",
+		OwnerID:    "owner-1",
+		Category:   sql.NullString{String: "Customer Support", Valid: true},
+		Tags:       []string{"writing", "email"},
+		Language:   "en",
+		Visibility: "public",
+	}
+	query, args := relatedQuery("tpl-1", tpl, "viewer-1", 8)
+
+	// Parameter order: $1 templateID, $2 viewer, $3 category, $4 tags,
+	// $5 language, $6 owner, $7 limit.
+	if len(args) != 7 {
+		t.Fatalf("expected 7 args, got %d: %v", len(args), args)
+	}
+	if args[0] != "tpl-1" {
+		t.Errorf("arg[0] (templateID) = %v", args[0])
+	}
+	if args[1] != "viewer-1" {
+		t.Errorf("arg[1] (viewer) = %v", args[1])
+	}
+	if args[2] != "Customer Support" {
+		t.Errorf("arg[2] (category) = %v", args[2])
+	}
+	if args[3] == nil {
+		t.Errorf("arg[3] (tags) should be a pq.Array, got nil")
+	}
+	if args[4] != "en" {
+		t.Errorf("arg[4] (language) = %v", args[4])
+	}
+	if args[5] != "owner-1" {
+		t.Errorf("arg[5] (owner) = %v", args[5])
+	}
+	if args[6] != 8 {
+		t.Errorf("arg[6] (limit) = %v", args[6])
+	}
+
+	// The query must reference all seven placeholders and exclude the
+	// current template + banned owners.
+	for _, ph := range []string{"$1", "$2", "$3", "$4", "$5", "$6", "$7"} {
+		if !strings.Contains(query, ph) {
+			t.Errorf("query missing placeholder %s", ph)
+		}
+	}
+	if !strings.Contains(query, "t.id != $1") {
+		t.Errorf("query must exclude the current template")
+	}
+	if !strings.Contains(query, "status = 'banned'") {
+		t.Errorf("query must exclude banned owners")
+	}
+	if !strings.Contains(query, "t.visibility = 'public'") {
+		t.Errorf("query must filter public visibility")
+	}
+}
+
+func TestRelatedQueryEmptyTagsEdge(t *testing.T) {
+	// A template with no tags must still produce a valid query (tags && '{}'
+	// is false -> no points, no error).
+	tpl := &models.Template{
+		ID:         "tpl-1",
+		OwnerID:    "owner-1",
+		Category:   sql.NullString{String: "", Valid: false},
+		Tags:       []string{},
+		Language:   "en",
+		Visibility: "public",
+	}
+	query, args := relatedQuery("tpl-1", tpl, "", 8)
+	if len(args) != 7 {
+		t.Fatalf("expected 7 args, got %d", len(args))
+	}
+	if args[2] != "" {
+		t.Errorf("empty category should bind empty string, got %v", args[2])
+	}
+	if !strings.Contains(query, "t.tags && $4") {
+		t.Errorf("tags overlap clause missing: %s", query)
+	}
+}
+
+func TestAuthorQueryParameterOrder(t *testing.T) {
+	query, args := authorQuery("tpl-1", "owner-1", "viewer-1", 4)
+	if len(args) != 4 {
+		t.Fatalf("expected 4 args, got %d: %v", len(args), args)
+	}
+	if args[0] != "tpl-1" {
+		t.Errorf("arg[0] (templateID) = %v", args[0])
+	}
+	if args[1] != "viewer-1" {
+		t.Errorf("arg[1] (viewer) = %v", args[1])
+	}
+	if args[2] != "owner-1" {
+		t.Errorf("arg[2] (owner) = %v", args[2])
+	}
+	if args[3] != 4 {
+		t.Errorf("arg[3] (limit) = %v", args[3])
+	}
+	for _, ph := range []string{"$1", "$2", "$3", "$4"} {
+		if !strings.Contains(query, ph) {
+			t.Errorf("query missing placeholder %s", ph)
+		}
+	}
+	if !strings.Contains(query, "t.owner_id = $3") {
+		t.Errorf("author query must filter by owner")
+	}
+	if !strings.Contains(query, "t.id != $1") {
+		t.Errorf("author query must exclude the current template")
+	}
+	if !strings.Contains(query, "t.like_count DESC") {
+		t.Errorf("author query must order by like_count DESC")
 	}
 }

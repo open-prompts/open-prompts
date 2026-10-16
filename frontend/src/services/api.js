@@ -87,6 +87,14 @@ export const listTemplateVersions = (templateId, params) => {
   return api.get(`/templates/${templateId}/versions`, { params });
 };
 
+export const getRelatedTemplates = (templateId, limit = 8) => {
+  return api.get(`/templates/${templateId}/related`, { params: { limit } });
+};
+
+export const getMoreFromAuthor = (templateId, limit = 4) => {
+  return api.get(`/templates/${templateId}/more-from-author`, { params: { limit } });
+};
+
 // API methods for Prompts
 export const createPrompt = (promptData) => {
   return api.post('/prompts', promptData);
