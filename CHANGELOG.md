@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/open-prompts/open-prompts/compare/v1.30.0...v1.30.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **review:** coalesce null category in review queue queries ([8b7ab9e](https://github.com/open-prompts/open-prompts/commit/8b7ab9e7b621cd994c869327015839933a85fc2f))
+
 # [1.30.0](https://github.com/open-prompts/open-prompts/compare/v1.29.0...v1.30.0) (2026-10-16)
 
 
