@@ -155,7 +155,7 @@ const queueOrderBy = `
 // queueRowColumns is the SELECT list for queue rows (joins templates/users).
 const queueRowColumns = `
 	rs.id, rs.template_id, t.title, rs.creator_id, u.display_name,
-	rs.attempt_number, rs.submitted_at, t.category,
+	rs.attempt_number, rs.submitted_at, COALESCE(t.category, ''),
 	(rs.submitted_at < now() - ($1 * interval '1 hour')) AS aging,
 	u.approved_template_count,
 	(SELECT COUNT(*) FROM review_submissions x
@@ -232,7 +232,7 @@ func (r *reviewRepository) GetSubmissionDetail(ctx context.Context, id string) (
 			rs.id, rs.template_id, rs.creator_id, rs.attempt_number, rs.status,
 			rs.submitted_at, rs.decided_at, rs.decided_by,
 			rs.reject_reason_code, rs.reject_note,
-			t.title, t.description, t.type, t.tags, t.category, t.language,
+			t.title, t.description, t.type, t.tags, COALESCE(t.category, ''), t.language,
 			t.created_at, t.like_count, t.favorite_count, t.comment_count,
 			u.display_name, u.created_at, u.approved_template_count,
 			(SELECT COUNT(*) FROM review_submissions x

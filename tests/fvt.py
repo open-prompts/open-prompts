@@ -2433,6 +2433,52 @@ def _run_pre_publication_review_inner(admin_headers, newbie_id, established_id, 
         return False
     print("   PASS")
 
+    # --- 3b. Issue #3: NULL category must not crash the queue ---
+    print("3b. NULL category queue scan (Issue #3)...")
+    # A template created without a category stores NULL in templates.category.
+    # The queue scan must COALESCE it to "" instead of erroring on
+    # "converting NULL to string is unsupported".
+    resp = requests.post(BASE_URL, headers=headers_newbie, json={
+        "title": f"Newbie No Category {ts}",
+        "description": "Template with NULL category",
+        "content": "Content without a category",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "",
+        "tags": ["reviewtest"],
+    })
+    if resp.status_code != 200:
+        print(f"Create NULL-category template failed: {resp.status_code} - {resp.text}")
+        return False
+    nullcat_tid = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({"id": nullcat_tid, "owner_id": newbie_id})
+    if resp.json()["template"].get("moderation_status") != "in_review":
+        print("NULL-category template must be in_review (newbie is gated)")
+        return False
+    # The queue must return 200 with template_category "" (not crash).
+    resp = requests.get(f"{ADMIN}/review", headers=admin_headers,
+                        params={"per_page": 100})
+    if resp.status_code != 200:
+        print(f"Queue with NULL-category template must be 200, got {resp.status_code}: {resp.text}")
+        return False
+    nullcat_item = next((i for i in resp.json().get("items", [])
+                         if i["template_id"] == nullcat_tid), None)
+    if not nullcat_item:
+        print("NULL-category template must appear in the queue")
+        return False
+    if nullcat_item.get("category") != "":
+        print(f"NULL-category template must expose category '', got {nullcat_item.get('category')!r}")
+        return False
+    # The detail endpoint must also survive a NULL category.
+    resp = requests.get(f"{ADMIN}/review/{nullcat_item['id']}", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Detail of NULL-category submission must be 200, got {resp.status_code}: {resp.text}")
+        return False
+    detail = resp.json().get("submission", {})
+    if detail.get("category") != "":
+        print(f"Detail category must be '', got {detail.get('category')!r}")
+        return False
+    print("   PASS")
+
     # --- 4. AC-3: approve ---
     print("4. Approve (AC-3)...")
     sub_id = first_item["id"]
