@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/open-prompts/open-prompts/compare/v1.27.0...v1.28.0) (2026-10-16)
+
+
+### Features
+
+* **related:** add related templates and more-from-author rails ([29a3780](https://github.com/open-prompts/open-prompts/commit/29a3780fd2f07ff3a7fb43d6112f8956a7b7db06))
+
 # [1.27.0](https://github.com/open-prompts/open-prompts/compare/v1.26.0...v1.27.0) (2026-10-16)
 
 
