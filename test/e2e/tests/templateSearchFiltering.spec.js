@@ -40,7 +40,9 @@ function loginViaUI(browser, email, password) {
     .waitForElementVisible('#email', 15000)
     .setValue('#email', email)
     .setValue('#password', password)
-    .submitForm('form');
+    .submitForm('form')
+    // Login now redirects to /dashboard (user-dashboard feature), not /.
+    .waitForElementVisible('.dashboard-layout', 20000);
 }
 
 describe('Template search and filtering', function () {
@@ -413,6 +415,7 @@ describe('Template search and filtering', function () {
 
   it('shows skeleton cards while loading, then results with an aria-live count', function (browser) {
     loginViaUI(browser, fx.owner.email, fx.owner.password)
+      .url(`${browser.launch_url}/`)
       .waitForElementVisible('.home-page', 20000)
       .waitForElementVisible('.templates-grid', 20000)
       .waitForElementVisible('.result-count', 10000)

@@ -69,7 +69,8 @@ function loginViaUI(browser, email, password) {
     .setValue('#email', email)
     .setValue('#password', password)
     .submitForm('#email')
-    .waitForElementVisible('.home-page', 20000);
+    // Login now redirects to /dashboard (user-dashboard feature), not /.
+    .waitForElementVisible('.dashboard-layout', 20000);
 }
 
 // Admin login through the real admin console UI.
@@ -565,6 +566,7 @@ describe('Pre-publication review', function () {
 
   it('shows review status cards on Home for in_review and rejected templates', function (browser) {
     loginViaUI(browser, fx.newbie.email, fx.newbie.password)
+      .url(`${browser.launch_url}/`)
       .waitForElementVisible('.home-review-status', 20000)
       // At least one in-review card and one rejected card.
       .assert.textContains('.home-review-status', `${fx.marker} Gated Submission`)

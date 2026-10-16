@@ -6,7 +6,9 @@ describe('Smoke - frontend loads', function () {
     browser
       .url(browser.launch_url)
       .waitForElementVisible('body', 15000)
-      .assert.titleEquals('Open Prompts')
+      // The accessibility feature's usePageAnnouncement sets document.title
+      // to the page's i18n title ('Home') on pathname change.
+      .assert.titleEquals('Home')
       .waitForElementVisible('#root', 15000)
       // The React app should render some visible content inside #root.
       .waitForElementVisible('#root *', 15000, 'React app rendered content')

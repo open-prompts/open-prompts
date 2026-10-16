@@ -73,7 +73,8 @@ function loginViaUI(browser, email, password) {
     .setValue('#email', email)
     .setValue('#password', password)
     .submitForm('#email')
-    .waitForElementVisible('.home-page', 20000);
+    // Login now redirects to /dashboard (user-dashboard feature), not /.
+    .waitForElementVisible('.dashboard-layout', 20000);
 }
 
 // Admin login through the real admin console UI.
