@@ -14,7 +14,7 @@ import './PromptCard.scss';
  * @param {Object} props - Component props
  * @param {Object} props.template - The template data
  */
-const PromptCard = ({ template }) => {
+const PromptCard = ({ template, onAddToCollection }) => {
   const { t } = useTranslation();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
@@ -36,6 +36,13 @@ const PromptCard = ({ template }) => {
   const showWarnedContent = user && user.show_warned_content;
   const hasWarnings = warnings.length > 0;
   const shouldGate = hasWarnings && !showWarnedContent;
+
+  // "Add to collection" is hidden for private templates the viewer cannot
+  // add (private-and-not-ownable).
+  const showAddToCollection =
+    onAddToCollection &&
+    (template.visibility === 'VISIBILITY_PUBLIC' ||
+      (user && template.owner_id === user.id));
 
   const handleLike = async (e) => {
     e.stopPropagation();
@@ -134,6 +141,20 @@ const PromptCard = ({ template }) => {
           >
             <StarIcon size={15} filled={favorited} className="emoji" /> {favCount}
           </button>
+          {showAddToCollection && (
+            <button
+              type="button"
+              className="stat-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCollection(template);
+              }}
+              aria-label={t('collections.add_to')}
+              title={t('collections.add_to')}
+            >
+              {t('collections.add_to')}
+            </button>
+          )}
         </div>
       </div>
     </div>

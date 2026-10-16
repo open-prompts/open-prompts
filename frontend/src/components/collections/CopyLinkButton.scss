@@ -1,0 +1,16 @@
+.copy-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  color: var(--text-1, #222);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-subtle, #f0f0f0);
+  }
+}

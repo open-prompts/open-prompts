@@ -177,6 +177,10 @@ func main() {
 	}
 	notificationSvc := service.NewNotificationService(notificationRepo, notificationReadRetentionDays, notificationRetentionDays)
 
+	// Collection Service (user-curated template collections)
+	collectionRepo := repository.NewCollectionRepository(pgConn.DB)
+	collectionSvc := service.NewCollectionService(collectionRepo, templateRepo, userRepo)
+
 	// Auth Interceptor
 	authInterceptor := service.NewAuthInterceptor(jwtSecret, apiKeyRepo)
 	authInterceptor.SetUserRepository(userRepo)
@@ -203,6 +207,7 @@ func main() {
 		pb.RegisterUserServiceServer(s, userSvc)
 		pb.RegisterAdminServiceServer(s, adminSvc)
 		pb.RegisterNotificationServiceServer(s, notificationSvc)
+		pb.RegisterCollectionServiceServer(s, collectionSvc)
 		zap.S().Infof("gRPC server listening at %v", lis.Addr())
 		if err := s.Serve(lis); err != nil {
 			zap.S().Fatalf("failed to serve: %v", err)
@@ -949,6 +954,38 @@ func main() {
 				}
 			}
 			resp, err := svc.ListMoreFromAuthor(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/templates/{template_id}/collections — GET (auth) returns the
+		// caller's collections containing the template (picker checkmarks).
+		if len(parts) == 2 && parts[1] == "collections" {
+			templateID := parts[0]
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+			req := &pb.ListCollectionsContainingTemplateRequest{TemplateId: templateID}
+			resp, err := collectionSvc.ListCollectionsContainingTemplate(ctx, req)
 			if err != nil {
 				writeError(w, err)
 				return
@@ -1782,6 +1819,293 @@ func main() {
 			w.Header().Set("Content-Type", "application/json")
 			b, _ := marshaler.Marshal(resp)
 			_, _ = w.Write(b)
+			return
+		}
+
+		http.Error(w, "Not found", http.StatusNotFound)
+	})
+
+	// Collection Handlers — /api/v1/collections (list/create) and
+	// /api/v1/collections/... (mine, {id}, {id}/templates, ...).
+	http.HandleFunc("/api/v1/collections", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			// GET /api/v1/collections — public explore feed (anonymous).
+			req := &pb.ListPublicCollectionsRequest{}
+			q := r.URL.Query()
+			if v := q.Get("page_size"); v != "" {
+				if i, cerr := strconv.Atoi(v); cerr == nil {
+					req.PageSize = int32(i)
+				}
+			}
+			req.PageToken = q.Get("page_token")
+			req.Sort = q.Get("sort")
+			resp, err := collectionSvc.ListPublicCollections(context.Background(), req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case http.MethodPost:
+			// POST /api/v1/collections — create (auth).
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Failed to read body", http.StatusBadRequest)
+				return
+			}
+			var req pb.CreateCollectionRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			resp, err := collectionSvc.CreateCollection(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/v1/collections/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/collections/")
+		parts := strings.Split(rest, "/")
+
+		// /api/v1/collections/mine (GET) — matched before {id}.
+		if len(parts) == 1 && parts[0] == "mine" {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+			resp, err := collectionSvc.ListMyCollections(ctx, &pb.ListMyCollectionsRequest{})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/collections/{id}/templates/{template_id} (DELETE)
+		if len(parts) == 3 && parts[1] == "templates" {
+			if r.Method != http.MethodDelete {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+			req := &pb.RemoveTemplateFromCollectionRequest{
+				CollectionId: parts[0],
+				TemplateId:   parts[2],
+			}
+			resp, err := collectionSvc.RemoveTemplateFromCollection(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/collections/{id}/templates (POST add, PUT reorder)
+		if len(parts) == 2 && parts[1] == "templates" {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+
+			switch r.Method {
+			case http.MethodPost:
+				var body struct {
+					TemplateId string `json:"template_id"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					http.Error(w, "Invalid request body", http.StatusBadRequest)
+					return
+				}
+				req := &pb.AddTemplateToCollectionRequest{
+					CollectionId: parts[0],
+					TemplateId:   body.TemplateId,
+				}
+				resp, err := collectionSvc.AddTemplateToCollection(ctx, req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+			case http.MethodPut:
+				var body struct {
+					TemplateIds []string `json:"template_ids"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					http.Error(w, "Invalid request body", http.StatusBadRequest)
+					return
+				}
+				req := &pb.ReorderCollectionTemplatesRequest{
+					CollectionId: parts[0],
+					TemplateIds:  body.TemplateIds,
+				}
+				resp, err := collectionSvc.ReorderCollectionTemplates(ctx, req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+			return
+		}
+
+		// /api/v1/collections/{id} (GET anonymous, PATCH update, DELETE)
+		if len(parts) == 1 && parts[0] != "" {
+			collectionID := parts[0]
+			switch r.Method {
+			case http.MethodGet:
+				ctx := context.Background()
+				if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+					tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+					if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+						ctx = service.ContextWithUserID(ctx, userID)
+					}
+				}
+				resp, err := collectionSvc.GetCollection(ctx, &pb.GetCollectionRequest{Id: collectionID})
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+			case http.MethodPatch:
+				authHeader := r.Header.Get("Authorization")
+				if authHeader == "" {
+					http.Error(w, "Authorization header required", http.StatusUnauthorized)
+					return
+				}
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				ctx := service.ContextWithUserID(context.Background(), userID)
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					http.Error(w, "Failed to read body", http.StatusBadRequest)
+					return
+				}
+				var req pb.UpdateCollectionRequest
+				if err := unmarshaler.Unmarshal(body, &req); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				req.Id = collectionID
+				resp, err := collectionSvc.UpdateCollection(ctx, &req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+			case http.MethodDelete:
+				authHeader := r.Header.Get("Authorization")
+				if authHeader == "" {
+					http.Error(w, "Authorization header required", http.StatusUnauthorized)
+					return
+				}
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				ctx := service.ContextWithUserID(context.Background(), userID)
+				resp, err := collectionSvc.DeleteCollection(ctx, &pb.DeleteCollectionRequest{Id: collectionID})
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
 			return
 		}
 

@@ -1,0 +1,47 @@
+.collections-page {
+  padding: 24px;
+}
+
+.collections-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.collections-page__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.collections-page__sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-2, #666);
+
+  select {
+    padding: 6px 8px;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--card-bg, #fff);
+  }
+}
+
+.collections-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.collections-page__error {
+  color: var(--danger, #d93025);
+}
+
+.collections-page__loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-2, #666);
+}

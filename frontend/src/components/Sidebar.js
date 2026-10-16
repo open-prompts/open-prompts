@@ -212,12 +212,30 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
               </button>
             </li>
             <li>
+              <Link to="/collections/mine" className="sidebar-item">
+                {t('collections.nav_mine')}
+              </Link>
+            </li>
+            <li>
               <Link to="/analytics" className="sidebar-item">
                 {t('analytics.title')}
               </Link>
             </li>
             {/* Private Categories could go here if we filtered them separately,
                 but typically they are just subsets of My Prompts */}
+          </ul>
+        </div>
+      )}
+
+      {!isAuthenticated && (
+        <div className="sidebar-section">
+          <h3>{t('collections.nav_explore')}</h3>
+          <ul>
+            <li>
+              <Link to="/collections" className="sidebar-item">
+                {t('collections.nav_explore')}
+              </Link>
+            </li>
           </ul>
         </div>
       )}

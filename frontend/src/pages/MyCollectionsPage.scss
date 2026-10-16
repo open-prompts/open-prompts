@@ -1,0 +1,63 @@
+.my-collections-page {
+  padding: 24px;
+}
+
+.my-collections-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.my-collections-page__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.my-collections-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.my-collections-page__card {
+  position: relative;
+}
+
+.my-collections-page__delete {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  color: var(--danger, #d93025);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--danger-subtle, #fdecea);
+  }
+}
+
+.my-collections-page__error {
+  color: var(--danger, #d93025);
+}
+
+.my-collections-page__loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-2, #666);
+}
+
+.my-collections-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.my-collections-page__form-error {
+  margin: 0;
+  color: var(--danger, #d93025);
+  font-size: 13px;
+}

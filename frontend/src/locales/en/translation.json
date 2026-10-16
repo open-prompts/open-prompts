@@ -794,5 +794,54 @@
       "rail": "Related prompts section",
       "authorRow": "More from this author"
     }
+  },
+  "collections": {
+    "nav_mine": "My Collections",
+    "nav_explore": "Explore Collections",
+    "explore_title": "Explore Collections",
+    "mine_title": "My Collections",
+    "sort": {
+      "most_templates": "Most templates"
+    },
+    "new": "New collection",
+    "items": "{{count}} templates",
+    "items_other": "{{count}} templates",
+    "by": "by {{name}}",
+    "updated": "Updated {{date}}",
+    "copy_link": "Copy link",
+    "link_copied": "Copied!",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "publish_confirm": "Make this collection public?",
+    "unpublish_confirm": "Make this collection private?",
+    "edit": "Edit",
+    "reorder": "Reorder",
+    "delete": "Delete",
+    "delete_confirm": "Delete this collection? This cannot be undone.",
+    "add_to": "Add to collection",
+    "picker": {
+      "title": "Add to collection",
+      "subtitle": "Select one or more collections",
+      "filter_placeholder": "Filter collections",
+      "create_new": "New collection…",
+      "save": "Save",
+      "cancel": "Cancel",
+      "limit_reached": "You've reached the 50-collection limit.",
+      "member_limit_reached": "\"{{name}}\" is full (100 templates)."
+    },
+    "member_badge": {
+      "private": "Private",
+      "no_longer_public": "No longer public"
+    },
+    "more_from": "More from {{name}}",
+    "empty": {
+      "explore": "No public collections yet",
+      "mine": "No collections yet — create your first",
+      "collection": "This collection is empty"
+    },
+    "error": {
+      "load": "Failed to load collections",
+      "save": "Failed to save"
+    }
   }
 }

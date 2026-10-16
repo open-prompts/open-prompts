@@ -15,6 +15,7 @@ import useTemplateFilters from '../hooks/useTemplateFilters';
 import { getCategories, getTags, getFollowingFeed, getTopCreators } from '../services/api';
 import UserCard from '../components/UserCard';
 import ImportButton from '../components/ImportButton';
+import CollectionPicker from '../components/collections/CollectionPicker';
 import { usePageAnnouncement } from '../utils/a11y';
 import './Home.scss';
 
@@ -35,6 +36,7 @@ const Home = () => {
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState(false);
   const [suggested, setSuggested] = useState([]);
+  const [pickerTemplate, setPickerTemplate] = useState(null);
 
   usePageAnnouncement('home.title');
 
@@ -244,7 +246,7 @@ const Home = () => {
                   <>
                     <div className="templates-grid">
                       {feedTemplates.map((template) => (
-                        <PromptCard key={template.id} template={template} />
+                        <PromptCard key={template.id} template={template} onAddToCollection={setPickerTemplate} />
                       ))}
                     </div>
                     {feedNextToken && (
@@ -308,14 +310,14 @@ const Home = () => {
             {privateTemplates.length > 0 && (
               <div className="templates-grid private-grid">
                 {privateTemplates.map((template) => (
-                  <PromptCard key={template.id} template={template} />
+                  <PromptCard key={template.id} template={template} onAddToCollection={setPickerTemplate} />
                 ))}
               </div>
             )}
 
             <div className="templates-grid">
               {templates.map((template) => (
-                <PromptCard key={template.id} template={template} />
+                <PromptCard key={template.id} template={template} onAddToCollection={setPickerTemplate} />
               ))}
             </div>
 
@@ -329,6 +331,9 @@ const Home = () => {
         </>
         )}
       </div>
+      {pickerTemplate && (
+        <CollectionPicker template={pickerTemplate} onClose={() => setPickerTemplate(null)} />
+      )}
     </Layout>
   );
 };

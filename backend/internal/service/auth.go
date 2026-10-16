@@ -80,6 +80,8 @@ func NewAuthInterceptor(jwtSecret string, apiKeyRepo *repository.APIKeyRepositor
 			"/v1.PromptService/ListTags":       true,
 			"/v1.PromptService/RecordTemplateEvent": true,
 			"/v1.AdminService/AdminLogin":      true,
+			"/v1.CollectionService/GetCollection":   true,
+			"/v1.CollectionService/ListPublicCollections": true,
 			// For testing reflection
 			"/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo": true,
 		},

@@ -762,3 +762,64 @@ FROM (SELECT template_id, COUNT(*) AS c
       FROM template_usage_events WHERE event_type = 'use'
       GROUP BY template_id) sub
 WHERE t.id = sub.template_id AND t.use_count <> sub.c;
+
+-- ============================================
+-- Template Collections
+-- ============================================
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables
+                   WHERE table_name = 'collections') THEN
+        CREATE TABLE collections (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            description TEXT,
+            visibility TEXT NOT NULL CHECK (visibility IN ('private','public')) DEFAULT 'private',
+            status TEXT NOT NULL CHECK (status IN ('active','deleted')) DEFAULT 'active',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables
+                   WHERE table_name = 'collection_templates') THEN
+        CREATE TABLE collection_templates (
+            collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+            template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+            position INT NOT NULL,
+            added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (collection_id, template_id)
+        );
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes
+                   WHERE indexname = 'idx_collection_templates_position') THEN
+        CREATE INDEX idx_collection_templates_position
+            ON collection_templates (collection_id, position);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes
+                   WHERE indexname = 'idx_collections_owner') THEN
+        CREATE INDEX idx_collections_owner
+            ON collections (owner_id) WHERE status = 'active';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes
+                   WHERE indexname = 'idx_collections_public') THEN
+        CREATE INDEX idx_collections_public
+            ON collections (visibility, created_at DESC) WHERE status = 'active' AND visibility = 'public';
+    END IF;
+END $$;

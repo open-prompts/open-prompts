@@ -1,0 +1,51 @@
+.collection-detail-page {
+  padding: 24px;
+}
+
+.collection-detail-page__loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-2, #666);
+}
+
+.collection-detail-page__not-found {
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.collection-detail-page__error {
+  color: var(--danger, #d93025);
+}
+
+.collection-detail-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.collection-detail-page__member {
+  position: relative;
+}
+
+.collection-detail-page__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface-subtle, #f0f0f0);
+  color: var(--text-2, #666);
+  font-size: 12px;
+}
+
+.collection-detail-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.collection-detail-page__form-error {
+  margin: 0;
+  color: var(--danger, #d93025);
+  font-size: 13px;
+}

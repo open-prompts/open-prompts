@@ -244,3 +244,44 @@ export const getFollowingFeed = (params) => {
 export const getTopCreators = (params) => {
   return api.get('/users', { params: { sort: 'followers', ...params } });
 };
+
+// API methods for Template Collections
+export const listPublicCollections = (params) => {
+  return api.get('/collections', { params });
+};
+
+export const createCollection = (data) => {
+  return api.post('/collections', data);
+};
+
+export const getCollection = (id) => {
+  return api.get(`/collections/${id}`);
+};
+
+export const updateCollection = (id, data) => {
+  return api.patch(`/collections/${id}`, data);
+};
+
+export const deleteCollection = (id) => {
+  return api.delete(`/collections/${id}`);
+};
+
+export const addTemplateToCollection = (collectionId, templateId) => {
+  return api.post(`/collections/${collectionId}/templates`, { template_id: templateId });
+};
+
+export const removeTemplateFromCollection = (collectionId, templateId) => {
+  return api.delete(`/collections/${collectionId}/templates/${templateId}`);
+};
+
+export const reorderCollectionTemplates = (collectionId, templateIds) => {
+  return api.put(`/collections/${collectionId}/templates`, { template_ids: templateIds });
+};
+
+export const listCollectionsContainingTemplate = (templateId) => {
+  return api.get(`/templates/${templateId}/collections`);
+};
+
+export const listMyCollections = () => {
+  return api.get('/collections/mine');
+};

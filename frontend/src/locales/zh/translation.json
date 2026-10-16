@@ -794,5 +794,54 @@
       "rail": "相关提示词区块",
       "authorRow": "来自此作者的更多"
     }
+  },
+  "collections": {
+    "nav_mine": "我的合集",
+    "nav_explore": "探索合集",
+    "explore_title": "探索合集",
+    "mine_title": "我的合集",
+    "sort": {
+      "most_templates": "模板最多"
+    },
+    "new": "新建合集",
+    "items": "{{count}} 个模板",
+    "items_other": "{{count}} 个模板",
+    "by": "由 {{name}} 创建",
+    "updated": "更新于 {{date}}",
+    "copy_link": "复制链接",
+    "link_copied": "已复制！",
+    "publish": "发布",
+    "unpublish": "取消发布",
+    "publish_confirm": "将此合集设为公开？",
+    "unpublish_confirm": "将此合集设为私有？",
+    "edit": "编辑",
+    "reorder": "排序",
+    "delete": "删除",
+    "delete_confirm": "删除此合集？此操作无法撤销。",
+    "add_to": "添加到合集",
+    "picker": {
+      "title": "添加到合集",
+      "subtitle": "选择一个或多个合集",
+      "filter_placeholder": "筛选合集",
+      "create_new": "新建合集…",
+      "save": "保存",
+      "cancel": "取消",
+      "limit_reached": "已达到 50 个合集的上限。",
+      "member_limit_reached": "“{{name}}”已满（100 个模板）。"
+    },
+    "member_badge": {
+      "private": "私有",
+      "no_longer_public": "已不再公开"
+    },
+    "more_from": "来自 {{name}} 的更多合集",
+    "empty": {
+      "explore": "还没有公开合集",
+      "mine": "还没有合集——创建第一个吧",
+      "collection": "此合集中还没有模板"
+    },
+    "error": {
+      "load": "加载合集失败",
+      "save": "保存失败"
+    }
   }
 }

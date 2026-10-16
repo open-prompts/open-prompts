@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/empty.proto";
+import "prompt.proto";
+
+option go_package = "open-prompts/backend/api/proto/v1;v1";
+
+// CollectionService manages user-curated, ordered sets of templates.
+service CollectionService {
+  // CreateCollection creates a collection for the caller (default private).
+  rpc CreateCollection(CreateCollectionRequest) returns (Collection);
+  // UpdateCollection edits name/description/visibility (owner only).
+  rpc UpdateCollection(UpdateCollectionRequest) returns (Collection);
+  // DeleteCollection soft-deletes a collection (owner only).
+  rpc DeleteCollection(DeleteCollectionRequest) returns (DeleteCollectionResponse);
+  // GetCollection returns a collection with its members. Public collections are
+  // readable anonymously; private/deleted collections return NotFound for non-owners.
+  rpc GetCollection(GetCollectionRequest) returns (Collection);
+  // ListMyCollections returns the caller's active collections.
+  rpc ListMyCollections(ListMyCollectionsRequest) returns (ListMyCollectionsResponse);
+  // ListPublicCollections returns the public explore feed, paginated and sorted.
+  rpc ListPublicCollections(ListPublicCollectionsRequest) returns (ListPublicCollectionsResponse);
+  // AddTemplateToCollection adds a template (owner only, idempotent).
+  rpc AddTemplateToCollection(AddTemplateToCollectionRequest) returns (AddTemplateToCollectionResponse);
+  // RemoveTemplateFromCollection removes a template (owner only).
+  rpc RemoveTemplateFromCollection(RemoveTemplateFromCollectionRequest) returns (google.protobuf.Empty);
+  // ReorderCollectionTemplates applies a full ordered template-id list (owner only).
+  rpc ReorderCollectionTemplates(ReorderCollectionTemplatesRequest) returns (google.protobuf.Empty);
+  // ListCollectionsContainingTemplate returns the caller's collections that
+  // contain a given template (used for picker checkmarks).
+  rpc ListCollectionsContainingTemplate(ListCollectionsContainingTemplateRequest) returns (ListCollectionsContainingTemplateResponse);
+}
+
+// A collection summary. Used in lists; GetCollection additionally fills members.
+message Collection {
+  string id = 1;
+  string owner_id = 2;
+  string name = 3;
+  string description = 4;
+  string visibility = 5; // "private" | "public"
+  int32 template_count = 6; // read-time count, never denormalized
+  string created_at = 7; // RFC3339
+  string updated_at = 8; // RFC3339
+  CollectionOwner owner = 9; // id + display_name for cards/detail
+  repeated CollectionMember members = 10; // filled by GetCollection only
+}
+
+message CollectionOwner {
+  string id = 1;
+  string display_name = 2;
+}
+
+// A member entry: the reused Template message plus position and visibility flag.
+message CollectionMember {
+  Template template = 1;
+  int32 position = 2;
+  bool is_public = 3; // owner view: flags private / no-longer-public members
+}
+
+message CreateCollectionRequest {
+  string name = 1; // 1-80 chars, required
+  string description = 2; // 0-500 chars
+  string visibility = 3; // "private" (default) | "public"
+}
+
+message UpdateCollectionRequest {
+  string id = 1;
+  string name = 2; // optional; validated when non-empty
+  string description = 3; // optional
+  string visibility = 4; // optional
+}
+
+message DeleteCollectionRequest {
+  string id = 1;
+}
+
+message DeleteCollectionResponse {
+  string id = 1;
+}
+
+message GetCollectionRequest {
+  string id = 1;
+}
+
+message ListMyCollectionsRequest {}
+
+message ListMyCollectionsResponse {
+  repeated Collection collections = 1;
+}
+
+message ListPublicCollectionsRequest {
+  int32 page_size = 1; // default 20, max 50
+  string page_token = 2; // offset-as-string (existing convention)
+  string sort = 3; // "newest" (default) | "most_templates"
+}
+
+message ListPublicCollectionsResponse {
+  repeated Collection collections = 1;
+  string next_page_token = 2; // empty when no more pages
+}
+
+message AddTemplateToCollectionRequest {
+  string collection_id = 1;
+  string template_id = 2;
+}
+
+message AddTemplateToCollectionResponse {
+  string collection_id = 1;
+  string template_id = 2;
+  int32 position = 3;
+  int32 template_count = 4; // post-add count
+}
+
+message RemoveTemplateFromCollectionRequest {
+  string collection_id = 1;
+  string template_id = 2;
+}
+
+message ReorderCollectionTemplatesRequest {
+  string collection_id = 1;
+  repeated string template_ids = 2; // full ordered list, no duplicates
+}
+
+message ListCollectionsContainingTemplateRequest {
+  string template_id = 1;
+}
+
+message ListCollectionsContainingTemplateResponse {
+  repeated Collection collections = 1; // caller's collections containing the template
+}

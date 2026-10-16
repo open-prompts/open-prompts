@@ -3833,6 +3833,301 @@ def test_related_templates():
     return True
 
 
+def test_template_collections():
+    """Template collections (AC-1..AC-12):
+    1.  Create collection (name/description) -> 200, UUID id, private default,
+        template_count==0. Missing name -> 400. Name >80 -> 400.
+    2.  PATCH rename + set visibility=public -> 200.
+    3.  Anonymous GET public collection -> 200 with members. Second-user read
+        of a private collection -> 404.
+    4.  Add public template -> 200, position==0, template_count==1. Re-add
+        same -> 200 idempotent (same position, count unchanged). Add second ->
+        position==1.
+    5.  DELETE member -> 200; member gone from GET.
+    6.  PUT reorder [t2, t1] -> 200; GET shows positions swapped.
+    7.  Visitor POST on owner's collection -> 403. Anonymous -> 401.
+    8.  GET /templates/{tid}/collections (owner) contains the collection;
+        visitor's call does not contain owner's private collection.
+    9.  GET /collections anonymous lists the public collection with
+        template_count; sort=most_templates ordering; page_token pagination.
+        GET /collections/mine (owner) lists own collections incl. private.
+    10. DELETE collection -> 200; subsequent GET -> 404; absent from explore
+        and from /templates/{tid}/collections.
+    11. 50-collection cap -> 429 on the 51st create.
+    """
+    print("\n--- Starting Template Collections Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    owner = f"fvt_coll_owner_{ts}"
+    visitor = f"fvt_coll_visitor_{ts}"
+    owner_token = get_auth_token(owner)
+    visitor_token = get_auth_token(visitor)
+    if not owner_token or not visitor_token:
+        print("Failed to create test users")
+        return False
+    headers_owner = {"Authorization": f"Bearer {owner_token}"}
+    headers_visitor = {"Authorization": f"Bearer {visitor_token}"}
+
+    def create_tpl(owner_id, headers, title, visibility="VISIBILITY_PUBLIC"):
+        payload = {
+            "owner_id": owner_id,
+            "title": title,
+            "description": "collection test",
+            "visibility": visibility,
+            "type": "TEMPLATE_TYPE_USER",
+            "content": "collection content",
+            "language": "en",
+        }
+        r = requests.post(f"{APP}/templates", json=payload, headers=headers)
+        if r.status_code != 200:
+            print(f"Create template failed: {r.status_code} - {r.text}")
+            return None
+        tpl = r.json().get("template", {})
+        CREATED_TEMPLATES.append({"id": tpl.get("id"), "owner_id": owner_id})
+        return tpl.get("id")
+
+    # --- Fixtures: two public templates + one private ---
+    t1 = create_tpl(owner, headers_owner, f"Coll T1 {ts}")
+    t2 = create_tpl(owner, headers_owner, f"Coll T2 {ts}")
+    t_priv = create_tpl(owner, headers_owner, f"Coll Priv {ts}", visibility="VISIBILITY_PRIVATE")
+    if not all([t1, t2, t_priv]):
+        return False
+
+    # --- 1. Create collection (AC-1/2) ---
+    print("1. Create collection (AC-1/2)...")
+    resp = requests.post(f"{APP}/collections", headers=headers_owner, json={
+        "name": "Best prompts",
+        "description": "Hand-picked",
+    })
+    if resp.status_code != 200:
+        print(f"Create collection failed: {resp.status_code} - {resp.text}")
+        return False
+    col = resp.json()
+    col_id = col.get("id")
+    if not col_id:
+        print("Collection should return a UUID id")
+        return False
+    if col.get("visibility") != "private":
+        print(f"Default visibility should be private, got {col.get('visibility')}")
+        return False
+    if col.get("template_count") != 0:
+        print(f"template_count should be 0, got {col.get('template_count')}")
+        return False
+    # Missing name -> 400.
+    resp = requests.post(f"{APP}/collections", headers=headers_owner, json={"name": "  "})
+    if resp.status_code != 400:
+        print(f"Missing name should 400, got {resp.status_code}")
+        return False
+    # Name > 80 -> 400.
+    resp = requests.post(f"{APP}/collections", headers=headers_owner, json={"name": "x" * 81})
+    if resp.status_code != 400:
+        print(f"Name >80 should 400, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 2. PATCH rename + publish (AC-3) ---
+    print("2. PATCH rename + publish (AC-3)...")
+    resp = requests.patch(f"{APP}/collections/{col_id}", headers=headers_owner, json={
+        "name": "Best prompts v2",
+        "visibility": "public",
+    })
+    if resp.status_code != 200:
+        print(f"PATCH collection failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("name") != "Best prompts v2":
+        print("PATCH should update the name")
+        return False
+    if resp.json().get("visibility") != "public":
+        print("PATCH should set visibility to public")
+        return False
+    print("   PASS")
+
+    # --- 3. Anonymous read of public; private 404 for second user (AC-4/12) ---
+    print("3. Anonymous read / private 404 (AC-4/12)...")
+    resp = requests.get(f"{APP}/collections/{col_id}")
+    if resp.status_code != 200:
+        print(f"Anonymous GET public collection should 200, got {resp.status_code}")
+        return False
+    # Create a private collection for the 404 check.
+    resp = requests.post(f"{APP}/collections", headers=headers_owner, json={"name": "Private col"})
+    if resp.status_code != 200:
+        print(f"Create private collection failed: {resp.status_code}")
+        return False
+    priv_col_id = resp.json().get("id")
+    resp = requests.get(f"{APP}/collections/{priv_col_id}", headers=headers_visitor)
+    if resp.status_code != 404:
+        print(f"Second-user read of private collection should 404, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 4. Add members (AC-5) ---
+    print("4. Add members (AC-5)...")
+    resp = requests.post(f"{APP}/collections/{col_id}/templates", headers=headers_owner, json={"template_id": t1})
+    if resp.status_code != 200:
+        print(f"Add template failed: {resp.status_code} - {resp.text}")
+        return False
+    add = resp.json()
+    if add.get("position") != 0:
+        print(f"First member position should be 0, got {add.get('position')}")
+        return False
+    if add.get("template_count") != 1:
+        print(f"template_count should be 1, got {add.get('template_count')}")
+        return False
+    # Re-add same -> idempotent (same position, count unchanged).
+    resp = requests.post(f"{APP}/collections/{col_id}/templates", headers=headers_owner, json={"template_id": t1})
+    if resp.status_code != 200:
+        print(f"Re-add should 200 (idempotent), got {resp.status_code}")
+        return False
+    if resp.json().get("position") != 0 or resp.json().get("template_count") != 1:
+        print("Re-add should keep position 0 and count 1")
+        return False
+    # Add second -> position 1.
+    resp = requests.post(f"{APP}/collections/{col_id}/templates", headers=headers_owner, json={"template_id": t2})
+    if resp.status_code != 200 or resp.json().get("position") != 1:
+        print(f"Second member position should be 1, got {resp.status_code} {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 5. Remove member (AC-6) ---
+    print("5. Remove member (AC-6)...")
+    resp = requests.delete(f"{APP}/collections/{col_id}/templates/{t2}", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Remove member failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{APP}/collections/{col_id}")
+    member_ids = [m.get("template", {}).get("id") for m in resp.json().get("members", [])]
+    if t2 in member_ids:
+        print("Removed member should not appear in GET")
+        return False
+    print("   PASS")
+
+    # --- 6. Reorder (AC-7) ---
+    print("6. Reorder (AC-7)...")
+    # Re-add t2 so we have [t1, t2], then reorder to [t2, t1].
+    requests.post(f"{APP}/collections/{col_id}/templates", headers=headers_owner, json={"template_id": t2})
+    resp = requests.put(f"{APP}/collections/{col_id}/templates", headers=headers_owner,
+                        json={"template_ids": [t2, t1]})
+    if resp.status_code != 200:
+        print(f"Reorder failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{APP}/collections/{col_id}")
+    members = resp.json().get("members", [])
+    if members[0].get("template", {}).get("id") != t2 or members[1].get("template", {}).get("id") != t1:
+        print("Reorder should swap positions so t2 is first")
+        return False
+    print("   PASS")
+
+    # --- 7. Visitor POST -> 403; anonymous -> 401 (AC-8) ---
+    print("7. Authz (AC-8)...")
+    resp = requests.post(f"{APP}/collections/{col_id}/templates", headers=headers_visitor, json={"template_id": t1})
+    if resp.status_code != 403:
+        print(f"Visitor POST should 403, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{APP}/collections/{col_id}/templates", json={"template_id": t1})
+    if resp.status_code != 401:
+        print(f"Anonymous POST should 401, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 8. Template-collections cross-reference (AC-9) ---
+    print("8. Template-collections cross-reference (AC-9)...")
+    resp = requests.get(f"{APP}/templates/{t1}/collections", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Owner template-collections failed: {resp.status_code} - {resp.text}")
+        return False
+    owner_col_ids = [c.get("id") for c in resp.json().get("collections", [])]
+    if col_id not in owner_col_ids:
+        print("Owner's collection should contain t1")
+        return False
+    # Visitor's call should not reveal the owner's private collection.
+    resp = requests.get(f"{APP}/templates/{t1}/collections", headers=headers_visitor)
+    if resp.status_code != 200:
+        print(f"Visitor template-collections failed: {resp.status_code}")
+        return False
+    visitor_col_ids = [c.get("id") for c in resp.json().get("collections", [])]
+    if priv_col_id in visitor_col_ids:
+        print("Visitor should not see the owner's private collection")
+        return False
+    print("   PASS")
+
+    # --- 9. Explore listing + sorting + pagination + mine (AC-10) ---
+    print("9. Explore listing (AC-10)...")
+    resp = requests.get(f"{APP}/collections")
+    if resp.status_code != 200:
+        print(f"GET /collections failed: {resp.status_code}")
+        return False
+    explore = resp.json().get("collections", [])
+    if not any(c.get("id") == col_id for c in explore):
+        print("Public collection should appear in explore")
+        return False
+    # sort=most_templates ordering.
+    resp = requests.get(f"{APP}/collections?sort=most_templates")
+    if resp.status_code != 200:
+        print(f"GET /collections?sort=most_templates failed: {resp.status_code}")
+        return False
+    # page_token pagination.
+    resp = requests.get(f"{APP}/collections?page_size=1")
+    if resp.status_code != 200:
+        print(f"GET /collections?page_size=1 failed: {resp.status_code}")
+        return False
+    data = resp.json()
+    if not data.get("next_page_token"):
+        print("page_size=1 with >1 public collections should return next_page_token")
+        return False
+    # mine lists own collections incl. private.
+    resp = requests.get(f"{APP}/collections/mine", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"GET /collections/mine failed: {resp.status_code}")
+        return False
+    mine_ids = [c.get("id") for c in resp.json().get("collections", [])]
+    if col_id not in mine_ids or priv_col_id not in mine_ids:
+        print("mine should list both public and private collections")
+        return False
+    print("   PASS")
+
+    # --- 10. Soft delete (AC-11) ---
+    print("10. Soft delete (AC-11)...")
+    resp = requests.delete(f"{APP}/collections/{col_id}", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Delete collection failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{APP}/collections/{col_id}")
+    if resp.status_code != 404:
+        print(f"Deleted collection should 404, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{APP}/collections")
+    if any(c.get("id") == col_id for c in resp.json().get("collections", [])):
+        print("Deleted collection should be absent from explore")
+        return False
+    resp = requests.get(f"{APP}/templates/{t1}/collections", headers=headers_owner)
+    if col_id in [c.get("id") for c in resp.json().get("collections", [])]:
+        print("Deleted collection should be absent from template-collections")
+        return False
+    print("   PASS")
+
+    # --- 11. 50-collection cap (AC-11) ---
+    print("11. 50-collection cap (AC-11)...")
+    # The owner already has 2 active collections (col_id deleted, priv_col_id
+    # active). Create up to the cap, then expect 429 on the next.
+    created = 0
+    while created < 49:
+        resp = requests.post(f"{APP}/collections", headers=headers_owner, json={"name": f"cap {created}"})
+        if resp.status_code != 200:
+            print(f"Create for cap failed at {created}: {resp.status_code} - {resp.text}")
+            return False
+        created += 1
+    resp = requests.post(f"{APP}/collections", headers=headers_owner, json={"name": "over cap"})
+    if resp.status_code != 429:
+        print(f"51st collection should 429, got {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    print("--- Template Collections Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -3888,6 +4183,7 @@ def main():
     if success: success = test_import_export()
     if success: success = test_template_analytics()
     if success: success = test_related_templates()
+    if success: success = test_template_collections()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

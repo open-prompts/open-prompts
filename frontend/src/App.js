@@ -25,6 +25,9 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const CreatorProfilePage = lazy(() => import('./pages/CreatorProfilePage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
+const MyCollectionsPage = lazy(() => import('./pages/MyCollectionsPage'));
+const CollectionDetailPage = lazy(() => import('./pages/CollectionDetailPage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -75,6 +78,30 @@ function App() {
               element={
                 <Suspense fallback={<PageSpinner />}>
                   <AnalyticsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/collections"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <CollectionsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/collections/mine"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <MyCollectionsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/collections/:id"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <CollectionDetailPage />
                 </Suspense>
               }
             />
