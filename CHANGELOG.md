@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/open-prompts/open-prompts/compare/v1.28.0...v1.29.0) (2026-10-16)
+
+
+### Features
+
+* **collections:** add template collections ([2872d93](https://github.com/open-prompts/open-prompts/commit/2872d93278242b173341e5feb6d09a56a5fe6a35))
+
 # [1.28.0](https://github.com/open-prompts/open-prompts/compare/v1.27.0...v1.28.0) (2026-10-16)
 
 
