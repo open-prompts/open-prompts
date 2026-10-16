@@ -70,9 +70,14 @@ args := m.Called(ctx, key)
 return args.Error(0)
 }
 
+func (m *MockRedisStore) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
+	args := m.Called(ctx, key, value, expiration)
+	return args.Bool(0), args.Error(1)
+}
+
 // MockEmailService is a mock implementation of EmailService
 type MockEmailService struct {
-mock.Mock
+	mock.Mock
 }
 
 func (m *MockEmailService) SendVerificationCode(to, code, lang string) error {

@@ -1,0 +1,93 @@
+.daily-chart {
+  padding: 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-12);
+  border: 1px solid var(--surface-3);
+}
+
+.daily-chart__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.daily-chart__header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-1);
+}
+
+.daily-chart__toggles {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.daily-chart__toggle {
+  padding: 4px 10px;
+  border: 1px solid var(--surface-3);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.daily-chart__toggle.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.daily-chart__table-toggle {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.daily-chart__svg {
+  width: 100%;
+  height: auto;
+}
+
+.daily-chart__axis {
+  stroke: var(--surface-3);
+  stroke-width: 1;
+}
+
+.daily-chart__line {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.daily-chart__dot {
+  fill: var(--accent);
+}
+
+.daily-chart__empty {
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.daily-chart__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.daily-chart__table th,
+.daily-chart__table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--surface-3);
+  text-align: right;
+}
+
+.daily-chart__table th {
+  color: var(--text-2);
+  text-transform: uppercase;
+  font-size: 12px;
+}

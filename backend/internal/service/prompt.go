@@ -35,6 +35,7 @@ type PromptService struct {
 	CommentRepo         repository.CommentRepository
 	ReviewRepo          repository.ReviewRepository
 	FollowRepo          repository.FollowRepository
+	AnalyticsRepo       AnalyticsRepo
 	Redis               RedisStore
 
 	// settingsCache caches platform settings (review thresholds) for
@@ -104,6 +105,12 @@ func (s *PromptService) SetReviewRepo(repo repository.ReviewRepository) {
 // owner enrichment is skipped when absent).
 func (s *PromptService) SetFollowRepo(repo repository.FollowRepository) {
 	s.FollowRepo = repo
+}
+
+// SetAnalyticsRepo wires the analytics repository after construction
+// (nil-safe; analytics methods return errors when absent).
+func (s *PromptService) SetAnalyticsRepo(repo AnalyticsRepo) {
+	s.AnalyticsRepo = repo
 }
 
 // getSettingInt returns a platform setting as an int, through the 60s
@@ -1287,6 +1294,8 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 		LikeCount:     m.LikeCount,
 		FavoriteCount: m.FavoriteCount,
 		CommentCount:  m.CommentCount,
+		ViewCount:     m.ViewCount,
+		UseCount:      m.UseCount,
 		IsLiked:       m.IsLiked,
 		IsFavorited:   m.IsFavorited,
 		Language:      m.Language,

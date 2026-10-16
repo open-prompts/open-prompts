@@ -104,6 +104,16 @@ service PromptService {
 
   // DeleteComment deletes a comment (author or template owner).
   rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
+
+  // RecordTemplateEvent records a view event for a template (anonymous
+  // allowed; rate-limited per IP). Use events are recorded server-side only.
+  rpc RecordTemplateEvent(RecordTemplateEventRequest) returns (RecordTemplateEventResponse);
+
+  // GetTemplateStats returns analytics for a single template (owner only).
+  rpc GetTemplateStats(GetTemplateStatsRequest) returns (GetTemplateStatsResponse);
+
+  // GetCreatorStats returns aggregate analytics for the caller's templates.
+  rpc GetCreatorStats(GetCreatorStatsRequest) returns (GetCreatorStatsResponse);
 }
 
 // Visibility defines who can see the template.
@@ -156,6 +166,10 @@ message Template {
   string language = 16;
   // Number of comments.
   int32 comment_count = 17;
+  // Total deduplicated views (per session per 30 minutes).
+  int32 view_count = 23;
+  // Total prompts created from this template (web + API).
+  int32 use_count = 24;
   // Moderation state: "normal" | "in_review" | "rejected".
   // Only meaningful to the owner and admins; hidden templates 404 for
   // everyone else so the value never leaks.
@@ -746,4 +760,87 @@ message DeleteCommentRequest {
 
 message DeleteCommentResponse {
   bool success = 1;
+}
+
+// RecordTemplateEventRequest records a client-side view event.
+message RecordTemplateEventRequest {
+  // Template the event belongs to (required).
+  string template_id = 1;
+  // Event type; only "view" is accepted in v1 (required).
+  string event_type = 2;
+  // Client session id used for dedup (optional; empty = no dedup).
+  string session_id = 3;
+}
+
+message RecordTemplateEventResponse {}
+
+// TemplateStatsSummary is a range total for the four tracked metrics.
+message TemplateStatsSummary {
+  int32 views = 1;
+  int32 uses = 2;
+  int32 likes = 3;
+  int32 favorites = 4;
+}
+
+// DailyMetricPoint is one UTC day of the daily series.
+message DailyMetricPoint {
+  // Day as YYYY-MM-DD (UTC).
+  string date = 1;
+  int32 views = 2;
+  int32 uses = 3;
+  int32 likes = 4;
+  int32 favorites = 5;
+}
+
+// SourceSplit breaks down use events by origin.
+message SourceSplit {
+  int32 web = 1;
+  int32 api = 2;
+}
+
+message GetTemplateStatsRequest {
+  string template_id = 1;
+  // 7, 30, or 90 (required; anything else is InvalidArgument).
+  int32 days = 2;
+}
+
+message GetTemplateStatsResponse {
+  // Totals for the requested range.
+  TemplateStatsSummary current = 1;
+  // Totals for the equivalent preceding range (delta baseline).
+  TemplateStatsSummary previous = 2;
+  // Zero-filled daily series, exactly `days` points, oldest first.
+  repeated DailyMetricPoint series = 3;
+  // Use-event source split for the requested range.
+  SourceSplit source_split = 4;
+  // uses / views for the range; 0 when views == 0.
+  double view_to_use_rate = 5;
+}
+
+// TopTemplateRow is one row of the top-templates table.
+message TopTemplateRow {
+  string id = 1;
+  string title = 2;
+  int32 views = 3;
+  int32 uses = 4;
+  int32 likes = 5;
+  int32 favorites = 6;
+  // View→use rate for the range (uses / views; 0 when views == 0).
+  double rate = 7;
+}
+
+message GetCreatorStatsRequest {
+  // 7, 30, or 90 (required; anything else is InvalidArgument).
+  int32 days = 1;
+}
+
+message GetCreatorStatsResponse {
+  TemplateStatsSummary current = 1;
+  TemplateStatsSummary previous = 2;
+  repeated DailyMetricPoint series = 3;
+  SourceSplit source_split = 4;
+  // Top 10 of the caller's templates by uses in range (ties → views).
+  repeated TopTemplateRow top_templates = 5;
+  // Total templates owned by the caller (drives the empty state).
+  int32 template_count = 6;
 }

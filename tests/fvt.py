@@ -3410,6 +3410,196 @@ def test_import_export():
     return True
 
 
+def test_template_analytics():
+    """Prompt analytics: view events (dedup), web/API use events, public
+    counters, owner stats, creator overview, validation, rate limit."""
+    print("--- Starting Template Analytics Test ---")
+    APP = "http://localhost:8080/api/v1"
+
+    ts = int(time.time())
+    owner_id = f"fvt_an_{ts}"
+    token = get_auth_token(owner_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create a public template
+    create_payload = {
+        "owner_id": owner_id,
+        "title": f"Analytics Test {ts}",
+        "description": "analytics",
+        "category": "general",
+        "visibility": "VISIBILITY_PUBLIC",
+        "type": "TEMPLATE_TYPE_USER",
+        "content": "analytics content",
+    }
+    resp = requests.post(f"{APP}/templates", json=create_payload, headers=headers)
+    if resp.status_code != 200:
+        print(f"Create failed: {resp.status_code} - {resp.text}")
+        return False
+    template_id = resp.json().get("template", {}).get("id")
+    version_id = resp.json().get("version", {}).get("id")
+    CREATED_TEMPLATES.append({"id": template_id, "owner_id": owner_id})
+
+    # 1. View event + dedup (AC-1): anonymous view with session s1.
+    resp = requests.post(f"{APP}/templates/{template_id}/events",
+                         json={"type": "view", "session_id": "s1"})
+    if resp.status_code != 200:
+        print(f"View event failed: {resp.status_code} - {resp.text}")
+        return False
+    # Repeat same session -> deduped, view_count stays 1.
+    requests.post(f"{APP}/templates/{template_id}/events",
+                  json={"type": "view", "session_id": "s1"})
+    resp = requests.get(f"{APP}/templates/{template_id}")
+    if resp.status_code != 200:
+        print(f"Get template failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("template", {}).get("view_count") != 1:
+        print(f"Expected view_count 1 after dedup, got {resp.json().get('template', {}).get('view_count')}")
+        return False
+    # Different session -> view_count 2.
+    requests.post(f"{APP}/templates/{template_id}/events",
+                  json={"type": "view", "session_id": "s2"})
+    resp = requests.get(f"{APP}/templates/{template_id}")
+    if resp.json().get("template", {}).get("view_count") != 2:
+        print(f"Expected view_count 2, got {resp.json().get('template', {}).get('view_count')}")
+        return False
+    print("View event + dedup OK (view_count=2).")
+
+    # 2. Web use event (AC-2): create a prompt via POST /prompts.
+    resp = requests.post(f"{APP}/prompts", json={
+        "template_id": template_id,
+        "version_id": version_id,
+        "variables": {},
+    }, headers=headers)
+    if resp.status_code != 200:
+        print(f"Create prompt failed: {resp.status_code} - {resp.text}")
+        return False
+    # Give the fire-and-forget goroutine a moment.
+    time.sleep(1)
+    resp = requests.get(f"{APP}/templates/{template_id}")
+    if resp.json().get("template", {}).get("use_count", 0) < 1:
+        print(f"Expected use_count >= 1 after web use, got {resp.json().get('template', {}).get('use_count')}")
+        return False
+    print("Web use event OK.")
+
+    # 3. API use event (AC-2): create an API key, fetch by alias.
+    resp = requests.post(f"{APP}/api-keys", json={"name": "fvt"}, headers=headers)
+    if resp.status_code != 200:
+        print(f"Create API key failed: {resp.status_code} - {resp.text}")
+        return False
+    api_key = resp.json().get("api_key")
+    if not api_key:
+        print(f"No api_key in response: {resp.json()}")
+        return False
+    # Create an alias pointing to version 1.
+    resp = requests.post(f"{APP}/templates/{template_id}/aliases",
+                         json={"alias_name": "prod", "version_id": version_id}, headers=headers)
+    if resp.status_code != 200:
+        print(f"Create alias failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{APP}/templates/{template_id}/aliases/prod",
+                        headers={"Authorization": f"ApiKey {api_key}"})
+    if resp.status_code != 200:
+        print(f"API alias fetch failed: {resp.status_code} - {resp.text}")
+        return False
+    time.sleep(1)
+    resp = requests.get(f"{APP}/templates/{template_id}")
+    if resp.json().get("template", {}).get("use_count", 0) < 2:
+        print(f"Expected use_count >= 2 after API use, got {resp.json().get('template', {}).get('use_count')}")
+        return False
+    print("API use event OK.")
+
+    # 4. Public counters (AC-3): anonymous GET carries view_count/use_count.
+    resp = requests.get(f"{APP}/templates/{template_id}")
+    tpl = resp.json().get("template", {})
+    if "view_count" not in tpl or "use_count" not in tpl:
+        print(f"Public counters missing: {tpl}")
+        return False
+    print("Public counters OK.")
+
+    # 5. Owner stats (AC-4/AC-9): owner 200, non-owner 403, anonymous 401, missing 404.
+    resp = requests.get(f"{APP}/templates/{template_id}/stats?days=30", headers=headers)
+    if resp.status_code != 200:
+        print(f"Owner stats failed: {resp.status_code} - {resp.text}")
+        return False
+    stats = resp.json()
+    if len(stats.get("series", [])) != 30:
+        print(f"Expected 30 series points, got {len(stats.get('series', []))}")
+        return False
+    if "current" not in stats or "previous" not in stats or "source_split" not in stats:
+        print(f"Stats missing fields: {stats}")
+        return False
+    # Non-owner -> 403
+    other_id = f"fvt_an_other_{ts}"
+    other_token = get_auth_token(other_id)
+    other_headers = {"Authorization": f"Bearer {other_token}"}
+    resp = requests.get(f"{APP}/templates/{template_id}/stats?days=30", headers=other_headers)
+    if resp.status_code != 403:
+        print(f"Non-owner stats should be 403, got {resp.status_code}")
+        return False
+    # Anonymous -> 401
+    resp = requests.get(f"{APP}/templates/{template_id}/stats?days=30")
+    if resp.status_code != 401:
+        print(f"Anonymous stats should be 401, got {resp.status_code}")
+        return False
+    # Missing template -> 404
+    resp = requests.get(f"{APP}/templates/00000000-0000-0000-0000-000000000000/stats?days=30", headers=headers)
+    if resp.status_code != 404:
+        print(f"Missing template stats should be 404, got {resp.status_code}")
+        return False
+    print("Owner stats OK (200/403/401/404).")
+
+    # 6. Overview (AC-5/AC-7): series length, top_templates, template_count.
+    resp = requests.get(f"{APP}/analytics/overview?days=7", headers=headers)
+    if resp.status_code != 200:
+        print(f"Overview failed: {resp.status_code} - {resp.text}")
+        return False
+    overview = resp.json()
+    if len(overview.get("series", [])) != 7:
+        print(f"Expected 7 series points, got {len(overview.get('series', []))}")
+        return False
+    if overview.get("template_count", 0) < 1:
+        print(f"Expected template_count >= 1, got {overview.get('template_count')}")
+        return False
+    if not isinstance(overview.get("top_templates"), list):
+        print(f"top_templates should be a list: {overview}")
+        return False
+    print("Overview OK.")
+
+    # 7. Validation: invalid days -> 400; invalid event type -> 400.
+    resp = requests.get(f"{APP}/templates/{template_id}/stats?days=14", headers=headers)
+    if resp.status_code != 400:
+        print(f"Invalid days should be 400, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{APP}/analytics/overview?days=14", headers=headers)
+    if resp.status_code != 400:
+        print(f"Invalid overview days should be 400, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{APP}/templates/{template_id}/events", json={"type": "click"})
+    if resp.status_code != 400:
+        print(f"Invalid event type should be 400, got {resp.status_code}")
+        return False
+    print("Validation OK (400s).")
+
+    # 8. Rate limit: loop 60+ posts -> 429 with Retry-After.
+    limited = False
+    for _ in range(70):
+        resp = requests.post(f"{APP}/templates/{template_id}/events",
+                             json={"type": "view", "session_id": f"rl_{time.time()}"})
+        if resp.status_code == 429:
+            limited = True
+            if "Retry-After" not in resp.headers:
+                print("429 should carry Retry-After header")
+                return False
+            break
+    if not limited:
+        print("Expected a 429 rate limit response after 70 posts")
+        return False
+    print("Rate limit OK (429 + Retry-After).")
+
+    print("--- Template Analytics Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -3463,6 +3653,7 @@ def main():
     if success: success = test_content_warnings()
     if success: success = test_follow_creators()
     if success: success = test_import_export()
+    if success: success = test_template_analytics()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

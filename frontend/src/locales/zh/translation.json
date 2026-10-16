@@ -147,6 +147,25 @@
     "favorites": "我收藏的",
     "my_likes": "我点赞的"
   },
+  "analytics": {
+    "title": "数据分析",
+    "range": { "7": "7 天", "30": "30 天", "90": "90 天" },
+    "kpi": { "views": "浏览", "uses": "使用", "likes": "新增点赞", "favorites": "新增收藏" },
+    "kpi_tooltip": {
+      "views": "模板详情页浏览量，每会话每 30 分钟去重。",
+      "uses": "通过 Web UI 或 API key 从你的模板创建的提示词数。",
+      "likes": "所选范围内的新增点赞。",
+      "favorites": "所选范围内的新增收藏。"
+    },
+    "delta": { "up": "较上一周期 +{{value}}%", "down": "较上一周期 -{{value}}%", "flat": "与上一周期持平" },
+    "chart": { "title": "每日活动", "empty": "该范围内没有活动", "view_as_table": "以表格查看", "date": "日期", "views": "浏览", "uses": "使用", "likes": "点赞", "favorites": "收藏" },
+    "source": { "title": "按来源使用", "web": "Web", "api": "API", "empty": "该范围内没有使用" },
+    "top": { "title": "热门模板", "views": "浏览", "uses": "使用", "likes": "新增点赞", "favorites": "新增收藏", "rate": "浏览→使用", "empty": "还没有模板活动" },
+    "owner_stats": { "title": "所有者统计（最近 30 天）", "rate": "浏览→使用率", "sparkline": "最近 30 天每日浏览与使用，峰值 {{peak}}" },
+    "public": { "views": "浏览", "uses": "使用" },
+    "empty": { "title": "还没有模板", "body": "创建你的第一个模板以查看分析。", "cta": "创建模板" },
+    "error": { "fetch": "加载分析数据失败。", "retry": "重试" }
+  },
   "sidebar": {
     "error_fetch": "获取分类或标签失败。",
     "no_tags": "无标签"

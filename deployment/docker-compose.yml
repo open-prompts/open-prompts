@@ -42,6 +42,8 @@ services:
       NOTIFICATION_RETENTION_DAYS: ${NOTIFICATION_RETENTION_DAYS:-180}
       # Follow rate limit (successful follow/unfollow per minute per account)
       FOLLOW_RATE_PER_MINUTE: ${FOLLOW_RATE_PER_MINUTE:-30}
+      # Prompt analytics: per-IP view-event rate limit (per minute)
+      TEMPLATE_EVENT_RATE_PER_MINUTE: ${TEMPLATE_EVENT_RATE_PER_MINUTE:-60}
     depends_on:
       - postgres
       - redis

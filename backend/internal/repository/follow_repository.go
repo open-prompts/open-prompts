@@ -243,7 +243,8 @@ func (r *followRepository) ListFollowing(ctx context.Context, userID string, pag
 func (r *followRepository) GetFollowingFeed(ctx context.Context, userID string, pageSize int, beforeCreatedAt time.Time) ([]*models.Template, int, error) {
 	query := `
 		SELECT t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
-		       t.like_count, t.favorite_count, t.comment_count, t.moderation_status, t.published_at,
+		       t.like_count, t.favorite_count, t.comment_count, t.view_count, t.use_count,
+		       t.moderation_status, t.published_at,
 		       t.content_warnings, t.locked_warnings,
 		       t.created_at, t.updated_at,
 		       u.display_name AS owner_display_name, COALESCE(u.avatar, '') AS owner_avatar
@@ -269,6 +270,7 @@ func (r *followRepository) GetFollowingFeed(ctx context.Context, userID string, 
 		if err := rows.Scan(
 			&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
 			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
+			&t.ViewCount, &t.UseCount,
 			&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
 			&t.CreatedAt, &t.UpdatedAt,
 			&t.OwnerDisplayName, &t.OwnerAvatar,

@@ -24,6 +24,7 @@ const ReviewDetailPage = lazy(() => import('./pages/admin/ReviewDetailPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const CreatorProfilePage = lazy(() => import('./pages/CreatorProfilePage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -66,6 +67,14 @@ function App() {
               element={
                 <Suspense fallback={<PageSpinner />}>
                   <NotificationsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <AnalyticsPage />
                 </Suspense>
               }
             />

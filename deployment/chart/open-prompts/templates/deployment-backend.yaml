@@ -59,3 +59,5 @@ spec:
               value: {{ .Values.backend.env.notificationRetentionDays | quote }}
             - name: FOLLOW_RATE_PER_MINUTE
               value: {{ .Values.backend.env.followRatePerMinute | quote }}
+            - name: TEMPLATE_EVENT_RATE_PER_MINUTE
+              value: {{ .Values.backend.env.templateEventRatePerMinute | quote }}

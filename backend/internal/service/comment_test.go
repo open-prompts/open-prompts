@@ -94,6 +94,18 @@ func (f *fakeRedis) Del(_ context.Context, key string) error {
 	return nil
 }
 
+func (f *fakeRedis) SetNX(_ context.Context, key string, value interface{}, _ time.Duration) (bool, error) {
+	if f.fail {
+		return false, errors.New("redis down")
+	}
+	if _, ok := f.data[key]; ok {
+		return false, nil
+	}
+	f.sets++
+	f.data[key] = fmt.Sprintf("%v", value)
+	return true, nil
+}
+
 // ---- helpers ----
 
 func newCommentTestService(t *testing.T) (*PromptService, *MockCommentRepository, *MockTemplateRepository, *MockUserRepository, *fakeRedis) {

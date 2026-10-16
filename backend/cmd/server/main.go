@@ -122,6 +122,10 @@ func main() {
 	svc.SetReviewRepo(reviewRepo)
 	svc.SetFollowRepo(followRepo)
 
+	// Prompt analytics: usage events + aggregation.
+	analyticsRepo := repository.NewAnalyticsRepository(pgConn.DB)
+	svc.SetAnalyticsRepo(analyticsRepo)
+
 	// User Service
 	apiKeyRepo := repository.NewAPIKeyRepository(pgConn.DB)
 
@@ -412,6 +416,27 @@ func main() {
 		}
 	})
 
+	// clientIP extracts the caller IP for rate limiting (admin login, view
+	// events). Defined before the handlers that use it.
+	clientIP := func(r *http.Request) string {
+		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+			if idx := strings.Index(fwd, ","); idx > 0 {
+				return strings.TrimSpace(fwd[:idx])
+			}
+			return strings.TrimSpace(fwd)
+		}
+		host := r.RemoteAddr
+		if idx := strings.LastIndex(host, ":"); idx > 0 {
+			host = host[:idx]
+		}
+		return host
+	}
+
+	// withClientIP attaches the client IP as gRPC metadata for the service.
+	withClientIP := func(ctx context.Context, ip string) context.Context {
+		return metadata.NewIncomingContext(ctx, metadata.Pairs("x-client-ip", ip))
+	}
+
 	http.HandleFunc("/api/v1/templates/", func(w http.ResponseWriter, r *http.Request) {
 		// Enable CORS
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -498,6 +523,24 @@ func main() {
 						writeError(w, err)
 						return
 					}
+					// Prompt analytics: fire-and-forget API use event. The
+					// alias endpoint is public; attribute the user when a
+					// valid token is presented, else record with empty id.
+					authHeader := r.Header.Get("Authorization")
+					tplID := templateID
+					go func() {
+						ctx := context.Background()
+						uid := ""
+						if authHeader != "" {
+							parts := strings.SplitN(authHeader, " ", 2)
+							if len(parts) == 2 {
+								if id, err := authInterceptor.VerifyAnyToken(ctx, parts[1]); err == nil {
+									uid = id
+								}
+							}
+						}
+						svc.RecordUseEvent(ctx, tplID, uid, "api")
+					}()
 					w.Header().Set("Content-Type", "application/json")
 					b, _ := marshaler.Marshal(resp)
 					_, _ = w.Write(b)
@@ -769,6 +812,83 @@ func main() {
 			}
 		}
 
+		// /api/v1/templates/{template_id}/events — POST view beacon
+		// (anonymous allowed; rate-limited per IP).
+		if len(parts) == 2 && parts[1] == "events" {
+			templateID := parts[0]
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			ctx := context.Background()
+			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+					ctx = service.ContextWithUserID(ctx, userID)
+				}
+			}
+			var body struct {
+				Type      string `json:"type"`
+				SessionID string `json:"session_id"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "Invalid request body", http.StatusBadRequest)
+				return
+			}
+			req := &pb.RecordTemplateEventRequest{
+				TemplateId: templateID,
+				EventType:  body.Type,
+				SessionId:  body.SessionID,
+			}
+			resp, err := svc.RecordTemplateEvent(withClientIP(ctx, clientIP(r)), req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// /api/v1/templates/{template_id}/stats?days=30 — owner-only analytics.
+		if len(parts) == 2 && parts[1] == "stats" {
+			templateID := parts[0]
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+
+			days := 30
+			if v := r.URL.Query().Get("days"); v != "" {
+				if parsed, perr := strconv.Atoi(v); perr == nil {
+					days = parsed
+				}
+			}
+			req := &pb.GetTemplateStatsRequest{TemplateId: templateID, Days: int32(days)}
+			resp, err := svc.GetTemplateStats(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			ctx := context.Background()
@@ -873,6 +993,49 @@ func main() {
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+
+	// /api/v1/analytics/overview?days=30 — creator analytics dashboard.
+	http.HandleFunc("/api/v1/analytics/overview", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		days := 30
+		if v := r.URL.Query().Get("days"); v != "" {
+			if parsed, perr := strconv.Atoi(v); perr == nil {
+				days = parsed
+			}
+		}
+		req := &pb.GetCreatorStatsRequest{Days: int32(days)}
+		resp, err := svc.GetCreatorStats(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
 	})
 
 	// User Handlers
@@ -1747,6 +1910,13 @@ func main() {
 				return
 			}
 
+			// Prompt analytics: fire-and-forget web use event. Capture the
+			// values before the goroutine; never touch the response path.
+			tplID, uid := prompt.TemplateID, prompt.OwnerID
+			go func() {
+				svc.RecordUseEvent(context.Background(), tplID, uid, "web")
+			}()
+
 			zap.S().Infof("CreatePrompt: stored prompt ID: %s", prompt.ID)
 
 			pbPrompt := &pb.Prompt{
@@ -1846,26 +2016,6 @@ func main() {
 		ctx = service.ContextWithUserRole(ctx, claims.Role)
 		ctx = service.ContextWithUserScope(ctx, claims.Scope)
 		return ctx, true
-	}
-
-	// clientIP extracts the caller IP for admin login rate limiting.
-	clientIP := func(r *http.Request) string {
-		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-			if idx := strings.Index(fwd, ","); idx > 0 {
-				return strings.TrimSpace(fwd[:idx])
-			}
-			return strings.TrimSpace(fwd)
-		}
-		host := r.RemoteAddr
-		if idx := strings.LastIndex(host, ":"); idx > 0 {
-			host = host[:idx]
-		}
-		return host
-	}
-
-	// withClientIP attaches the client IP as gRPC metadata for the service.
-	withClientIP := func(ctx context.Context, ip string) context.Context {
-		return metadata.NewIncomingContext(ctx, metadata.Pairs("x-client-ip", ip))
 	}
 
 	http.HandleFunc("/api/v1/admin/login", func(w http.ResponseWriter, r *http.Request) {

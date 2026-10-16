@@ -147,6 +147,25 @@
     "favorites": "Favorites",
     "my_likes": "My Likes"
   },
+  "analytics": {
+    "title": "Analytics",
+    "range": { "7": "7 days", "30": "30 days", "90": "90 days" },
+    "kpi": { "views": "Views", "uses": "Uses", "likes": "New Likes", "favorites": "New Favorites" },
+    "kpi_tooltip": {
+      "views": "Template detail page views, deduplicated per session per 30 minutes.",
+      "uses": "Prompts created from your templates via web UI or API key.",
+      "likes": "New likes in the selected range.",
+      "favorites": "New favorites in the selected range."
+    },
+    "delta": { "up": "+{{value}}% vs. previous period", "down": "-{{value}}% vs. previous period", "flat": "No change vs. previous period" },
+    "chart": { "title": "Daily activity", "empty": "No activity in this range", "view_as_table": "View as table", "date": "Date", "views": "Views", "uses": "Uses", "likes": "Likes", "favorites": "Favorites" },
+    "source": { "title": "Uses by source", "web": "Web", "api": "API", "empty": "No uses in this range" },
+    "top": { "title": "Top templates", "views": "Views", "uses": "Uses", "likes": "New likes", "favorites": "New favorites", "rate": "View→Use", "empty": "No template activity yet" },
+    "owner_stats": { "title": "Owner stats (last 30 days)", "rate": "View→Use rate", "sparkline": "Daily views and uses over the last 30 days, peak {{peak}}" },
+    "public": { "views": "views", "uses": "uses" },
+    "empty": { "title": "No templates yet", "body": "Create your first template to see analytics.", "cta": "Create a template" },
+    "error": { "fetch": "Failed to load analytics.", "retry": "Retry" }
+  },
   "sidebar": {
     "error_fetch": "Failed to fetch categories or tags.",
     "no_tags": "No tags"

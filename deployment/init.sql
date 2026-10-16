@@ -698,3 +698,67 @@ BEGIN
                             'template_warning_changed', 'follow'));
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: prompt-analytics
+-- Description: per-template view/use events, denormalized counters, and the
+--              historical use backfill. view_count has no historical source
+--              and starts at 0 (accepted in the architecture doc).
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_usage_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL CHECK (event_type IN ('view', 'use')),
+    source TEXT NOT NULL CHECK (source IN ('web', 'api')),
+    user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    session_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tue_template_created
+    ON template_usage_events(template_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_tue_user_created
+    ON template_usage_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_tue_view_dedup
+    ON template_usage_events(template_id, session_id, created_at)
+    WHERE event_type = 'view';
+
+COMMENT ON TABLE template_usage_events IS 'Per-template view/use events for analytics';
+COMMENT ON COLUMN template_usage_events.event_type IS 'view | use';
+COMMENT ON COLUMN template_usage_events.source IS 'web | api (origin of the event)';
+COMMENT ON COLUMN template_usage_events.session_id IS 'Client session id (view dedup); NULL for use events';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'templates' AND column_name = 'view_count') THEN
+        ALTER TABLE templates ADD COLUMN view_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN templates.view_count IS 'Denormalized view count (async maintained)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'templates' AND column_name = 'use_count') THEN
+        ALTER TABLE templates ADD COLUMN use_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN templates.use_count IS 'Denormalized use count (async maintained)';
+    END IF;
+END $$;
+
+-- Backfill (D-2): one historical use/web event per prompts row. The
+-- per-row NOT EXISTS guard makes re-runs and coexistence with live events
+-- safe. Deploy DDL before the new binary so the guard imports history once.
+INSERT INTO template_usage_events (template_id, event_type, source, user_id, created_at)
+SELECT p.template_id, 'use', 'web', p.owner_id, p.created_at
+FROM prompts p
+WHERE NOT EXISTS (
+    SELECT 1 FROM template_usage_events e
+    WHERE e.event_type = 'use' AND e.template_id = p.template_id
+      AND e.user_id IS NOT DISTINCT FROM p.owner_id
+      AND e.created_at = p.created_at
+);
+
+-- Converge the denormalized counter from the event table (idempotent).
+UPDATE templates t
+SET use_count = sub.c
+FROM (SELECT template_id, COUNT(*) AS c
+      FROM template_usage_events WHERE event_type = 'use'
+      GROUP BY template_id) sub
+WHERE t.id = sub.template_id AND t.use_count <> sub.c;

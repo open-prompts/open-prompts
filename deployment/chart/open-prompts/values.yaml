@@ -32,6 +32,8 @@ backend:
     notificationRetentionDays: "180"
     # Follow rate limit (successful follow/unfollow per minute per account)
     followRatePerMinute: "30"
+    # Prompt analytics: per-IP view-event rate limit (per minute)
+    templateEventRatePerMinute: "60"
 
 frontend:
   replicaCount: 1

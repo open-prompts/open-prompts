@@ -47,3 +47,9 @@ func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
 func (r *RedisClient) Del(ctx context.Context, key string) error {
 	return r.Client.Del(ctx, key).Err()
 }
+
+// SetNX sets a key only if it does not already exist. Returns true when the
+// key was newly set, false when it already existed.
+func (r *RedisClient) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
+	return r.Client.SetNX(ctx, key, value, expiration).Result()
+}

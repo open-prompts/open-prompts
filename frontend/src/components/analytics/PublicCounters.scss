@@ -1,0 +1,27 @@
+.public-counters {
+  display: inline-flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.public-counters__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.public-counters__icon {
+  color: var(--text-2);
+}
+
+.public-counters__count {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.public-counters__label {
+  color: var(--text-3);
+  font-size: 12px;
+}

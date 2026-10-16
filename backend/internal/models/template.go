@@ -22,6 +22,8 @@ type Template struct {
 	LikeCount        int32          `json:"like_count"`
 	FavoriteCount    int32          `json:"favorite_count"`
 	CommentCount     int32          `json:"comment_count"`
+	ViewCount        int32          `json:"view_count"` // denormalized; maintained by the event write path
+	UseCount         int32          `json:"use_count"`  // denormalized; maintained by the event write path + backfill
 	ModerationStatus string         `json:"moderation_status"` // "normal" | "in_review" | "rejected"
 	PublishedAt      sql.NullTime   `json:"published_at"`      // first review-approval time; NULL until approved
 	ContentWarnings  pq.StringArray `json:"content_warnings"`  // active warnings (taxonomy keys)

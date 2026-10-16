@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: api/proto/v1/prompt.proto
+// source: prompt.proto
 
 package v1
 
@@ -899,7 +899,7 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/v1/prompt.proto",
+	Metadata: "prompt.proto",
 }
 
 const (
@@ -920,6 +920,9 @@ const (
 	PromptService_CreateComment_FullMethodName          = "/v1.PromptService/CreateComment"
 	PromptService_UpdateComment_FullMethodName          = "/v1.PromptService/UpdateComment"
 	PromptService_DeleteComment_FullMethodName          = "/v1.PromptService/DeleteComment"
+	PromptService_RecordTemplateEvent_FullMethodName    = "/v1.PromptService/RecordTemplateEvent"
+	PromptService_GetTemplateStats_FullMethodName       = "/v1.PromptService/GetTemplateStats"
+	PromptService_GetCreatorStats_FullMethodName        = "/v1.PromptService/GetCreatorStats"
 )
 
 // PromptServiceClient is the client API for PromptService service.
@@ -962,6 +965,13 @@ type PromptServiceClient interface {
 	UpdateComment(ctx context.Context, in *UpdateCommentRequest, opts ...grpc.CallOption) (*Comment, error)
 	// DeleteComment deletes a comment (author or template owner).
 	DeleteComment(ctx context.Context, in *DeleteCommentRequest, opts ...grpc.CallOption) (*DeleteCommentResponse, error)
+	// RecordTemplateEvent records a view event for a template (anonymous
+	// allowed; rate-limited per IP). Use events are recorded server-side only.
+	RecordTemplateEvent(ctx context.Context, in *RecordTemplateEventRequest, opts ...grpc.CallOption) (*RecordTemplateEventResponse, error)
+	// GetTemplateStats returns analytics for a single template (owner only).
+	GetTemplateStats(ctx context.Context, in *GetTemplateStatsRequest, opts ...grpc.CallOption) (*GetTemplateStatsResponse, error)
+	// GetCreatorStats returns aggregate analytics for the caller's templates.
+	GetCreatorStats(ctx context.Context, in *GetCreatorStatsRequest, opts ...grpc.CallOption) (*GetCreatorStatsResponse, error)
 }
 
 type promptServiceClient struct {
@@ -1142,6 +1152,36 @@ func (c *promptServiceClient) DeleteComment(ctx context.Context, in *DeleteComme
 	return out, nil
 }
 
+func (c *promptServiceClient) RecordTemplateEvent(ctx context.Context, in *RecordTemplateEventRequest, opts ...grpc.CallOption) (*RecordTemplateEventResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordTemplateEventResponse)
+	err := c.cc.Invoke(ctx, PromptService_RecordTemplateEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) GetTemplateStats(ctx context.Context, in *GetTemplateStatsRequest, opts ...grpc.CallOption) (*GetTemplateStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTemplateStatsResponse)
+	err := c.cc.Invoke(ctx, PromptService_GetTemplateStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) GetCreatorStats(ctx context.Context, in *GetCreatorStatsRequest, opts ...grpc.CallOption) (*GetCreatorStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreatorStatsResponse)
+	err := c.cc.Invoke(ctx, PromptService_GetCreatorStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PromptServiceServer is the server API for PromptService service.
 // All implementations must embed UnimplementedPromptServiceServer
 // for forward compatibility.
@@ -1182,6 +1222,13 @@ type PromptServiceServer interface {
 	UpdateComment(context.Context, *UpdateCommentRequest) (*Comment, error)
 	// DeleteComment deletes a comment (author or template owner).
 	DeleteComment(context.Context, *DeleteCommentRequest) (*DeleteCommentResponse, error)
+	// RecordTemplateEvent records a view event for a template (anonymous
+	// allowed; rate-limited per IP). Use events are recorded server-side only.
+	RecordTemplateEvent(context.Context, *RecordTemplateEventRequest) (*RecordTemplateEventResponse, error)
+	// GetTemplateStats returns analytics for a single template (owner only).
+	GetTemplateStats(context.Context, *GetTemplateStatsRequest) (*GetTemplateStatsResponse, error)
+	// GetCreatorStats returns aggregate analytics for the caller's templates.
+	GetCreatorStats(context.Context, *GetCreatorStatsRequest) (*GetCreatorStatsResponse, error)
 	mustEmbedUnimplementedPromptServiceServer()
 }
 
@@ -1242,6 +1289,15 @@ func (UnimplementedPromptServiceServer) UpdateComment(context.Context, *UpdateCo
 }
 func (UnimplementedPromptServiceServer) DeleteComment(context.Context, *DeleteCommentRequest) (*DeleteCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteComment not implemented")
+}
+func (UnimplementedPromptServiceServer) RecordTemplateEvent(context.Context, *RecordTemplateEventRequest) (*RecordTemplateEventResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordTemplateEvent not implemented")
+}
+func (UnimplementedPromptServiceServer) GetTemplateStats(context.Context, *GetTemplateStatsRequest) (*GetTemplateStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTemplateStats not implemented")
+}
+func (UnimplementedPromptServiceServer) GetCreatorStats(context.Context, *GetCreatorStatsRequest) (*GetCreatorStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCreatorStats not implemented")
 }
 func (UnimplementedPromptServiceServer) mustEmbedUnimplementedPromptServiceServer() {}
 func (UnimplementedPromptServiceServer) testEmbeddedByValue()                       {}
@@ -1570,6 +1626,60 @@ func _PromptService_DeleteComment_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PromptService_RecordTemplateEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordTemplateEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).RecordTemplateEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_RecordTemplateEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).RecordTemplateEvent(ctx, req.(*RecordTemplateEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_GetTemplateStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTemplateStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).GetTemplateStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_GetTemplateStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).GetTemplateStats(ctx, req.(*GetTemplateStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_GetCreatorStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreatorStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).GetCreatorStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_GetCreatorStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).GetCreatorStats(ctx, req.(*GetCreatorStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PromptService_ServiceDesc is the grpc.ServiceDesc for PromptService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1645,7 +1755,19 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteComment",
 			Handler:    _PromptService_DeleteComment_Handler,
 		},
+		{
+			MethodName: "RecordTemplateEvent",
+			Handler:    _PromptService_RecordTemplateEvent_Handler,
+		},
+		{
+			MethodName: "GetTemplateStats",
+			Handler:    _PromptService_GetTemplateStats_Handler,
+		},
+		{
+			MethodName: "GetCreatorStats",
+			Handler:    _PromptService_GetCreatorStats_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/v1/prompt.proto",
+	Metadata: "prompt.proto",
 }

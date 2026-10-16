@@ -156,6 +156,16 @@ export const deleteAPIKey = (id) => {
   return api.delete(`/api-keys/${id}`);
 };
 
+// API methods for Analytics
+export const getAnalyticsOverview = (days = 30) =>
+  api.get('/analytics/overview', { params: { days } });
+
+export const getTemplateStats = (id, days = 30) =>
+  api.get(`/templates/${id}/stats`, { params: { days } });
+
+export const recordTemplateEvent = (id, { type = 'view', sessionId = '' } = {}) =>
+  api.post(`/templates/${id}/events`, { type, session_id: sessionId });
+
 // API methods for Notifications
 export const getNotifications = (params) => {
   return api.get('/notifications', { params });

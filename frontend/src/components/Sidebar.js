@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '../context/NotificationContext';
 import { getCategories, getTags } from '../services/api';
@@ -209,6 +210,11 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
               >
                 {t('dashboard.favorites')}
               </button>
+            </li>
+            <li>
+              <Link to="/analytics" className="sidebar-item">
+                {t('analytics.title')}
+              </Link>
             </li>
             {/* Private Categories could go here if we filtered them separately,
                 but typically they are just subsets of My Prompts */}

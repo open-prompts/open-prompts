@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,8 @@ import {
   toggleTemplateLike,
   toggleTemplateFavorite,
   forkTemplate,
-  getCategories
+  getCategories,
+  recordTemplateEvent
 } from '../services/api';
 import Modal from '../components/ui/Modal';
 import { HeartIcon, StarIcon, ClockIcon, AlertIcon } from '../components/ui/Icons';
@@ -29,6 +30,8 @@ import ContentInterstitial, { isWarnedRevealed } from '../components/warnings/Co
 import WarningCheckboxGroup from '../components/warnings/WarningCheckboxGroup';
 import OwnerChip from '../components/OwnerChip';
 import ExportButton from '../components/ExportButton';
+import PublicCounters from '../components/analytics/PublicCounters';
+import OwnerStatsSection from '../components/analytics/OwnerStatsSection';
 import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
@@ -174,6 +177,20 @@ const TemplateDetails = () => {
 
     fetchData();
   }, [id, user, addNotification, t]);
+
+  // Prompt analytics: fire a view beacon once per mount (StrictMode-safe).
+  const viewFiredRef = useRef(false);
+  useEffect(() => {
+    if (viewFiredRef.current) return;
+    viewFiredRef.current = true;
+    let sid = localStorage.getItem('op_analytics_sid');
+    if (!sid) {
+      const g = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '';
+      sid = g || `sid-${Date.now()}-${Math.random()}`;
+      localStorage.setItem('op_analytics_sid', sid);
+    }
+    recordTemplateEvent(id, { sessionId: sid }).catch(() => {});
+  }, [id]);
 
   // Fetch categories when editing metadata
   useEffect(() => {
@@ -754,6 +771,7 @@ const TemplateDetails = () => {
                   <span className="count">{favoritesCount}</span>
                 </button>
               </div>
+              <PublicCounters views={template.view_count} uses={template.use_count} />
             </div>
             {isEditingMetadata ? (
                 <div className="meta-editor">
@@ -1164,6 +1182,8 @@ print(prompt)`}
                     })()}
                 </div>
             </div>
+
+            {isOwner && <OwnerStatsSection templateId={id} />}
           </div>
         </div>
       </div>
