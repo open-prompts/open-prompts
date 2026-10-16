@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/open-prompts/open-prompts/compare/v1.29.0...v1.30.0) (2026-10-16)
+
+
+### Features
+
+* **ratings:** add 1-5 star template ratings with top_rated sort ([8a480eb](https://github.com/open-prompts/open-prompts/commit/8a480eb9641645134bc313f91e821c2a5fd9df19))
+
 # [1.29.0](https://github.com/open-prompts/open-prompts/compare/v1.28.0...v1.29.0) (2026-10-16)
 
 
