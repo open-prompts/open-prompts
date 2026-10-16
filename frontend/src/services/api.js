@@ -95,6 +95,14 @@ export const getMoreFromAuthor = (templateId, limit = 4) => {
   return api.get(`/templates/${templateId}/more-from-author`, { params: { limit } });
 };
 
+export const rateTemplate = (templateId, rating) => {
+  return api.post(`/templates/${templateId}/rating`, { rating });
+};
+
+export const deleteRating = (templateId) => {
+  return api.delete(`/templates/${templateId}/rating`);
+};
+
 // API methods for Prompts
 export const createPrompt = (promptData) => {
   return api.post('/prompts', promptData);

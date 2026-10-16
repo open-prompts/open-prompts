@@ -6,6 +6,7 @@ import { useNotification } from '../context/NotificationContext';
 import { toggleTemplateLike, toggleTemplateFavorite } from '../services/api';
 import { HeartIcon, StarIcon } from './ui/Icons';
 import BlurredPreview from './warnings/BlurredPreview';
+import StarRating from './StarRating';
 import './PromptCard.scss';
 
 /**
@@ -107,6 +108,7 @@ const PromptCard = ({ template, onAddToCollection }) => {
             <span key={tag} className="tag">#{tag}</span>
           ))}
         </div>
+        <StarRating ratingAvg={template.rating_avg} ratingCount={template.rating_count} size="sm" />
         <div className="stats">
           {template.owner_display_name && (
             <button

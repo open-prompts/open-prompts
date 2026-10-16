@@ -245,13 +245,14 @@ func (r *adminRepository) ListUserIdentities(ctx context.Context, userID string)
 	return identities, nil
 }
 
-const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.category, t.content_warnings, t.locked_warnings, t.created_at, t.updated_at`
+const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.rating_sum, t.rating_count, COALESCE(t.category, ''), t.content_warnings, t.locked_warnings, t.created_at, t.updated_at`
 
 func scanAdminTemplate(row interface{ Scan(...interface{}) error }) (*models.AdminTemplate, error) {
 	var t models.AdminTemplate
 	if err := row.Scan(
 		&t.ID, &t.OwnerID, &t.OwnerDisplayName, &t.Title, &t.Description,
 		&t.Visibility, &t.Type, &t.Language, &t.Tags, &t.LikeCount, &t.FavoriteCount,
+		&t.RatingSum, &t.RatingCount,
 		&t.Category, &t.ContentWarnings, &t.LockedWarnings,
 		&t.CreatedAt, &t.UpdatedAt,
 	); err != nil {

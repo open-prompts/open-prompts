@@ -118,6 +118,9 @@ const TemplateDetailPage = () => {
             <span>
               {t('admin.templates.favorites')}: {template.favorite_count}
             </span>
+            <span>
+              {t('admin.templates.rating')}: {template.rating_count > 0 ? `${template.rating_avg.toFixed(2)} (${template.rating_count})` : t('admin.templates.no_ratings')}
+            </span>
           </div>
         </div>
         <ExportButton template={template} dataSource="admin" />

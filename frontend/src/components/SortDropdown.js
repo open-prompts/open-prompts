@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import useDismissable from '../hooks/useDismissable';
 import './SortDropdown.scss';
 
-const OPTIONS = ['newest', 'most_liked', 'most_favorited', 'trending'];
+const OPTIONS = ['newest', 'most_liked', 'most_favorited', 'trending', 'top_rated'];
 
 /**
  * Custom sort dropdown with listbox keyboard pattern (↑↓ Enter Esc).

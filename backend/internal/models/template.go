@@ -35,6 +35,13 @@ type Template struct {
 	IsLiked     bool `json:"is_liked"`
 	IsFavorited bool `json:"is_favorited"`
 
+	// Ratings (denormalized aggregates on templates; my_rating is filled
+	// per-viewer by repository joins).
+	RatingSum   int64   `json:"rating_sum"`   // denormalized; not exposed in proto directly
+	RatingCount int32   `json:"rating_count"` // denormalized
+	RatingAvg   float64 `json:"rating_avg"`   // computed at mapping time: sum/count, 0 when count=0
+	MyRating    int32   `json:"my_rating"`    // 0 = unrated; filled per-viewer by repository joins
+
 	// Owner enrichment (joined from users at read time, not stored).
 	OwnerDisplayName string `json:"owner_display_name"`
 	OwnerAvatar      string `json:"owner_avatar"`

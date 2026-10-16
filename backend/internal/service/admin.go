@@ -190,6 +190,10 @@ func userToSummary(user *models.User, templateCount int32) *pb.AdminUserSummary 
 
 // templateToSummary converts a models.AdminTemplate to the proto summary.
 func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
+	ratingAvg := 0.0
+	if t.RatingCount > 0 {
+		ratingAvg = float64(t.RatingSum) / float64(t.RatingCount)
+	}
 	return &pb.AdminTemplateSummary{
 		Id:               t.ID,
 		Title:            t.Title,
@@ -199,6 +203,8 @@ func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
 		Tags:             t.Tags,
 		LikeCount:        t.LikeCount,
 		FavoriteCount:    t.FavoriteCount,
+		RatingAvg:        ratingAvg,
+		RatingCount:      t.RatingCount,
 		CreatedAt:        timestamppb.New(t.CreatedAt),
 		UpdatedAt:        timestamppb.New(t.UpdatedAt),
 		OwnerId:          t.OwnerID,

@@ -4,7 +4,7 @@ import { getTemplates } from '../services/api';
 
 const STORAGE_KEY = 'home.selectedVisibility';
 const HIDE_WARNED_KEY = 'home.hideWarned';
-const SORT_WHITELIST = ['newest', 'most_liked', 'most_favorited', 'trending'];
+const SORT_WHITELIST = ['newest', 'most_liked', 'most_favorited', 'trending', 'top_rated'];
 
 const normalizeSort = (value) =>
   SORT_WHITELIST.includes(value) ? value : 'newest';

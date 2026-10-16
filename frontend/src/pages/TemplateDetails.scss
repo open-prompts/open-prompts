@@ -87,6 +87,16 @@
   gap: 8px;
 }
 
+.rating-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
 .social-btn {
   display: inline-flex;
   align-items: center;

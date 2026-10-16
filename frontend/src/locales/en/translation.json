@@ -117,7 +117,9 @@
       "newest": "Newest",
       "most_liked": "Most Liked",
       "most_favorited": "Most Favorited",
-      "trending": "Trending"
+      "trending": "Trending",
+      "top_rated": "Top rated",
+      "top_rated_hint": "Average rating, minimum {{count}} ratings"
     },
     "chips": {
       "clear_all": "Clear all",
@@ -146,6 +148,26 @@
     "all_mine": "My",
     "favorites": "Favorites",
     "my_likes": "My Likes"
+  },
+  "ratings": {
+    "rate": "Rate this template",
+    "ratings_count": "{{count}} ratings",
+    "no_ratings": "No ratings yet",
+    "be_first": "No ratings yet — be the first",
+    "clear": "Clear rating",
+    "clear_confirm": "Remove your rating?",
+    "you_rated": "You rated {{count}}★",
+    "owner_hint": "You can't rate your own template",
+    "submitted": "Rated {{count}} stars",
+    "error": "Could not save your rating",
+    "rate_limited": "Too many rating changes. Please try again shortly.",
+    "hint_1": "Poor",
+    "hint_2": "Fair",
+    "hint_3": "Good",
+    "hint_4": "Very good",
+    "hint_5": "Excellent",
+    "aria_label": "Rated {{avg}} out of 5 with {{count}} ratings",
+    "histogram": "Rating distribution"
   },
   "analytics": {
     "title": "Analytics",
@@ -564,6 +586,8 @@
       "owner": "Owner",
       "likes": "Likes",
       "favorites": "Favorites",
+      "rating": "Rating",
+      "no_ratings": "No ratings",
       "updated": "Updated",
       "no_match": "No templates match your filters",
       "clear_filters": "Clear filters",

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -608,6 +609,12 @@ func (s *PromptService) GetTemplate(ctx context.Context, req *pb.GetTemplateRequ
 		LatestVersion: s.versionModelToProto(latest),
 	}
 
+	// Rating distribution (index 0 -> 1★ ... index 4 -> 5★). Best-effort:
+	// a distribution failure must not fail the whole detail read.
+	if dist, err := s.TemplateRepo.GetRatingDistribution(ctx, template.ID); err == nil {
+		resp.RatingDistribution = dist[:]
+	}
+
 	// Owner enrichment: public identity + is_following for the viewer.
 	if s.UserRepo != nil {
 		if owner, err := s.UserRepo.GetByID(ctx, template.OwnerID); err == nil && owner != nil {
@@ -642,7 +649,7 @@ func normalizeKeyword(s string) string {
 // normalizeSort returns a whitelisted sort value; anything else -> "newest".
 func normalizeSort(s string) string {
 	switch s {
-	case "newest", "most_liked", "most_favorited", "trending":
+	case "newest", "most_liked", "most_favorited", "trending", "top_rated":
 		return s
 	default:
 		return "newest"
@@ -713,6 +720,9 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 			filters["keyword"] = keyword
 		}
 		filters["sort"] = sort
+		if sort == "top_rated" {
+			filters["top_rated_threshold"] = s.topRatedMinRatings()
+		}
 	}
 
 	// applyWarnedFilter adds the exclude_warned filter to a public stream.
@@ -1031,6 +1041,158 @@ func (s *PromptService) ToggleFavoriteTemplate(ctx context.Context, req *pb.Togg
 	}, nil
 }
 
+// ratingRatePerMinuteDef is the default rating changes per minute per
+// account (RATING_RATE_PER_MINUTE).
+const ratingRatePerMinuteDef = 20
+
+// topRatedMinRatingsDef is the default minimum rating_count for the
+// top_rated sort threshold (TOP_RATED_MIN_RATINGS).
+const topRatedMinRatingsDef = 5
+
+// topRatedMinRatings returns the top_rated sort threshold from the
+// TOP_RATED_MIN_RATINGS env var, falling back to the default.
+func (s *PromptService) topRatedMinRatings() int {
+	n, _ := strconv.Atoi(os.Getenv("TOP_RATED_MIN_RATINGS"))
+	if n <= 0 {
+		return topRatedMinRatingsDef
+	}
+	return n
+}
+
+// checkRatingRate enforces RATING_RATE_PER_MINUTE using a fixed-window
+// counter in Redis. Returns (retryAfterSeconds, false) when over limit.
+// Fail-open when Redis is unavailable. Only successful changes consume
+// quota: the caller invokes this right before the rating mutation.
+func (s *PromptService) checkRatingRate(ctx context.Context, userID string) (int, bool) {
+	if s.Redis == nil {
+		return 0, true
+	}
+	key := "rating_rate_min:" + userID
+	max, _ := strconv.Atoi(os.Getenv("RATING_RATE_PER_MINUTE"))
+	if max <= 0 {
+		max = ratingRatePerMinuteDef
+	}
+	window := time.Minute
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if time.Now().Unix() >= expires { // window elapsed: reset
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if count >= max {
+		return int(expires - time.Now().Unix()), false
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count+1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+	return 0, true
+}
+
+// RateTemplate upserts the caller's 1-5 star rating for a template.
+func (s *PromptService) RateTemplate(ctx context.Context, req *pb.RateTemplateRequest) (*pb.RateTemplateResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	zap.S().Infof("PromptService.RateTemplate: user_id=%s template_id=%s rating=%d", userID, req.TemplateId, req.Rating)
+
+	// Validate the 1-5 domain.
+	if req.Rating < 1 || req.Rating > 5 {
+		return nil, status.Errorf(codes.InvalidArgument, "rating must be between 1 and 5")
+	}
+
+	// Hidden (in_review/rejected) templates are invisible to non-owners —
+	// 404 before touching rating state (constraint 5).
+	tpl, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
+	// Private templates are invisible to non-owners — 404 (no existence leak).
+	if tpl.Visibility == "private" && tpl.OwnerID != userID {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
+	// Owner self-rating is forbidden.
+	if tpl.OwnerID == userID {
+		return nil, status.Errorf(codes.PermissionDenied, "cannot rate your own template")
+	}
+
+	// Banned callers are blocked.
+	if s.UserRepo != nil {
+		if u, err := s.UserRepo.GetByID(ctx, userID); err == nil && u != nil && u.Status == "banned" {
+			return nil, status.Errorf(codes.PermissionDenied, "banned users cannot rate templates")
+		}
+	}
+
+	// Rate limit — only successful changes consume quota.
+	if retryAfter, ok := s.checkRatingRate(ctx, userID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+
+	sum, count, err := s.TemplateRepo.RateTemplate(ctx, userID, req.TemplateId, req.Rating)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to rate template: %v", err)
+	}
+
+	return ratingResponse(sum, count, req.Rating), nil
+}
+
+// DeleteRating removes the caller's rating for a template (idempotent).
+func (s *PromptService) DeleteRating(ctx context.Context, req *pb.DeleteRatingRequest) (*pb.RateTemplateResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	zap.S().Infof("PromptService.DeleteRating: user_id=%s template_id=%s", userID, req.TemplateId)
+
+	// Hidden (in_review/rejected) templates are invisible to non-owners —
+	// 404 before touching rating state (constraint 5).
+	tpl, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
+	// Private templates are invisible to non-owners — 404 (no existence leak).
+	if tpl.Visibility == "private" && tpl.OwnerID != userID {
+		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+
+	// Rate limit — only successful changes consume quota.
+	if retryAfter, ok := s.checkRatingRate(ctx, userID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+
+	sum, count, err := s.TemplateRepo.DeleteRating(ctx, userID, req.TemplateId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete rating: %v", err)
+	}
+
+	return ratingResponse(sum, count, 0), nil
+}
+
+// ratingResponse builds a RateTemplateResponse from fresh aggregates.
+func ratingResponse(sum int64, count int32, myRating int32) *pb.RateTemplateResponse {
+	avg := 0.0
+	if count > 0 {
+		avg = float64(sum) / float64(count)
+	}
+	return &pb.RateTemplateResponse{
+		RatingAvg:   avg,
+		RatingCount: count,
+		MyRating:    myRating,
+	}
+}
+
 func (s *PromptService) ListCategories(ctx context.Context, req *pb.ListCategoriesRequest) (*pb.ListCategoriesResponse, error) {
 	zap.S().Infof("PromptService.ListCategories: owner_id=%s", req.OwnerId)
 	filters := make(map[string]interface{})
@@ -1299,6 +1461,12 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 		IsLiked:       m.IsLiked,
 		IsFavorited:   m.IsFavorited,
 		Language:      m.Language,
+		RatingCount:   m.RatingCount,
+		MyRating:      m.MyRating,
+	}
+	// The average is always computed, never stored; guard division by zero.
+	if m.RatingCount > 0 {
+		tpl.RatingAvg = float64(m.RatingSum) / float64(m.RatingCount)
 	}
 	// Moderation state: default to "normal" for legacy rows / zero values so
 	// the field is always meaningful to clients.

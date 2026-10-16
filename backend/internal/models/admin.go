@@ -59,6 +59,8 @@ type AdminTemplate struct {
 	Tags             pq.StringArray `json:"tags"`
 	LikeCount        int32          `json:"like_count"`
 	FavoriteCount    int32          `json:"favorite_count"`
+	RatingSum        int64          `json:"rating_sum"`
+	RatingCount      int32          `json:"rating_count"`
 	Category         string         `json:"category"`
 	ContentWarnings  pq.StringArray `json:"content_warnings"`
 	LockedWarnings   pq.StringArray `json:"locked_warnings"`

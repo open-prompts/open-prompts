@@ -34,9 +34,29 @@ func TestTemplateOrderBy(t *testing.T) {
 		"bogus; DROP TABLE users": " ORDER BY t.created_at DESC",
 	}
 	for sort, want := range cases {
-		if got := templateOrderBy(sort); got != want {
+		got, args, nextID := templateOrderBy(sort, 5, nil, 2)
+		if got != want {
 			t.Errorf("templateOrderBy(%q) = %q, want %q", sort, got, want)
 		}
+		if len(args) != 0 {
+			t.Errorf("templateOrderBy(%q) should not append args, got %d", sort, len(args))
+		}
+		if nextID != 2 {
+			t.Errorf("templateOrderBy(%q) should keep argID 2, got %d", sort, nextID)
+		}
+	}
+}
+
+func TestTemplateOrderByTopRated(t *testing.T) {
+	got, args, nextID := templateOrderBy("top_rated", 5, nil, 2)
+	if !strings.Contains(got, "t.rating_count >= $2") {
+		t.Errorf("top_rated should reference $2 for the threshold, got: %s", got)
+	}
+	if len(args) != 1 || args[0] != 5 {
+		t.Errorf("top_rated should append the threshold 5, got %v", args)
+	}
+	if nextID != 3 {
+		t.Errorf("top_rated should advance argID to 3, got %d", nextID)
 	}
 }
 

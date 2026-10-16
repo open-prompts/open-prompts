@@ -25,6 +25,9 @@ type TemplateRepository interface {
 	CountTemplates(ctx context.Context, filters map[string]interface{}) (int32, error)
 	ListRelated(ctx context.Context, templateID string, tpl *models.Template, currentUserID string, limit int) ([]*models.Template, error)
 	ListMoreFromAuthor(ctx context.Context, templateID, ownerID, currentUserID string, limit int) ([]*models.Template, error)
+	RateTemplate(ctx context.Context, userID, templateID string, rating int32) (sum int64, count int32, err error)
+	DeleteRating(ctx context.Context, userID, templateID string) (sum int64, count int32, err error)
+	GetRatingDistribution(ctx context.Context, templateID string) ([5]int32, error)
 }
 
 // templateRepository implements TemplateRepository.
@@ -103,14 +106,17 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
 			t.like_count, t.favorite_count, t.comment_count, t.view_count, t.use_count,
+			t.rating_sum, t.rating_count,
 			t.moderation_status, t.published_at,
 			t.content_warnings, t.locked_warnings,
 			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
-			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited
+			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited,
+			COALESCE(mr.rating, 0) AS my_rating
 		FROM templates t
 		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $2
 		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $2
+		LEFT JOIN template_ratings mr ON t.id = mr.template_id AND mr.user_id = $2
 		WHERE t.id = $1
 	`
 	var t models.Template
@@ -118,9 +124,11 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 		&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
 		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
 		&t.ViewCount, &t.UseCount,
+		&t.RatingSum, &t.RatingCount,
 		&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
 		&t.CreatedAt, &t.UpdatedAt,
 		&t.IsLiked, &t.IsFavorited,
+		&t.MyRating,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -169,17 +177,29 @@ func escapeLike(s string) string {
 
 // templateOrderBy maps a whitelisted sort value to a hardcoded ORDER BY
 // clause. User input never reaches SQL text — anything unrecognized falls
-// back to the default newest ordering.
-func templateOrderBy(sort string) string {
+// back to the default newest ordering. The top_rated threshold is a bound
+// parameter (never inlined); it is appended to args and the next placeholder
+// id is returned. For non-top_rated sorts the threshold is ignored and argID
+// is returned unchanged.
+func templateOrderBy(sort string, threshold int, args []interface{}, argID int) (string, []interface{}, int) {
 	switch sort {
 	case "most_liked":
-		return " ORDER BY t.like_count DESC, t.created_at DESC"
+		return " ORDER BY t.like_count DESC, t.created_at DESC", args, argID
 	case "most_favorited":
-		return " ORDER BY t.favorite_count DESC, t.created_at DESC"
+		return " ORDER BY t.favorite_count DESC, t.created_at DESC", args, argID
 	case "trending":
-		return " ORDER BY (COALESCE(el.cnt, 0) + COALESCE(ef.cnt, 0)) DESC, t.created_at DESC"
+		return " ORDER BY (COALESCE(el.cnt, 0) + COALESCE(ef.cnt, 0)) DESC, t.created_at DESC", args, argID
+	case "top_rated":
+		order := fmt.Sprintf(` ORDER BY
+			(t.rating_count >= $%d) DESC,
+			CASE WHEN t.rating_count >= $%d
+			     THEN t.rating_sum::float / GREATEST(t.rating_count, 1) END DESC NULLS LAST,
+			t.rating_count DESC,
+			t.created_at DESC`, argID, argID)
+		args = append(args, threshold)
+		return order, args, argID + 1
 	default: // "newest" and any invalid value
-		return " ORDER BY t.created_at DESC"
+		return " ORDER BY t.created_at DESC", args, argID
 	}
 }
 
@@ -290,6 +310,7 @@ func templateFromClause(sort string, args []interface{}, argID int) (string, []i
 		FROM templates t
 		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $1
 		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $1
+		LEFT JOIN template_ratings mr ON t.id = mr.template_id AND mr.user_id = $1
 	`
 	if sort == "trending" {
 		from += fmt.Sprintf(trendingJoins(), argID, argID+1)
@@ -311,11 +332,13 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 		SELECT
 			t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
 			t.like_count, t.favorite_count, t.comment_count, t.view_count, t.use_count,
+			t.rating_sum, t.rating_count,
 			t.moderation_status, t.published_at,
 			t.content_warnings, t.locked_warnings,
 			t.created_at, t.updated_at,
 			CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 			CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited,
+			COALESCE(mr.rating, 0) AS my_rating,
 			ou.display_name AS owner_display_name, COALESCE(ou.avatar, '') AS owner_avatar
 	`
 	args := []interface{}{currentUserID}
@@ -327,7 +350,15 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 	conditions, args, argID := buildTemplateConditions(filters, args, argID)
 	query += conditions
 
-	query += templateOrderBy(sort)
+	// top_rated threshold (server config, default 5) is a bound parameter.
+	threshold := 5
+	if val, ok := filters["top_rated_threshold"]; ok {
+		if n, ok := val.(int); ok && n > 0 {
+			threshold = n
+		}
+	}
+	order, args, argID := templateOrderBy(sort, threshold, args, argID)
+	query += order
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argID, argID+1)
 	args = append(args, limit, offset)
 
@@ -348,9 +379,11 @@ func (r *templateRepository) List(ctx context.Context, limit, offset int, filter
 			&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
 			&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
 			&t.ViewCount, &t.UseCount,
+			&t.RatingSum, &t.RatingCount,
 			&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
 			&t.CreatedAt, &t.UpdatedAt,
 			&t.IsLiked, &t.IsFavorited,
+			&t.MyRating,
 			&t.OwnerDisplayName, &t.OwnerAvatar,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan template: %w", err)
@@ -576,17 +609,105 @@ func (r *templateRepository) ToggleFavorite(ctx context.Context, userID, templat
 	return !exists, count, nil
 }
 
+// RateTemplate upserts the caller's 1-5 rating for a template and maintains
+// the denormalized aggregates transactionally. Returns the fresh
+// (rating_sum, rating_count). The delta math is done in a single CTE so the
+// read-modify-write is atomic: the previous rating is captured FOR UPDATE,
+// the upsert reports whether a row was inserted, and the templates row is
+// updated with the exact delta (floored at 0).
+func (r *templateRepository) RateTemplate(ctx context.Context, userID, templateID string, rating int32) (int64, int32, error) {
+	query := `
+		WITH prev AS (
+			SELECT rating FROM template_ratings
+			WHERE user_id = $1 AND template_id = $2 FOR UPDATE
+		), upsert AS (
+			INSERT INTO template_ratings (user_id, template_id, rating)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (user_id, template_id)
+			DO UPDATE SET rating = EXCLUDED.rating, updated_at = now()
+			RETURNING rating, (xmax = 0) AS inserted
+		)
+		UPDATE templates t
+		SET rating_sum = GREATEST(t.rating_sum + $3 - COALESCE((SELECT rating FROM prev), 0), 0),
+		    rating_count = t.rating_count + CASE WHEN (SELECT inserted FROM upsert) THEN 1 ELSE 0 END
+		WHERE t.id = $2
+		RETURNING t.rating_sum, t.rating_count
+	`
+	var sum int64
+	var count int32
+	err := r.db.QueryRowContext(ctx, query, userID, templateID, rating).Scan(&sum, &count)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to rate template: %w", err)
+	}
+	return sum, count, nil
+}
+
+// DeleteRating removes the caller's rating for a template (idempotent) and
+// maintains the denormalized aggregates transactionally. A missing row is a
+// no-op returning the current aggregates.
+func (r *templateRepository) DeleteRating(ctx context.Context, userID, templateID string) (int64, int32, error) {
+	query := `
+		WITH removed AS (
+			DELETE FROM template_ratings
+			WHERE user_id = $1 AND template_id = $2
+			RETURNING rating
+		)
+		UPDATE templates t
+		SET rating_sum = GREATEST(t.rating_sum - COALESCE((SELECT rating FROM removed), 0), 0),
+		    rating_count = t.rating_count - CASE WHEN EXISTS (SELECT 1 FROM removed) THEN 1 ELSE 0 END
+		WHERE t.id = $2
+		RETURNING t.rating_sum, t.rating_count
+	`
+	var sum int64
+	var count int32
+	err := r.db.QueryRowContext(ctx, query, userID, templateID).Scan(&sum, &count)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to delete rating: %w", err)
+	}
+	return sum, count, nil
+}
+
+// GetRatingDistribution returns the per-star counts for a template as a
+// fixed 5-element array (index 0 -> 1★ ... index 4 -> 5★).
+func (r *templateRepository) GetRatingDistribution(ctx context.Context, templateID string) ([5]int32, error) {
+	var dist [5]int32
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT rating, COUNT(*) FROM template_ratings WHERE template_id = $1 GROUP BY rating`,
+		templateID,
+	)
+	if err != nil {
+		return dist, fmt.Errorf("failed to get rating distribution: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var rating int32
+		var count int32
+		if err := rows.Scan(&rating, &count); err != nil {
+			return dist, fmt.Errorf("failed to scan rating distribution: %w", err)
+		}
+		if rating >= 1 && rating <= 5 {
+			dist[rating-1] = count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return dist, fmt.Errorf("rows error: %w", err)
+	}
+	return dist, nil
+}
+
 // relatedSelectColumns is the shared SELECT column list (with viewer
 // like/favorite LEFT JOINs) used by the discovery queries. It mirrors the
 // List query's projection so cards render the same shape.
 const relatedSelectColumns = `
 		t.id, t.owner_id, t.title, t.description, t.visibility, t.type, t.tags, t.category, t.language,
 		t.like_count, t.favorite_count, t.comment_count, t.view_count, t.use_count,
+		t.rating_sum, t.rating_count,
 		t.moderation_status, t.published_at,
 		t.content_warnings, t.locked_warnings,
 		t.created_at, t.updated_at,
 		CASE WHEN tl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
 		CASE WHEN tf.user_id IS NOT NULL THEN true ELSE false END as is_favorited,
+		COALESCE(mr.rating, 0) AS my_rating,
 		ou.display_name AS owner_display_name, COALESCE(ou.avatar, '') AS owner_avatar
 `
 
@@ -598,9 +719,11 @@ func scanTemplateRow(scan func(dest ...interface{}) error) (*models.Template, er
 		&t.ID, &t.OwnerID, &t.Title, &t.Description, &t.Visibility, &t.Type,
 		&t.Tags, &t.Category, &t.Language, &t.LikeCount, &t.FavoriteCount, &t.CommentCount,
 		&t.ViewCount, &t.UseCount,
+		&t.RatingSum, &t.RatingCount,
 		&t.ModerationStatus, &t.PublishedAt, &t.ContentWarnings, &t.LockedWarnings,
 		&t.CreatedAt, &t.UpdatedAt,
 		&t.IsLiked, &t.IsFavorited,
+		&t.MyRating,
 		&t.OwnerDisplayName, &t.OwnerAvatar,
 	); err != nil {
 		return nil, err
@@ -617,6 +740,7 @@ func relatedQuery(templateID string, tpl *models.Template, currentUserID string,
 		FROM templates t
 		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $2
 		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $2
+		LEFT JOIN template_ratings mr ON t.id = mr.template_id AND mr.user_id = $2
 		JOIN users ou ON ou.id = t.owner_id
 		WHERE t.visibility = 'public'
 		  AND t.id != $1
@@ -681,6 +805,7 @@ func authorQuery(templateID, ownerID, currentUserID string, limit int) (string, 
 		FROM templates t
 		LEFT JOIN template_likes tl ON t.id = tl.template_id AND tl.user_id = $2
 		LEFT JOIN template_favorites tf ON t.id = tf.template_id AND tf.user_id = $2
+		LEFT JOIN template_ratings mr ON t.id = mr.template_id AND mr.user_id = $2
 		JOIN users ou ON ou.id = t.owner_id
 		WHERE t.owner_id = $3
 		  AND t.visibility = 'public'

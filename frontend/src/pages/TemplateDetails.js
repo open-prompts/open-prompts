@@ -34,6 +34,8 @@ import PublicCounters from '../components/analytics/PublicCounters';
 import OwnerStatsSection from '../components/analytics/OwnerStatsSection';
 import RelatedRail from '../components/related/RelatedRail';
 import MoreFromAuthorRow from '../components/related/MoreFromAuthorRow';
+import RatingWidget from '../components/RatingWidget';
+import RatingHistogram from '../components/RatingHistogram';
 import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
@@ -59,6 +61,12 @@ const TemplateDetails = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
+
+  // Ratings
+  const [ratingAvg, setRatingAvg] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [myRating, setMyRating] = useState(0);
+  const [ratingDistribution, setRatingDistribution] = useState([]);
 
   // Loading States
   const [isSaving, setIsSaving] = useState(false);
@@ -155,6 +163,11 @@ const TemplateDetails = () => {
         setIsFavorited(tplRes.data.template.is_favorited || false);
         setLikesCount(tplRes.data.template.like_count || 0);
         setFavoritesCount(tplRes.data.template.favorite_count || 0);
+
+        setRatingAvg(tplRes.data.template.rating_avg || 0);
+        setRatingCount(tplRes.data.template.rating_count || 0);
+        setMyRating(tplRes.data.template.my_rating || 0);
+        setRatingDistribution(tplRes.data.rating_distribution || []);
 
         // Select latest version by default
         if (tplRes.data.latest_version) {
@@ -774,6 +787,21 @@ const TemplateDetails = () => {
                 </button>
               </div>
               <PublicCounters views={template.view_count} uses={template.use_count} />
+            </div>
+            <div className="rating-block">
+              <RatingWidget
+                templateId={template.id}
+                ratingAvg={ratingAvg}
+                ratingCount={ratingCount}
+                myRating={myRating}
+                isOwner={isOwner}
+                onChange={(data) => {
+                  setRatingAvg(data.rating_avg);
+                  setRatingCount(data.rating_count);
+                  setMyRating(data.my_rating);
+                }}
+              />
+              <RatingHistogram distribution={ratingDistribution} />
             </div>
             {isEditingMetadata ? (
                 <div className="meta-editor">

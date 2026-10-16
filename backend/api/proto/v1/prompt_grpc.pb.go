@@ -925,6 +925,8 @@ const (
 	PromptService_GetCreatorStats_FullMethodName        = "/v1.PromptService/GetCreatorStats"
 	PromptService_GetRelatedTemplates_FullMethodName    = "/v1.PromptService/GetRelatedTemplates"
 	PromptService_ListMoreFromAuthor_FullMethodName     = "/v1.PromptService/ListMoreFromAuthor"
+	PromptService_RateTemplate_FullMethodName           = "/v1.PromptService/RateTemplate"
+	PromptService_DeleteRating_FullMethodName           = "/v1.PromptService/DeleteRating"
 )
 
 // PromptServiceClient is the client API for PromptService service.
@@ -980,6 +982,10 @@ type PromptServiceClient interface {
 	// ListMoreFromAuthor returns the author's other public templates,
 	// most-liked first.
 	ListMoreFromAuthor(ctx context.Context, in *ListMoreFromAuthorRequest, opts ...grpc.CallOption) (*ListMoreFromAuthorResponse, error)
+	// RateTemplate upserts the caller's 1-5 star rating for a template.
+	RateTemplate(ctx context.Context, in *RateTemplateRequest, opts ...grpc.CallOption) (*RateTemplateResponse, error)
+	// DeleteRating removes the caller's rating for a template (idempotent).
+	DeleteRating(ctx context.Context, in *DeleteRatingRequest, opts ...grpc.CallOption) (*RateTemplateResponse, error)
 }
 
 type promptServiceClient struct {
@@ -1210,6 +1216,26 @@ func (c *promptServiceClient) ListMoreFromAuthor(ctx context.Context, in *ListMo
 	return out, nil
 }
 
+func (c *promptServiceClient) RateTemplate(ctx context.Context, in *RateTemplateRequest, opts ...grpc.CallOption) (*RateTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RateTemplateResponse)
+	err := c.cc.Invoke(ctx, PromptService_RateTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) DeleteRating(ctx context.Context, in *DeleteRatingRequest, opts ...grpc.CallOption) (*RateTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RateTemplateResponse)
+	err := c.cc.Invoke(ctx, PromptService_DeleteRating_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PromptServiceServer is the server API for PromptService service.
 // All implementations must embed UnimplementedPromptServiceServer
 // for forward compatibility.
@@ -1263,6 +1289,10 @@ type PromptServiceServer interface {
 	// ListMoreFromAuthor returns the author's other public templates,
 	// most-liked first.
 	ListMoreFromAuthor(context.Context, *ListMoreFromAuthorRequest) (*ListMoreFromAuthorResponse, error)
+	// RateTemplate upserts the caller's 1-5 star rating for a template.
+	RateTemplate(context.Context, *RateTemplateRequest) (*RateTemplateResponse, error)
+	// DeleteRating removes the caller's rating for a template (idempotent).
+	DeleteRating(context.Context, *DeleteRatingRequest) (*RateTemplateResponse, error)
 	mustEmbedUnimplementedPromptServiceServer()
 }
 
@@ -1338,6 +1368,12 @@ func (UnimplementedPromptServiceServer) GetRelatedTemplates(context.Context, *Ge
 }
 func (UnimplementedPromptServiceServer) ListMoreFromAuthor(context.Context, *ListMoreFromAuthorRequest) (*ListMoreFromAuthorResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListMoreFromAuthor not implemented")
+}
+func (UnimplementedPromptServiceServer) RateTemplate(context.Context, *RateTemplateRequest) (*RateTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RateTemplate not implemented")
+}
+func (UnimplementedPromptServiceServer) DeleteRating(context.Context, *DeleteRatingRequest) (*RateTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteRating not implemented")
 }
 func (UnimplementedPromptServiceServer) mustEmbedUnimplementedPromptServiceServer() {}
 func (UnimplementedPromptServiceServer) testEmbeddedByValue()                       {}
@@ -1756,6 +1792,42 @@ func _PromptService_ListMoreFromAuthor_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PromptService_RateTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RateTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).RateTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_RateTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).RateTemplate(ctx, req.(*RateTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_DeleteRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRatingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).DeleteRating(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_DeleteRating_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).DeleteRating(ctx, req.(*DeleteRatingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PromptService_ServiceDesc is the grpc.ServiceDesc for PromptService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1850,6 +1922,14 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListMoreFromAuthor",
 			Handler:    _PromptService_ListMoreFromAuthor_Handler,
+		},
+		{
+			MethodName: "RateTemplate",
+			Handler:    _PromptService_RateTemplate_Handler,
+		},
+		{
+			MethodName: "DeleteRating",
+			Handler:    _PromptService_DeleteRating_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

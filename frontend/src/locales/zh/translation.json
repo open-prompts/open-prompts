@@ -117,7 +117,9 @@
       "newest": "最新",
       "most_liked": "最多点赞",
       "most_favorited": "最多收藏",
-      "trending": "趋势"
+      "trending": "趋势",
+      "top_rated": "评分最高",
+      "top_rated_hint": "平均评分，至少 {{count}} 条评分"
     },
     "chips": {
       "clear_all": "全部清除",
@@ -146,6 +148,26 @@
     "all_mine": "我的",
     "favorites": "我收藏的",
     "my_likes": "我点赞的"
+  },
+  "ratings": {
+    "rate": "为模板评分",
+    "ratings_count": "{{count}} 条评分",
+    "no_ratings": "暂无评分",
+    "be_first": "暂无评分 — 快来抢首评",
+    "clear": "清除评分",
+    "clear_confirm": "确定移除你的评分？",
+    "you_rated": "你评了 {{count}}★",
+    "owner_hint": "你不能给自己的模板评分",
+    "submitted": "已评 {{count}} 星",
+    "error": "无法保存你的评分",
+    "rate_limited": "评分操作过于频繁，请稍后再试。",
+    "hint_1": "很差",
+    "hint_2": "较差",
+    "hint_3": "一般",
+    "hint_4": "好",
+    "hint_5": "很好",
+    "aria_label": "评分 {{avg}} / 5，共 {{count}} 条评分",
+    "histogram": "评分分布"
   },
   "analytics": {
     "title": "数据分析",
@@ -564,6 +586,8 @@
       "owner": "所有者",
       "likes": "点赞",
       "favorites": "收藏",
+      "rating": "评分",
+      "no_ratings": "暂无评分",
       "updated": "更新时间",
       "no_match": "没有符合筛选条件的模板",
       "clear_filters": "清除筛选",

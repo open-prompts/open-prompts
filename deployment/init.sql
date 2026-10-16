@@ -823,3 +823,27 @@ BEGIN
             ON collections (visibility, created_at DESC) WHERE status = 'active' AND visibility = 'public';
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: template-ratings
+-- Description: 1-5 star ratings, one per user per template (upsert), with
+-- transactionally maintained aggregates (rating_sum + rating_count; the
+-- average is always computed, never stored).
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_ratings (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, template_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_ratings_template
+    ON template_ratings(template_id);
+
+ALTER TABLE templates ADD COLUMN IF NOT EXISTS rating_sum BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE templates ADD COLUMN IF NOT EXISTS rating_count INT NOT NULL DEFAULT 0;
+
+CREATE INDEX IF NOT EXISTS idx_templates_top_rated
+    ON templates(rating_count, rating_sum);

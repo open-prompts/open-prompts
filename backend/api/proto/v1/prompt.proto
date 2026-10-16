@@ -122,6 +122,12 @@ service PromptService {
   // ListMoreFromAuthor returns the author's other public templates,
   // most-liked first.
   rpc ListMoreFromAuthor(ListMoreFromAuthorRequest) returns (ListMoreFromAuthorResponse);
+
+  // RateTemplate upserts the caller's 1-5 star rating for a template.
+  rpc RateTemplate(RateTemplateRequest) returns (RateTemplateResponse);
+
+  // DeleteRating removes the caller's rating for a template (idempotent).
+  rpc DeleteRating(DeleteRatingRequest) returns (RateTemplateResponse);
 }
 
 // Visibility defines who can see the template.
@@ -174,6 +180,12 @@ message Template {
   string language = 16;
   // Number of comments.
   int32 comment_count = 17;
+  // Average rating (0 when rating_count = 0; computed, never stored).
+  double rating_avg = 20;
+  // Number of ratings.
+  int32 rating_count = 21;
+  // The caller's rating (0 = unrated; only meaningful for authed callers).
+  int32 my_rating = 22;
   // Total deduplicated views (per session per 30 minutes).
   int32 view_count = 23;
   // Total prompts created from this template (web + API).
@@ -309,6 +321,26 @@ message GetTemplateResponse {
   // Public owner identity (id, display_name, avatar, follower_count,
   // is_following). Populated when the owner is resolvable.
   OwnerInfo owner = 3;
+  // Rating distribution: index 0 -> 1★ ... index 4 -> 5★.
+  repeated int32 rating_distribution = 4;
+}
+
+// RateTemplateRequest is the request message for RateTemplate.
+message RateTemplateRequest {
+  string template_id = 1;
+  int32 rating = 2; // 1..5
+}
+
+// DeleteRatingRequest is the request message for DeleteRating.
+message DeleteRatingRequest {
+  string template_id = 1;
+}
+
+// RateTemplateResponse is the response message for RateTemplate/DeleteRating.
+message RateTemplateResponse {
+  double rating_avg = 1; // 0 when rating_count = 0
+  int32 rating_count = 2;
+  int32 my_rating = 3; // 0 = unrated
 }
 
 // ListTemplatesRequest is the request message for ListTemplates.

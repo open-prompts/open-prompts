@@ -61,3 +61,7 @@ spec:
               value: {{ .Values.backend.env.followRatePerMinute | quote }}
             - name: TEMPLATE_EVENT_RATE_PER_MINUTE
               value: {{ .Values.backend.env.templateEventRatePerMinute | quote }}
+            - name: RATING_RATE_PER_MINUTE
+              value: {{ .Values.backend.env.ratingRatePerMinute | quote }}
+            - name: TOP_RATED_MIN_RATINGS
+              value: {{ .Values.backend.env.topRatedMinRatings | quote }}

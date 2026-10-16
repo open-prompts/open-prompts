@@ -1,0 +1,50 @@
+.rating-histogram {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 320px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary, #6b7280);
+  }
+
+  &__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 40px;
+    font-weight: 500;
+  }
+
+  &__star {
+    color: var(--rating-star, #f5a623);
+  }
+
+  &__bar-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--surface-secondary, #f3f4f6);
+    overflow: hidden;
+  }
+
+  &__bar {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--rating-star, #f5a623);
+  }
+
+  &__pct {
+    min-width: 40px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}

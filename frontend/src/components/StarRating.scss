@@ -1,0 +1,35 @@
+.star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+  line-height: 1.2;
+
+  &__stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+  }
+
+  &__star {
+    color: var(--rating-star, #f5a623);
+  }
+
+  &__value {
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+  }
+
+  &__count {
+    color: var(--text-secondary, #6b7280);
+  }
+
+  &--lg {
+    font-size: 15px;
+
+    .star-rating__value {
+      font-size: 18px;
+    }
+  }
+}

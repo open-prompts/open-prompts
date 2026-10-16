@@ -61,6 +61,9 @@ type MockTemplateRepository struct {
 	DeleteFunc             func(ctx context.Context, id string) error
 	ListRelatedFunc        func(ctx context.Context, templateID string, tpl *models.Template, currentUserID string, limit int) ([]*models.Template, error)
 	ListMoreFromAuthorFunc func(ctx context.Context, templateID, ownerID, currentUserID string, limit int) ([]*models.Template, error)
+	RateTemplateFunc       func(ctx context.Context, userID, templateID string, rating int32) (int64, int32, error)
+	DeleteRatingFunc       func(ctx context.Context, userID, templateID string) (int64, int32, error)
+	GetRatingDistributionFunc func(ctx context.Context, templateID string) ([5]int32, error)
 }
 
 func (m *MockTemplateRepository) Create(ctx context.Context, t *models.Template) error {
@@ -136,6 +139,24 @@ func (m *MockTemplateRepository) ListMoreFromAuthor(ctx context.Context, templat
 		return m.ListMoreFromAuthorFunc(ctx, templateID, ownerID, currentUserID, limit)
 	}
 	return nil, nil
+}
+func (m *MockTemplateRepository) RateTemplate(ctx context.Context, userID, templateID string, rating int32) (int64, int32, error) {
+	if m.RateTemplateFunc != nil {
+		return m.RateTemplateFunc(ctx, userID, templateID, rating)
+	}
+	return 0, 0, nil
+}
+func (m *MockTemplateRepository) DeleteRating(ctx context.Context, userID, templateID string) (int64, int32, error) {
+	if m.DeleteRatingFunc != nil {
+		return m.DeleteRatingFunc(ctx, userID, templateID)
+	}
+	return 0, 0, nil
+}
+func (m *MockTemplateRepository) GetRatingDistribution(ctx context.Context, templateID string) ([5]int32, error) {
+	if m.GetRatingDistributionFunc != nil {
+		return m.GetRatingDistributionFunc(ctx, templateID)
+	}
+	return [5]int32{}, nil
 }
 
 // MockTemplateVersionRepository

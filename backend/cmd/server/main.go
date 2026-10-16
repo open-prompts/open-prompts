@@ -745,6 +745,57 @@ func main() {
 			return
 		}
 
+		if strings.HasSuffix(id, "/rating") {
+			templateID := strings.TrimSuffix(id, "/rating")
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+			if err != nil {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
+			ctx := service.ContextWithUserID(context.Background(), userID)
+
+			switch r.Method {
+			case http.MethodPost:
+				var body struct {
+					Rating int32 `json:"rating"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					http.Error(w, "Invalid request body", http.StatusBadRequest)
+					return
+				}
+				req := &pb.RateTemplateRequest{TemplateId: templateID, Rating: body.Rating}
+				resp, err := svc.RateTemplate(ctx, req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+				return
+			case http.MethodDelete:
+				req := &pb.DeleteRatingRequest{TemplateId: templateID}
+				resp, err := svc.DeleteRating(ctx, req)
+				if err != nil {
+					writeError(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				b, _ := marshaler.Marshal(resp)
+				_, _ = w.Write(b)
+				return
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+		}
+
 		// /api/v1/templates/{template_id}/comments — GET (public read with
 		// optional auth) and POST (auth required).
 		if len(parts) == 2 && parts[1] == "comments" {

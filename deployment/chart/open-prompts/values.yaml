@@ -34,6 +34,10 @@ backend:
     followRatePerMinute: "30"
     # Prompt analytics: per-IP view-event rate limit (per minute)
     templateEventRatePerMinute: "60"
+    # Template ratings: rating changes per minute per account + top_rated
+    # sort minimum rating_count threshold
+    ratingRatePerMinute: "20"
+    topRatedMinRatings: "5"
 
 frontend:
   replicaCount: 1

@@ -4128,6 +4128,250 @@ def test_template_collections():
     return True
 
 
+def test_template_ratings():
+    """Template ratings (FR-1..FR-14):
+    1.  alice creates a public template; bob rates it 4 -> {rating_avg: 4.0,
+        rating_count: 1, my_rating: 4}.
+    2.  bob re-rates 2 -> {rating_avg: 2.0, rating_count: 1, my_rating: 2}
+        (row replaced, count unchanged).
+    3.  carol rates 5 -> {rating_avg: 3.5, rating_count: 2}.
+    4.  bob deletes his rating -> {rating_avg: 5.0, rating_count: 1,
+        my_rating: 0}; repeat delete -> identical (idempotent).
+    5.  alice rates her own template -> 403; anonymous POST -> 401; bob rates
+        with 0/6/3.5 -> 400.
+    6.  Ban carol (admin API) -> carol's POST -> 403; her existing rating
+        still counts in aggregates.
+    7.  Private template: bob's rate attempt -> 404.
+    8.  Detail response: rating_distribution matches the rating rows; list
+        items carry rating_avg/rating_count/my_rating.
+    9.  Rate limit: 21 rapid changes -> 429 with Retry-After.
+    10. Admin template detail shows rating_avg/rating_count; admin rating
+        mutation routes -> 404/405.
+    """
+    print("\n--- Starting Template Ratings Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    alice = f"fvt_rate_alice_{ts}"
+    bob = f"fvt_rate_bob_{ts}"
+    carol = f"fvt_rate_carol_{ts}"
+    alice_token = get_auth_token(alice)
+    bob_token = get_auth_token(bob)
+    carol_token = get_auth_token(carol)
+    if not all([alice_token, bob_token, carol_token]):
+        print("Failed to create test users")
+        return False
+    headers_alice = {"Authorization": f"Bearer {alice_token}"}
+    headers_bob = {"Authorization": f"Bearer {bob_token}"}
+    headers_carol = {"Authorization": f"Bearer {carol_token}"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_headers = {"Authorization": f"Bearer {resp.json().get('token')}"}
+
+    def create_tpl(owner_id, headers, title, visibility="VISIBILITY_PUBLIC"):
+        payload = {
+            "owner_id": owner_id,
+            "title": title,
+            "description": "ratings test",
+            "visibility": visibility,
+            "type": "TEMPLATE_TYPE_USER",
+            "content": "ratings content",
+            "language": "en",
+        }
+        r = requests.post(f"{APP}/templates", json=payload, headers=headers)
+        if r.status_code != 200:
+            print(f"Create template failed: {r.status_code} - {r.text}")
+            return None
+        tpl = r.json().get("template", {})
+        CREATED_TEMPLATES.append({"id": tpl.get("id"), "owner_id": owner_id})
+        return tpl.get("id")
+
+    # --- Fixtures ---
+    pub = create_tpl(alice, headers_alice, f"Rate Pub {ts}")
+    priv = create_tpl(alice, headers_alice, f"Rate Priv {ts}", visibility="VISIBILITY_PRIVATE")
+    if not all([pub, priv]):
+        return False
+
+    # --- 1. bob rates 4 ---
+    print("1. bob rates 4...")
+    resp = requests.post(f"{APP}/templates/{pub}/rating", headers=headers_bob, json={"rating": 4})
+    if resp.status_code != 200:
+        print(f"Rate failed: {resp.status_code} - {resp.text}")
+        return False
+    body = resp.json()
+    if body.get("rating_avg") != 4.0 or body.get("rating_count") != 1 or body.get("my_rating") != 4:
+        print(f"Unexpected rate response: {body}")
+        return False
+    print("   PASS")
+
+    # --- 2. bob re-rates 2 (row replaced, count unchanged) ---
+    print("2. bob re-rates 2...")
+    resp = requests.post(f"{APP}/templates/{pub}/rating", headers=headers_bob, json={"rating": 2})
+    if resp.status_code != 200:
+        print(f"Re-rate failed: {resp.status_code} - {resp.text}")
+        return False
+    body = resp.json()
+    if body.get("rating_avg") != 2.0 or body.get("rating_count") != 1 or body.get("my_rating") != 2:
+        print(f"Unexpected re-rate response: {body}")
+        return False
+    print("   PASS")
+
+    # --- 3. carol rates 5 ---
+    print("3. carol rates 5...")
+    resp = requests.post(f"{APP}/templates/{pub}/rating", headers=headers_carol, json={"rating": 5})
+    if resp.status_code != 200:
+        print(f"Carol rate failed: {resp.status_code} - {resp.text}")
+        return False
+    body = resp.json()
+    if body.get("rating_avg") != 3.5 or body.get("rating_count") != 2:
+        print(f"Unexpected aggregate after carol: {body}")
+        return False
+    print("   PASS")
+
+    # --- 4. bob deletes his rating (idempotent) ---
+    print("4. bob deletes his rating...")
+    resp = requests.delete(f"{APP}/templates/{pub}/rating", headers=headers_bob)
+    if resp.status_code != 200:
+        print(f"Delete rating failed: {resp.status_code} - {resp.text}")
+        return False
+    body = resp.json()
+    if body.get("rating_avg") != 5.0 or body.get("rating_count") != 1 or body.get("my_rating") != 0:
+        print(f"Unexpected delete response: {body}")
+        return False
+    # repeat delete -> identical (idempotent)
+    resp2 = requests.delete(f"{APP}/templates/{pub}/rating", headers=headers_bob)
+    if resp2.status_code != 200 or resp2.json() != body:
+        print(f"Repeat delete should be idempotent: {resp2.status_code} - {resp2.text}")
+        return False
+    print("   PASS")
+
+    # --- 5. owner 403 / anonymous 401 / invalid 400 ---
+    print("5. owner 403 / anonymous 401 / invalid 400...")
+    resp = requests.post(f"{APP}/templates/{pub}/rating", headers=headers_alice, json={"rating": 4})
+    if resp.status_code != 403:
+        print(f"Owner self-rating should be 403, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{APP}/templates/{pub}/rating", json={"rating": 4})
+    if resp.status_code != 401:
+        print(f"Anonymous rating should be 401, got {resp.status_code}")
+        return False
+    for bad in [0, 6, 3.5]:
+        resp = requests.post(f"{APP}/templates/{pub}/rating", headers=headers_bob, json={"rating": bad})
+        if resp.status_code != 400:
+            print(f"Invalid rating {bad} should be 400, got {resp.status_code}")
+            return False
+    print("   PASS")
+
+    # --- 6. ban carol -> 403; her rating still counts ---
+    print("6. ban carol -> 403; rating still counts...")
+    resp = requests.post(f"{ADMIN}/users/{carol}/ban", headers=admin_headers, json={"reason": "FVT ratings ban"})
+    if resp.status_code != 200:
+        print(f"Ban carol failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.post(f"{APP}/templates/{pub}/rating", headers=headers_carol, json={"rating": 3})
+    if resp.status_code not in (401, 403):
+        print(f"Banned carol rating should be blocked (401/403), got {resp.status_code}")
+        return False
+    # her existing 5-star still counts -> avg 5.0, count 1
+    resp = requests.get(f"{APP}/templates/{pub}", headers=headers_bob)
+    tpl = resp.json().get("template", {})
+    if tpl.get("rating_avg") != 5.0 or tpl.get("rating_count") != 1:
+        print(f"Banned user's rating should still count: {tpl.get('rating_avg')}/{tpl.get('rating_count')}")
+        return False
+    # unban for cleanup
+    requests.post(f"{ADMIN}/users/{carol}/unban", headers=admin_headers, json={"reason": "FVT unban"})
+    print("   PASS")
+
+    # --- 7. private template -> 404 for non-owner ---
+    print("7. private template -> 404...")
+    resp = requests.post(f"{APP}/templates/{priv}/rating", headers=headers_bob, json={"rating": 4})
+    if resp.status_code != 404:
+        print(f"Private template rating should be 404, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 8. detail distribution + list my_rating ---
+    print("8. detail distribution + list my_rating...")
+    # bob rates 3 on pub -> distribution {0,0,1,0,1} (bob 3, carol 5)
+    requests.post(f"{APP}/templates/{pub}/rating", headers=headers_bob, json={"rating": 3})
+    resp = requests.get(f"{APP}/templates/{pub}", headers=headers_bob)
+    detail = resp.json()
+    dist = detail.get("rating_distribution", [])
+    if dist != [0, 0, 1, 0, 1]:
+        print(f"Unexpected rating_distribution: {dist}")
+        return False
+    if detail.get("template", {}).get("my_rating") != 3:
+        print(f"Detail my_rating should be 3: {detail.get('template', {}).get('my_rating')}")
+        return False
+    # list carries rating fields
+    resp = requests.get(f"{APP}/templates", headers=headers_bob)
+    items = resp.json().get("templates", [])
+    found = next((t for t in items if t.get("id") == pub), None)
+    if not found:
+        print("Rated template not in list")
+        return False
+    if found.get("rating_count") != 2 or found.get("my_rating") != 3:
+        print(f"List item rating fields wrong: {found.get('rating_count')}/{found.get('my_rating')}")
+        return False
+    print("   PASS")
+
+    # --- 9. rate limit: 21 rapid changes -> 429 with Retry-After ---
+    print("9. rate limit -> 429...")
+    # bob already used several changes; drive to the limit with a fresh user.
+    spammer = f"fvt_rate_spam_{ts}"
+    spam_token = get_auth_token(spammer)
+    spam_headers = {"Authorization": f"Bearer {spam_token}"}
+    got_429 = False
+    for _ in range(25):
+        resp = requests.post(f"{APP}/templates/{pub}/rating", headers=spam_headers, json={"rating": 4})
+        if resp.status_code == 429:
+            got_429 = True
+            if "Retry-After" not in resp.headers:
+                print("429 response missing Retry-After header")
+                return False
+            break
+        if resp.status_code != 200:
+            print(f"Unexpected spam rate status: {resp.status_code} - {resp.text}")
+            return False
+    if not got_429:
+        print("Rate limit was not triggered after 25 changes")
+        return False
+    print("   PASS")
+
+    # --- 10. admin detail shows rating fields; admin mutation routes 404/405 ---
+    print("10. admin detail rating fields + mutation routes...")
+    resp = requests.get(f"{ADMIN}/templates/{pub}", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Admin template detail failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_tpl = resp.json().get("template", {})
+    if admin_tpl.get("rating_count", 0) <= 0 or admin_tpl.get("rating_avg") is None:
+        print(f"Admin summary rating fields wrong: {admin_tpl.get('rating_count')}/{admin_tpl.get('rating_avg')}")
+        return False
+    # admin rating mutation routes -> 404/405
+    resp = requests.post(f"{ADMIN}/templates/{pub}/rating", headers=admin_headers, json={"rating": 4})
+    if resp.status_code not in (404, 405):
+        print(f"Admin rating POST should be 404/405, got {resp.status_code}")
+        return False
+    resp = requests.delete(f"{ADMIN}/templates/{pub}/rating", headers=admin_headers)
+    if resp.status_code not in (404, 405):
+        print(f"Admin rating DELETE should be 404/405, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    print("--- Template Ratings Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -4184,6 +4428,7 @@ def main():
     if success: success = test_template_analytics()
     if success: success = test_related_templates()
     if success: success = test_template_collections()
+    if success: success = test_template_ratings()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

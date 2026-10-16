@@ -19,6 +19,7 @@ COPY . .
 RUN protoc -I api/proto/v1 --go_out=. --go_opt=paths=source_relative \
     --go-grpc_out=. --go-grpc_opt=paths=source_relative \
     api/proto/v1/prompt.proto \
+    api/proto/v1/admin.proto \
     api/proto/v1/collection.proto
 
 RUN go build -o server cmd/server/main.go

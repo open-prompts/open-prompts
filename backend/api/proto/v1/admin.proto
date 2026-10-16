@@ -216,10 +216,14 @@ message AdminTemplateSummary {
   string owner_id = 11;
   string owner_display_name = 12;
   string category = 13; // NEW — required for admin export parity (FR-2)
+  // Average rating (0 when rating_count = 0; computed, never stored).
+  double rating_avg = 14;
   // Active content warnings (taxonomy keys).
   repeated string content_warnings = 15;
   // The subset applied by moderation; creator-immutable.
   repeated string locked_warnings = 16;
+  // Number of ratings.
+  int32 rating_count = 17;
 }
 
 message ListAdminTemplatesRequest {
