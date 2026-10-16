@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/open-prompts/open-prompts/compare/v1.26.0...v1.27.0) (2026-10-16)
+
+
+### Features
+
+* **analytics:** add prompt usage analytics ([3ec4cef](https://github.com/open-prompts/open-prompts/commit/3ec4cef79290152824cb2cf512db7509f554b1ba))
+
 # [1.26.0](https://github.com/open-prompts/open-prompts/compare/v1.25.0...v1.26.0) (2026-10-15)
 
 
