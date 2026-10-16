@@ -867,5 +867,64 @@
       "load": "Failed to load collections",
       "save": "Failed to save"
     }
+  },
+  "dashboard_v2": {
+    "title": "My Workspace",
+    "nav": {
+      "overview": "Overview",
+      "templates": "My Templates",
+      "prompts": "My Prompts",
+      "collections": "My Collections",
+      "api_keys": "API Keys"
+    },
+    "stats": {
+      "templates": "Templates",
+      "prompts": "Prompts",
+      "collections": "Collections",
+      "api_keys": "API Keys",
+      "aria": "{{label}}, {{count}} items"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No activity yet — your actions will appear here.",
+      "template_created": "Created \"{{title}}\"",
+      "template_updated": "Updated \"{{title}}\"",
+      "prompt_used": "Used \"{{title}}\"",
+      "liked": "Liked \"{{title}}\"",
+      "favorited": "Favorited \"{{title}}\""
+    },
+    "quick": {
+      "new_template": "New template",
+      "new_api_key": "New API key"
+    },
+    "templates": {
+      "filter": {
+        "all": "All",
+        "public": "Public",
+        "private": "Private",
+        "system": "System",
+        "user": "User"
+      },
+      "updated": "Updated {{date}}",
+      "empty": "You haven't created any templates yet.",
+      "empty_cta": "Create a template",
+      "delete_confirm": "Delete \"{{title}}\"? This cannot be undone."
+    },
+    "prompts": {
+      "filter": "All templates",
+      "from": "from \"{{title}}\"",
+      "created": "Created {{date}}",
+      "empty": "No prompts yet — use a template to create one.",
+      "empty_cta": "Browse the Prompt Square",
+      "view": "View",
+      "delete_confirm": "Delete this prompt? This cannot be undone.",
+      "modal_title": "Prompt from \"{{title}}\"",
+      "variables": "Variables",
+      "copy": "Copy"
+    },
+    "error": {
+      "fetch": "Failed to load dashboard.",
+      "retry": "Retry"
+    }
   }
 }

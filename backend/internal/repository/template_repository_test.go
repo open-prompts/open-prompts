@@ -30,6 +30,7 @@ func TestTemplateOrderBy(t *testing.T) {
 		"most_liked":              " ORDER BY t.like_count DESC, t.created_at DESC",
 		"most_favorited":          " ORDER BY t.favorite_count DESC, t.created_at DESC",
 		"trending":                " ORDER BY (COALESCE(el.cnt, 0) + COALESCE(ef.cnt, 0)) DESC, t.created_at DESC",
+		"updated":                 " ORDER BY t.updated_at DESC",
 		"":                        " ORDER BY t.created_at DESC",
 		"bogus; DROP TABLE users": " ORDER BY t.created_at DESC",
 	}

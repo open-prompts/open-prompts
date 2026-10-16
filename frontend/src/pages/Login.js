@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { login } from '../services/api';
@@ -17,6 +17,7 @@ import './Login.scss';
 const Login = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const { addNotification } = useNotification();
   const [email, setEmail] = useState('');
@@ -61,8 +62,9 @@ const Login = () => {
         user: { id, displayName: display_name, email, avatar }
       }));
 
-      // Redirect to home page
-      navigate('/');
+      // Redirect to the requested page (default dashboard for authed users)
+      const next = searchParams.get('next') || '/dashboard';
+      navigate(next);
     } catch (err) {
       console.error('Login error:', err);
       addNotification({

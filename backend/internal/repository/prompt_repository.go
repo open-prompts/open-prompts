@@ -104,9 +104,10 @@ func (r *promptRepository) Get(ctx context.Context, id string) (*models.Prompt, 
 func (r *promptRepository) List(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]*models.Prompt, error) {
 	zap.S().Infof("PromptRepository.List: filters=%v limit=%d offset=%d", filters, limit, offset)
 	query := `
-		SELECT p.id, p.template_id, p.version_id, p.owner_id, p.variables, p.created_at, tv.content
+		SELECT p.id, p.template_id, p.version_id, p.owner_id, p.variables, p.created_at, tv.content, t.title AS template_title
 		FROM prompts p
 		JOIN template_versions tv ON p.version_id = tv.id
+		JOIN templates t ON t.id = p.template_id
 		WHERE 1=1
 	`
 	var args []interface{}
@@ -146,6 +147,7 @@ func (r *promptRepository) List(ctx context.Context, limit, offset int, filters 
 			&variablesJSON,
 			&p.CreatedAt,
 			&p.Content,
+			&p.TemplateTitle,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan prompt: %w", err)
 		}

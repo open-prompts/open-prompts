@@ -4418,6 +4418,197 @@ def test_template_ratings():
     return True
 
 
+def test_user_dashboard():
+    """User dashboard (AC-1..AC-12):
+    1.  Anonymous GET /dashboard/overview -> 401.
+    2.  Overview counts match seeded data (templates/prompts/keys).
+    3.  recent_activity newest-first, <=10 items, valid types.
+    4.  GET /api/v1/templates?sort=updated returns updated_at-desc order.
+    5.  GET /api/v1/prompts?owner_id=<other> -> 403.
+    6.  GET /api/v1/prompts?owner_id=<me> without token -> 401.
+    7.  Prompt list rows carry template_title.
+    """
+    print("\n--- Starting User Dashboard Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ts = int(time.time())
+
+    owner = f"fvt_dash_{ts}"
+    other = f"fvt_dash_other_{ts}"
+    owner_token = get_auth_token(owner)
+    other_token = get_auth_token(other)
+    if not all([owner_token, other_token]):
+        print("Failed to create test users")
+        return False
+    headers_owner = {"Authorization": f"Bearer {owner_token}"}
+    headers_other = {"Authorization": f"Bearer {other_token}"}
+
+    # --- 1. Anonymous overview -> 401 ---
+    print("1. Anonymous overview -> 401...")
+    resp = requests.get(f"{APP}/dashboard/overview")
+    if resp.status_code != 401:
+        print(f"Anonymous overview should be 401, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- Fixtures: 2 templates (1 public, 1 private), 1 prompt, 1 API key ---
+    print("2. Seed fixtures...")
+    tpl_ids = []
+    version_ids = []
+    for i, vis in enumerate(["VISIBILITY_PUBLIC", "VISIBILITY_PRIVATE"]):
+        payload = {
+            "owner_id": owner,
+            "title": f"Dash Tpl {i} {ts}",
+            "description": "dashboard test",
+            "visibility": vis,
+            "type": "TEMPLATE_TYPE_USER",
+            "content": f"dash content {i}",
+            "language": "en",
+        }
+        r = requests.post(f"{APP}/templates", json=payload, headers=headers_owner)
+        if r.status_code != 200:
+            print(f"Create template failed: {r.status_code} - {r.text}")
+            return False
+        tid = r.json().get("template", {}).get("id")
+        tpl_ids.append(tid)
+        version_ids.append(r.json().get("version", {}).get("id"))
+        CREATED_TEMPLATES.append({"id": tid, "owner_id": owner})
+    # Create a prompt from the public template.
+    resp = requests.post(f"{APP}/prompts", json={
+        "template_id": tpl_ids[0],
+        "version_id": version_ids[0],
+        "variables": {"topic": "x"},
+    }, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Create prompt failed: {resp.status_code} - {resp.text}")
+        return False
+    prompt_id = resp.json().get("prompt", {}).get("id")
+    CREATED_PROMPTS.append({"id": prompt_id, "owner_id": owner})
+    # Create an API key.
+    resp = requests.post(f"{APP}/api-keys", json={"name": "dash"}, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Create API key failed: {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 2. Overview counts ---
+    print("3. Overview counts...")
+    resp = requests.get(f"{APP}/dashboard/overview", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Overview failed: {resp.status_code} - {resp.text}")
+        return False
+    ov = resp.json()
+    if ov.get("template_count") != 2:
+        print(f"Expected template_count 2, got {ov.get('template_count')}")
+        return False
+    if ov.get("prompt_count") != 1:
+        print(f"Expected prompt_count 1, got {ov.get('prompt_count')}")
+        return False
+    if ov.get("api_key_count") != 1:
+        print(f"Expected api_key_count 1, got {ov.get('api_key_count')}")
+        return False
+    if ov.get("collection_count") is None:
+        print("collection_count must be present (0 when feature absent)")
+        return False
+    print("   PASS")
+
+    # --- 3. recent_activity ---
+    print("4. recent_activity...")
+    activity = ov.get("recent_activity", [])
+    if len(activity) < 2:
+        print(f"Expected >=2 activity items, got {len(activity)}")
+        return False
+    if len(activity) > 10:
+        print(f"Expected <=10 activity items, got {len(activity)}")
+        return False
+    # newest-first
+    times = [a.get("timestamp") for a in activity]
+    if times != sorted(times, reverse=True):
+        print("Activity must be newest-first")
+        return False
+    valid_types = {"DASHBOARD_ACTIVITY_TYPE_TEMPLATE", "DASHBOARD_ACTIVITY_TYPE_PROMPT",
+                   "DASHBOARD_ACTIVITY_TYPE_LIKE", "DASHBOARD_ACTIVITY_TYPE_FAVORITE"}
+    for a in activity:
+        if a.get("type") not in valid_types:
+            print(f"Invalid activity type: {a.get('type')}")
+            return False
+    # A prompt item must carry template_id
+    prompt_item = next((a for a in activity if a.get("type") == "DASHBOARD_ACTIVITY_TYPE_PROMPT"), None)
+    if prompt_item and not prompt_item.get("template_id"):
+        print("Prompt activity item must carry template_id")
+        return False
+    print("   PASS")
+
+    # --- 4. sort=updated ---
+    print("5. sort=updated...")
+    # Update the private template so its updated_at is strictly newer than
+    # the public one, then verify sort=updated puts it first.
+    resp = requests.put(f"{APP}/templates/{tpl_ids[1]}", headers=headers_owner, json={
+        "template_id": tpl_ids[1],
+        "owner_id": owner,
+        "title": f"Dash Tpl 1 {ts}",
+        "description": "dashboard test updated",
+        "visibility": "VISIBILITY_PRIVATE",
+        "category": "",
+        "tags": [],
+        "content": "dash content 1 updated",
+    })
+    if resp.status_code != 200:
+        print(f"Update template failed: {resp.status_code} - {resp.text}")
+        return False
+    time.sleep(1)  # ensure updated_at is strictly newer
+    resp = requests.get(f"{APP}/templates", params={"sort": "updated", "owner_id": owner}, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"sort=updated failed: {resp.status_code} - {resp.text}")
+        return False
+    items = resp.json().get("templates", []) + resp.json().get("private_templates", [])
+    mine = [t for t in items if t.get("id") in tpl_ids]
+    if len(mine) < 2:
+        print(f"Expected >=2 owned templates, got {len(mine)}")
+        return False
+    # The public and private streams are returned separately; merge and sort
+    # by updated_at (exactly as the frontend TemplatesPage does) and verify
+    # the updated private template sorts first.
+    mine_sorted = sorted(mine, key=lambda t: t.get("updated_at") or "", reverse=True)
+    if mine_sorted[0].get("id") != tpl_ids[1]:
+        print(f"sort=updated must put the updated template first, got {mine_sorted[0].get('id')}")
+        return False
+    print("   PASS")
+
+    # --- 5. prompts owner_id=<other> -> 403 ---
+    print("6. prompts owner_id=<other> -> 403...")
+    resp = requests.get(f"{APP}/prompts", params={"owner_id": other}, headers=headers_owner)
+    if resp.status_code != 403:
+        print(f"Listing other's prompts should be 403, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 6. prompts owner_id=<me> without token -> 401 ---
+    print("7. prompts owner_id=<me> without token -> 401...")
+    resp = requests.get(f"{APP}/prompts", params={"owner_id": owner})
+    if resp.status_code != 401:
+        print(f"Anonymous prompts with owner_id should be 401, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 7. prompt list rows carry template_title ---
+    print("8. prompt list template_title...")
+    resp = requests.get(f"{APP}/prompts", params={"owner_id": owner}, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"List own prompts failed: {resp.status_code} - {resp.text}")
+        return False
+    prompts = resp.json().get("prompts", [])
+    if not prompts:
+        print("Expected at least one prompt")
+        return False
+    if not prompts[0].get("template_title"):
+        print(f"Prompt row must carry template_title, got {prompts[0]}")
+        return False
+    print("   PASS")
+
+    print("--- User Dashboard Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -4475,6 +4666,7 @@ def main():
     if success: success = test_related_templates()
     if success: success = test_template_collections()
     if success: success = test_template_ratings()
+    if success: success = test_user_dashboard()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "open-prompts/backend/api/proto/v1;v1";
+
+// DashboardService serves the authenticated user's personal workspace:
+// aggregate counts and recent activity across their owned resources.
+// All RPCs require a user token; identity is derived from the context.
+service DashboardService {
+  // GetDashboardOverview returns the caller's resource counts and the
+  // 10 most recent activity items across templates, prompts, likes,
+  // and favorites. Collections degrade to 0 when the feature is absent.
+  rpc GetDashboardOverview(GetDashboardOverviewRequest) returns (GetDashboardOverviewResponse);
+}
+
+// GetDashboardOverviewRequest is empty; the caller is taken from auth context.
+message GetDashboardOverviewRequest {}
+
+// DashboardActivityType enumerates recent-activity item kinds.
+enum DashboardActivityType {
+  DASHBOARD_ACTIVITY_TYPE_UNSPECIFIED = 0;
+  // Template created or updated (frontend distinguishes via created_at == updated_at).
+  DASHBOARD_ACTIVITY_TYPE_TEMPLATE = 1;
+  // Prompt instantiated from a template.
+  DASHBOARD_ACTIVITY_TYPE_PROMPT = 2;
+  // Like received on the user's template.
+  DASHBOARD_ACTIVITY_TYPE_LIKE = 3;
+  // Favorite received on the user's template.
+  DASHBOARD_ACTIVITY_TYPE_FAVORITE = 4;
+}
+
+// DashboardActivityItem is one entry in the recent-activity feed.
+message DashboardActivityItem {
+  DashboardActivityType type = 1;
+  // ID of the primary entity (template id, prompt id, or liked/favorited template id).
+  string entity_id = 2;
+  // Display title: template title, or source template title for prompts.
+  string entity_title = 3;
+  // When the activity happened (template updated_at, else created_at).
+  google.protobuf.Timestamp timestamp = 4;
+  // For PROMPT items: the template the prompt was instantiated from
+  // (links to /templates/{template_id}). Empty otherwise.
+  string template_id = 5;
+}
+
+// GetDashboardOverviewResponse aggregates the caller's workspace.
+message GetDashboardOverviewResponse {
+  int32 template_count = 1; // all owned templates (any visibility/type)
+  int32 prompt_count = 2; // all instantiated prompts
+  int32 collection_count = 3; // active collections (0 when feature absent)
+  int32 api_key_count = 4; // active, unexpired API keys
+  repeated DashboardActivityItem recent_activity = 5; // newest first, max 10
+}

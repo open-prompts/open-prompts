@@ -867,5 +867,64 @@
       "load": "加载合集失败",
       "save": "保存失败"
     }
+  },
+  "dashboard_v2": {
+    "title": "我的工作区",
+    "nav": {
+      "overview": "概览",
+      "templates": "我的模板",
+      "prompts": "我的提示词",
+      "collections": "我的合集",
+      "api_keys": "API 密钥"
+    },
+    "stats": {
+      "templates": "模板",
+      "prompts": "提示词",
+      "collections": "合集",
+      "api_keys": "API 密钥",
+      "aria": "{{label}}，{{count}} 项"
+    },
+    "activity": {
+      "title": "最近动态",
+      "empty": "还没有动态 —— 你的操作会显示在这里。",
+      "template_created": "创建了“{{title}}”",
+      "template_updated": "更新了“{{title}}”",
+      "prompt_used": "使用了“{{title}}”",
+      "liked": "赞了“{{title}}”",
+      "favorited": "收藏了“{{title}}”"
+    },
+    "quick": {
+      "new_template": "新建模板",
+      "new_api_key": "新建 API 密钥"
+    },
+    "templates": {
+      "filter": {
+        "all": "全部",
+        "public": "公开",
+        "private": "私有",
+        "system": "系统",
+        "user": "用户"
+      },
+      "updated": "更新于 {{date}}",
+      "empty": "你还没有创建任何模板。",
+      "empty_cta": "创建模板",
+      "delete_confirm": "删除“{{title}}”？此操作不可撤销。"
+    },
+    "prompts": {
+      "filter": "全部模板",
+      "from": "来自“{{title}}”",
+      "created": "创建于 {{date}}",
+      "empty": "还没有提示词 —— 使用模板创建一个吧。",
+      "empty_cta": "去提示词广场看看",
+      "view": "查看",
+      "delete_confirm": "删除这条提示词？此操作不可撤销。",
+      "modal_title": "来自“{{title}}”的提示词",
+      "variables": "变量",
+      "copy": "复制"
+    },
+    "error": {
+      "fetch": "加载仪表盘失败。",
+      "retry": "重试"
+    }
   }
 }

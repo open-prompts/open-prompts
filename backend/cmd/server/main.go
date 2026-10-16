@@ -181,6 +181,10 @@ func main() {
 	collectionRepo := repository.NewCollectionRepository(pgConn.DB)
 	collectionSvc := service.NewCollectionService(collectionRepo, templateRepo, userRepo)
 
+	// Dashboard Service (personal workspace overview)
+	dashboardRepo := repository.NewDashboardRepository(pgConn.DB)
+	dashboardSvc := service.NewDashboardService(dashboardRepo, apiKeyRepo)
+
 	// Auth Interceptor
 	authInterceptor := service.NewAuthInterceptor(jwtSecret, apiKeyRepo)
 	authInterceptor.SetUserRepository(userRepo)
@@ -208,6 +212,7 @@ func main() {
 		pb.RegisterAdminServiceServer(s, adminSvc)
 		pb.RegisterNotificationServiceServer(s, notificationSvc)
 		pb.RegisterCollectionServiceServer(s, collectionSvc)
+		pb.RegisterDashboardServiceServer(s, dashboardSvc)
 		zap.S().Infof("gRPC server listening at %v", lis.Addr())
 		if err := s.Serve(lis); err != nil {
 			zap.S().Fatalf("failed to serve: %v", err)
@@ -1878,6 +1883,43 @@ func main() {
 
 	// Collection Handlers — /api/v1/collections (list/create) and
 	// /api/v1/collections/... (mine, {id}, {id}/templates, ...).
+	http.HandleFunc("/api/v1/dashboard/overview", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Required auth: identity is derived from the token only.
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		resp, err := dashboardSvc.GetDashboardOverview(ctx, &pb.GetDashboardOverviewRequest{})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
 	http.HandleFunc("/api/v1/collections", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")

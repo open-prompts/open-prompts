@@ -47,6 +47,11 @@ export const getTemplates = (params) => {
   return api.get('/templates', { params });
 };
 
+// API methods for Dashboard
+export const getDashboardOverview = () => {
+  return api.get('/dashboard/overview');
+};
+
 export const getCategories = (params) => {
   return api.get('/categories', { params });
 };

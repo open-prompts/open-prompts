@@ -179,6 +179,19 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
 
       {isAuthenticated && (
         <div className="sidebar-section">
+          <h3>{t('dashboard_v2.title')}</h3>
+          <ul>
+            <li>
+              <Link to="/dashboard" className="sidebar-item">
+                {t('dashboard_v2.nav.overview')}
+              </Link>
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {isAuthenticated && (
+        <div className="sidebar-section">
           <h3>{t('dashboard.my_templates')}</h3>
           <ul>
             <li className={isActive('all-mine') ? 'active' : ''}>

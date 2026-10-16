@@ -198,6 +198,8 @@ func templateOrderBy(sort string, threshold int, args []interface{}, argID int) 
 			t.created_at DESC`, argID, argID)
 		args = append(args, threshold)
 		return order, args, argID + 1
+	case "updated":
+		return " ORDER BY t.updated_at DESC", args, argID
 	default: // "newest" and any invalid value
 		return " ORDER BY t.created_at DESC", args, argID
 	}

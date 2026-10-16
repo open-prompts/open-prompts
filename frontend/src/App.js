@@ -28,6 +28,10 @@ const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
 const MyCollectionsPage = lazy(() => import('./pages/MyCollectionsPage'));
 const CollectionDetailPage = lazy(() => import('./pages/CollectionDetailPage'));
+const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout'));
+const DashboardOverviewPage = lazy(() => import('./pages/dashboard/OverviewPage'));
+const DashboardTemplatesPage = lazy(() => import('./pages/dashboard/TemplatesPage'));
+const DashboardPromptsPage = lazy(() => import('./pages/dashboard/PromptsPage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -105,6 +109,39 @@ function App() {
                 </Suspense>
               }
             />
+            <Route
+              path="/dashboard"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <DashboardLayout />
+                </Suspense>
+              }
+            >
+              <Route
+                index
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <DashboardOverviewPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="templates"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <DashboardTemplatesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="prompts"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <DashboardPromptsPage />
+                  </Suspense>
+                }
+              />
+            </Route>
             <Route
               path="/admin/login"
               element={

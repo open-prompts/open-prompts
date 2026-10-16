@@ -649,7 +649,7 @@ func normalizeKeyword(s string) string {
 // normalizeSort returns a whitelisted sort value; anything else -> "newest".
 func normalizeSort(s string) string {
 	switch s {
-	case "newest", "most_liked", "most_favorited", "trending", "top_rated":
+	case "newest", "most_liked", "most_favorited", "trending", "top_rated", "updated":
 		return s
 	default:
 		return "newest"
@@ -1521,13 +1521,14 @@ func (s *PromptService) promptModelToProto(m *models.Prompt) *pb.Prompt {
 	}
 
 	return &pb.Prompt{
-		Id:         m.ID,
-		TemplateId: m.TemplateID,
-		VersionId:  m.VersionID,
-		OwnerId:    m.OwnerID,
-		Variables:  variables,
-		Content:    rendered,
-		CreatedAt:  timestamppb.New(m.CreatedAt),
+		Id:            m.ID,
+		TemplateId:    m.TemplateID,
+		VersionId:     m.VersionID,
+		OwnerId:       m.OwnerID,
+		Variables:     variables,
+		Content:       rendered,
+		CreatedAt:     timestamppb.New(m.CreatedAt),
+		TemplateTitle: m.TemplateTitle,
 	}
 }
 

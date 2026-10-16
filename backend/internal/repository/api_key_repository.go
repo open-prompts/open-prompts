@@ -68,6 +68,21 @@ func (r *APIKeyRepository) ListByUserID(ctx context.Context, userID string, limi
 	return keys, nil
 }
 
+// CountActiveByUserID returns the number of active, unexpired API keys for a
+// user. Used by the dashboard overview and reusable by the API Keys page.
+func (r *APIKeyRepository) CountActiveByUserID(ctx context.Context, userID string) (int32, error) {
+	query := `
+		SELECT COUNT(*) FROM api_keys
+		WHERE user_id = $1 AND is_active = true
+		  AND (expires_at IS NULL OR expires_at > NOW())
+	`
+	var count int32
+	if err := r.db.QueryRowContext(ctx, query, userID).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count active api keys: %w", err)
+	}
+	return count, nil
+}
+
 func (r *APIKeyRepository) GetByHash(ctx context.Context, hash string) (*models.APIKey, error) {
 	query := `
 		SELECT id, user_id, name, prefix, created_at, expires_at, last_used_at, is_active

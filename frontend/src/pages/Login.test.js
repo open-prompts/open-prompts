@@ -91,7 +91,7 @@ describe('Login Component', () => {
     });
 
     expect(localStorage.getItem('token')).toBe('fake-token');
-    expect(mockedNavigate).toHaveBeenCalledWith('/');
+    expect(mockedNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
   test('handles login failure', async () => {

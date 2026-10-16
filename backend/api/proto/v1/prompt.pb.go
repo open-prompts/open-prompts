@@ -646,7 +646,9 @@ type Prompt struct {
 	// Timestamp when the prompt was created.
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// The actual rendered content of the prompt.
-	Content       string `protobuf:"bytes,7,opt,name=content,proto3" json:"content,omitempty"`
+	Content string `protobuf:"bytes,7,opt,name=content,proto3" json:"content,omitempty"`
+	// Title of the source template (denormalized for list rows; empty on old payloads).
+	TemplateTitle string `protobuf:"bytes,8,opt,name=template_title,json=templateTitle,proto3" json:"template_title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -726,6 +728,13 @@ func (x *Prompt) GetCreatedAt() *timestamppb.Timestamp {
 func (x *Prompt) GetContent() string {
 	if x != nil {
 		return x.Content
+	}
+	return ""
+}
+
+func (x *Prompt) GetTemplateTitle() string {
+	if x != nil {
+		return x.TemplateTitle
 	}
 	return ""
 }
@@ -6285,7 +6294,7 @@ const file_prompt_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"w\n" +
 	"\x1cListTemplateVersionsResponse\x12/\n" +
 	"\bversions\x18\x01 \x03(\v2\x13.v1.TemplateVersionR\bversions\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xbf\x02\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xe6\x02\n" +
 	"\x06Prompt\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -6296,7 +6305,8 @@ const file_prompt_proto_rawDesc = "" +
 	"\tvariables\x18\x05 \x03(\v2\x19.v1.Prompt.VariablesEntryR\tvariables\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x18\n" +
-	"\acontent\x18\a \x01(\tR\acontent\x1a<\n" +
+	"\acontent\x18\a \x01(\tR\acontent\x12%\n" +
+	"\x0etemplate_title\x18\b \x01(\tR\rtemplateTitle\x1a<\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd1\x02\n" +

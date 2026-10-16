@@ -256,6 +256,8 @@ message Prompt {
   google.protobuf.Timestamp created_at = 6;
   // The actual rendered content of the prompt.
   string content = 7;
+  // Title of the source template (denormalized for list rows; empty on old payloads).
+  string template_title = 8;
 }
 
 // CreateTemplateRequest is the request message for CreateTemplate.
