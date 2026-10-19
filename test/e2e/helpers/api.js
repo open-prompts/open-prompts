@@ -346,6 +346,14 @@ async function getMoreFromAuthor(token, templateId, limit) {
   return resp.data;
 }
 
+// Admin template detail (read path). Returns { template, description, versions }
+// where template carries `category` and each version carries `change_note`
+// (NULL -> ""). Admin auth required.
+async function getAdminTemplateDetail(adminToken, templateId) {
+  const resp = await request('GET', `/api/v1/admin/templates/${templateId}`, null, { token: adminToken });
+  return resp.data;
+}
+
 // Set the caller's show_warned_content viewer preference.
 async function setShowWarnedContent(token, value) {
   const resp = await request('PUT', '/api/v1/profile', { show_warned_content: value }, { token });
@@ -391,4 +399,5 @@ module.exports = {
   setShowWarnedContent,
   getRelatedTemplates,
   getMoreFromAuthor,
+  getAdminTemplateDetail,
 };
