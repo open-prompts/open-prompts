@@ -444,6 +444,83 @@ async function getAdminUser(token, userId) {
   return resp.data;
 }
 
+// ---------- Template collections (2872d93) ----------
+
+// GET /api/v1/collections — anonymous public explore feed.
+// Returns { collections: [...], next_page_token } (offset-as-string token).
+async function listCollections({ pageSize, pageToken, sort } = {}) {
+  const params = new URLSearchParams();
+  if (pageSize) params.set('page_size', String(pageSize));
+  if (pageToken) params.set('page_token', pageToken);
+  if (sort) params.set('sort', sort);
+  const resp = await request('GET', `/api/v1/collections?${params.toString()}`, null, {});
+  return resp.data;
+}
+
+// POST /api/v1/collections (auth). visibility defaults to private server-side.
+// Limits: name 1-80, description <=500, 50 collections per owner -> 429.
+async function createCollection(token, { name, description = '', visibility = '' } = {}) {
+  const body = { name };
+  if (description) body.description = description;
+  if (visibility) body.visibility = visibility;
+  const resp = await request('POST', '/api/v1/collections', body, { token });
+  return resp.data;
+}
+
+// GET /api/v1/collections/{id} — anonymous ok for public collections;
+// private/deleted -> 404 for non-owners (existence must not leak).
+async function getCollection(token, collectionId) {
+  const resp = await request('GET', `/api/v1/collections/${collectionId}`, null, token ? { token } : {});
+  return resp.data;
+}
+
+// PATCH /api/v1/collections/{id} (owner only) — body carries any of
+// name / description / visibility.
+async function updateCollection(token, collectionId, body) {
+  const resp = await request('PATCH', `/api/v1/collections/${collectionId}`, body, { token });
+  return resp.data;
+}
+
+// DELETE /api/v1/collections/{id} (owner only, soft delete).
+async function deleteCollection(token, collectionId) {
+  const resp = await request('DELETE', `/api/v1/collections/${collectionId}`, null, { token });
+  return resp.data;
+}
+
+// POST /api/v1/collections/{id}/templates — { template_id }. Idempotent
+// re-adds return the existing position + count. 100-member cap -> 429.
+async function addToCollection(token, collectionId, templateId) {
+  const resp = await request('POST', `/api/v1/collections/${collectionId}/templates`, { template_id: templateId }, { token });
+  return resp.data;
+}
+
+// DELETE /api/v1/collections/{id}/templates/{template_id} (owner only).
+async function removeFromCollection(token, collectionId, templateId) {
+  const resp = await request('DELETE', `/api/v1/collections/${collectionId}/templates/${templateId}`, null, { token });
+  return resp.data;
+}
+
+// PUT /api/v1/collections/{id}/templates (owner only) — the FULL ordered
+// template-id list. Duplicates -> 400; list != current members -> 404.
+async function reorderCollection(token, collectionId, templateIds) {
+  const resp = await request('PUT', `/api/v1/collections/${collectionId}/templates`, { template_ids: templateIds }, { token });
+  return resp.data;
+}
+
+// GET /api/v1/collections/mine (auth) — the caller's active collections,
+// including private ones.
+async function listMyCollections(token) {
+  const resp = await request('GET', '/api/v1/collections/mine', null, { token });
+  return resp.data;
+}
+
+// GET /api/v1/templates/{id}/collections (auth) — caller-scoped picker
+// checkmarks: only the caller's collections containing the template.
+async function listTemplateCollections(token, templateId) {
+  const resp = await request('GET', `/api/v1/templates/${templateId}/collections`, null, { token });
+  return resp.data;
+}
+
 module.exports = {
   request,
   uniqueId,
@@ -496,4 +573,16 @@ module.exports = {
   getFollowingFeed,
   updateProfile,
   getAdminUser,
+
+  // Template collections (2872d93)
+  listCollections,
+  createCollection,
+  getCollection,
+  updateCollection,
+  deleteCollection,
+  addToCollection,
+  removeFromCollection,
+  reorderCollection,
+  listMyCollections,
+  listTemplateCollections,
 };
