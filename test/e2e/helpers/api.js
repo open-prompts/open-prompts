@@ -391,6 +391,59 @@ async function createPrompt(token, body) {
   return resp.data;
 }
 
+// ---------- Follow creators (021ef80) ----------
+
+// POST /api/v1/users/{id}/follow — idempotent follow.
+// Returns { following: true, follower_count, following_count }.
+async function followUser(token, userId) {
+  const resp = await request('POST', `/api/v1/users/${userId}/follow`, null, { token });
+  return resp.data;
+}
+
+// DELETE /api/v1/users/{id}/follow — idempotent unfollow.
+async function unfollowUser(token, userId) {
+  const resp = await request('DELETE', `/api/v1/users/${userId}/follow`, null, { token });
+  return resp.data;
+}
+
+// GET /api/v1/users/{id}/profile — allow-listed public profile.
+// is_following / follows_you are viewer-scoped (auth optional).
+async function getUserProfile(token, userId) {
+  const resp = await request('GET', `/api/v1/users/${userId}/profile`, null, token ? { token } : {});
+  return resp.data;
+}
+
+// GET /api/v1/users/{id}/followers — follows lists, paginated user cards.
+async function getUserFollowers(token, userId, query = '') {
+  const resp = await request('GET', `/api/v1/users/${userId}/followers${query ? `?${query}` : ''}`, null, token ? { token } : {});
+  return resp.data;
+}
+
+// GET /api/v1/users/{id}/following
+async function getUserFollowing(token, userId, query = '') {
+  const resp = await request('GET', `/api/v1/users/${userId}/following${query ? `?${query}` : ''}`, null, token ? { token } : {});
+  return resp.data;
+}
+
+// GET /api/v1/users/me/following-feed — keyset paginated public-only feed.
+async function getFollowingFeed(token, params = '') {
+  const resp = await request('GET', `/api/v1/users/me/following-feed${params ? `?${params}` : ''}`, null, { token });
+  return resp.data;
+}
+
+// PUT /api/v1/profile — bio trimmed to 0-280 server-side; >280 -> 400.
+async function updateProfile(token, body) {
+  const resp = await request('PUT', '/api/v1/profile', body, { token });
+  return resp.data;
+}
+
+// GET /api/v1/admin/users/{id} — admin user detail: summary + stats
+// (stats.follower_count / stats.following_count) + recent templates.
+async function getAdminUser(token, userId) {
+  const resp = await request('GET', `/api/v1/admin/users/${userId}`, null, { token });
+  return resp.data;
+}
+
 module.exports = {
   request,
   uniqueId,
@@ -435,4 +488,12 @@ module.exports = {
   getTemplateStats,
   getAnalyticsOverview,
   createPrompt,
+  followUser,
+  unfollowUser,
+  getUserProfile,
+  getUserFollowers,
+  getUserFollowing,
+  getFollowingFeed,
+  updateProfile,
+  getAdminUser,
 };
