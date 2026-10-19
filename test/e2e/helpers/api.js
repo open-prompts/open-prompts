@@ -360,6 +360,37 @@ async function setShowWarnedContent(token, value) {
   return resp.data;
 }
 
+// ---------- Prompt analytics (prompt-analytics, 3ec4cef) ----------
+
+// Anonymous-allowed view beacon. body: {type:'view'|'use', session_id}.
+// View dedup: same (template, session) within 30 min does not re-count.
+// Per-IP rate limit 60/min -> 429 + Retry-After.
+async function recordTemplateEvent(token, templateId, body = {}) {
+  return request('POST', `/api/v1/templates/${templateId}/events`, body, { token });
+}
+
+// Owner stats: days in {7,30,90}. Returns {series, current, previous,
+// source_split, view_to_use_rate}. anon 401 / non-owner 403 / missing 404.
+async function getTemplateStats(token, templateId, days = 30) {
+  const resp = await request('GET', `/api/v1/templates/${templateId}/stats?days=${days}`, null, { token });
+  return resp.data;
+}
+
+// Creator-wide overview: {series, current, previous, source_split,
+// top_templates, template_count, kpis}.
+async function getAnalyticsOverview(token, days = 30) {
+  const resp = await request('GET', `/api/v1/analytics/overview?days=${days}`, null, { token });
+  return resp.data;
+}
+
+// Create a prompt from a template. Fires the fire-and-forget web use event:
+// use_count +1 and source_split.web +1 some time after the 200.
+// body: {template_id, version_id, variables:{}, owner_id}
+async function createPrompt(token, body) {
+  const resp = await request('POST', '/api/v1/prompts', body, { token });
+  return resp.data;
+}
+
 module.exports = {
   request,
   uniqueId,
@@ -400,4 +431,8 @@ module.exports = {
   getRelatedTemplates,
   getMoreFromAuthor,
   getAdminTemplateDetail,
+  recordTemplateEvent,
+  getTemplateStats,
+  getAnalyticsOverview,
+  createPrompt,
 };
