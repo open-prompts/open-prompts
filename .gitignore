@@ -41,3 +41,6 @@ deployment/.env
 .shared/
 .env
 .github/agents/PIPELINE.md
+
+# Python
+__pycache__/
