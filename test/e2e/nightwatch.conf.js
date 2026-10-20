@@ -61,4 +61,11 @@ module.exports = {
       },
     },
   },
+
+  globals: {
+    // Specs do bulk API setup in before() (register users, create templates,
+    // collections, disable gating) — 55+ HTTP calls per suite. The default
+    // 20s async-hook timeout aborts the before() hook mid-setup.
+    asyncHookTimeout: 180000,
+  },
 };
