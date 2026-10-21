@@ -1,3 +1,10 @@
+## [1.31.1](https://github.com/open-prompts/open-prompts/compare/v1.31.0...v1.31.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **dashboard:** map snake_case overview API fields to camelCase ([d4b19c8](https://github.com/open-prompts/open-prompts/commit/d4b19c82be66175878c44640a5333cf88cbaf9e3)), closes [#4](https://github.com/open-prompts/open-prompts/issues/4)
+
 # [1.31.0](https://github.com/open-prompts/open-prompts/compare/v1.30.1...v1.31.0) (2026-10-16)
 
 
