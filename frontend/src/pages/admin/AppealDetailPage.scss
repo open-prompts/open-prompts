@@ -1,0 +1,135 @@
+.appeal-admin-detail {
+  padding: 24px;
+
+  &__heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 20px;
+  }
+  &__panes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+  &__pane {
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(127, 127, 127, 0.2);
+    h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      opacity: 0.7;
+      margin-bottom: 10px;
+    }
+  }
+  &__statement {
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  &__meta {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 10px;
+  }
+  &__action {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__action-type {
+    font-weight: 600;
+  }
+  &__action-reason {
+    font-size: 13px;
+  }
+  &__action-meta {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  &__audit {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 4px;
+  }
+  &__resolution {
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(127, 127, 127, 0.2);
+    h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      opacity: 0.7;
+      margin-bottom: 10px;
+    }
+  }
+  &__resolution-note {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  &__self-guard {
+    font-size: 13px;
+    color: #b26a00;
+  }
+  &__resolve-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  &__outcome {
+    border: none;
+    padding: 0;
+    display: flex;
+    gap: 16px;
+    legend {
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+  &__confirm {
+    font-size: 13px;
+    color: #b26a00;
+  }
+  &__note-label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  &__note {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+  }
+  &__note-rule {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+}

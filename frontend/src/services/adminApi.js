@@ -120,5 +120,10 @@ export const getAdminAuditLogs = (params) => adminApi.get('/admin/audit-log', { 
 export const getAdminComments = (params) => adminApi.get('/admin/comments', { params });
 export const deleteAdminComment = (id, reason) =>
   adminApi.delete(`/admin/comments/${id}`, { data: { reason } });
+// Moderation Appeals (admin surface)
+export const listAdminAppeals = (params) => adminApi.get('/admin/appeals', { params });
+export const getAdminAppeal = (id) => adminApi.get(`/admin/appeals/${id}`);
+export const reviewAppeal = (id) => adminApi.post(`/admin/appeals/${id}/review`);
+export const resolveAppeal = (id, data) => adminApi.post(`/admin/appeals/${id}/resolve`, data);
 
 export default adminApi;

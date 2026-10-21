@@ -70,7 +70,11 @@
     "initial_fallback": "U",
     "show_password": "显示密码",
     "hide_password": "隐藏密码",
-    "id_prefix": "ID：{{id}}"
+    "id_prefix": "ID：{{id}}",
+    "prev": "上一页",
+    "next": "下一页",
+    "page": "第 {{page}} / {{total}} 页",
+    "notFound": "未找到"
   },
   "home": {
     "title": "首页",
@@ -171,22 +175,71 @@
   },
   "analytics": {
     "title": "数据分析",
-    "range": { "7": "7 天", "30": "30 天", "90": "90 天" },
-    "kpi": { "views": "浏览", "uses": "使用", "likes": "新增点赞", "favorites": "新增收藏" },
+    "range": {
+      "7": "7 天",
+      "30": "30 天",
+      "90": "90 天"
+    },
+    "kpi": {
+      "views": "浏览",
+      "uses": "使用",
+      "likes": "新增点赞",
+      "favorites": "新增收藏"
+    },
     "kpi_tooltip": {
       "views": "模板详情页浏览量，每会话每 30 分钟去重。",
       "uses": "通过 Web UI 或 API key 从你的模板创建的提示词数。",
       "likes": "所选范围内的新增点赞。",
       "favorites": "所选范围内的新增收藏。"
     },
-    "delta": { "up": "较上一周期 +{{value}}%", "down": "较上一周期 -{{value}}%", "flat": "与上一周期持平" },
-    "chart": { "title": "每日活动", "empty": "该范围内没有活动", "view_as_table": "以表格查看", "date": "日期", "views": "浏览", "uses": "使用", "likes": "点赞", "favorites": "收藏" },
-    "source": { "title": "按来源使用", "web": "Web", "api": "API", "empty": "该范围内没有使用" },
-    "top": { "title": "热门模板", "views": "浏览", "uses": "使用", "likes": "新增点赞", "favorites": "新增收藏", "rate": "浏览→使用", "empty": "还没有模板活动" },
-    "owner_stats": { "title": "所有者统计（最近 30 天）", "rate": "浏览→使用率", "sparkline": "最近 30 天每日浏览与使用，峰值 {{peak}}" },
-    "public": { "views": "浏览", "uses": "使用" },
-    "empty": { "title": "还没有模板", "body": "创建你的第一个模板以查看分析。", "cta": "创建模板" },
-    "error": { "fetch": "加载分析数据失败。", "retry": "重试" }
+    "delta": {
+      "up": "较上一周期 +{{value}}%",
+      "down": "较上一周期 -{{value}}%",
+      "flat": "与上一周期持平"
+    },
+    "chart": {
+      "title": "每日活动",
+      "empty": "该范围内没有活动",
+      "view_as_table": "以表格查看",
+      "date": "日期",
+      "views": "浏览",
+      "uses": "使用",
+      "likes": "点赞",
+      "favorites": "收藏"
+    },
+    "source": {
+      "title": "按来源使用",
+      "web": "Web",
+      "api": "API",
+      "empty": "该范围内没有使用"
+    },
+    "top": {
+      "title": "热门模板",
+      "views": "浏览",
+      "uses": "使用",
+      "likes": "新增点赞",
+      "favorites": "新增收藏",
+      "rate": "浏览→使用",
+      "empty": "还没有模板活动"
+    },
+    "owner_stats": {
+      "title": "所有者统计（最近 30 天）",
+      "rate": "浏览→使用率",
+      "sparkline": "最近 30 天每日浏览与使用，峰值 {{peak}}"
+    },
+    "public": {
+      "views": "浏览",
+      "uses": "使用"
+    },
+    "empty": {
+      "title": "还没有模板",
+      "body": "创建你的第一个模板以查看分析。",
+      "cta": "创建模板"
+    },
+    "error": {
+      "fetch": "加载分析数据失败。",
+      "retry": "重试"
+    }
   },
   "sidebar": {
     "error_fetch": "获取分类或标签失败。",
@@ -480,7 +533,8 @@
       "review": "审核",
       "audit_log": "审计日志",
       "back_to_app": "返回应用",
-      "brand": "Open Prompts 管理控制台"
+      "brand": "Open Prompts 管理控制台",
+      "appeals": "申诉"
     },
     "login": {
       "title": "Open Prompts 管理控制台",
@@ -926,5 +980,79 @@
       "fetch": "加载仪表盘失败。",
       "retry": "重试"
     }
+  },
+  "appeal": {
+    "cta": {
+      "appeal": "申诉此决定",
+      "onePerAction": "每次操作仅一次申诉",
+      "status": {
+        "open": "申诉处理中",
+        "underReview": "申诉审核中",
+        "reversed": "申诉反转 —— 模板已恢复",
+        "upheld": "申诉维持"
+      }
+    },
+    "form": {
+      "title": "申诉此决定",
+      "actionContext": "操作",
+      "statement": "该决定为何应被反转？",
+      "statementHint": "每次操作仅一次申诉。请具体、基于事实。",
+      "submit": "提交申诉",
+      "conflict": "该操作已被申诉",
+      "tooShort": "陈述至少 50 字符",
+      "tooLong": "陈述最多 2000 字符"
+    },
+    "list": {
+      "title": "我的申诉",
+      "empty": "暂无申诉 —— 无可争议事项"
+    },
+    "detail": {
+      "statement": "你的陈述",
+      "resolution": "裁决",
+      "pending": "待裁决"
+    },
+    "state": {
+      "open": "处理中",
+      "under_review": "审核中",
+      "upheld": "维持",
+      "reversed": "反转",
+      "resolved": "已裁决"
+    },
+    "superseded": "已取代",
+    "admin": {
+      "queue": {
+        "title": "申诉",
+        "empty": "该状态下暂无申诉",
+        "col_age": "时间",
+        "col_template": "模板",
+        "col_action": "操作",
+        "col_statement": "陈述",
+        "col_appellant": "申诉人",
+        "col_state": "状态"
+      },
+      "detail": {
+        "originalAction": "原操作",
+        "appeal": "申诉",
+        "filed": "提交于",
+        "review": "开始审查",
+        "resolve": "裁决申诉",
+        "outcome": "结果",
+        "upheld": "维持",
+        "reversed": "反转",
+        "note": "说明（必填，对创作者可见）",
+        "noteRule": "20–1000 字符",
+        "selfGuard": "原操作操作者不能裁决此申诉"
+      },
+      "confirm": {
+        "reversed": "反转将把模板恢复为正常状态"
+      },
+      "toast": {
+        "resolved": "申诉已裁决"
+      }
+    },
+    "notif": {
+      "resolved": "你的申诉已{{outcome}}：{{note}}"
+    },
+    "rateLimit": "你最多可有 5 个处理中的申诉"
   }
 }

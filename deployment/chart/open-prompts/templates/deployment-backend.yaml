@@ -65,3 +65,5 @@ spec:
               value: {{ .Values.backend.env.ratingRatePerMinute | quote }}
             - name: TOP_RATED_MIN_RATINGS
               value: {{ .Values.backend.env.topRatedMinRatings | quote }}
+            - name: APPEAL_MAX_OPEN
+              value: {{ .Values.backend.env.appealMaxOpen | quote }}

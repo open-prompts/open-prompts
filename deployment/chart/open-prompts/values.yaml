@@ -38,6 +38,8 @@ backend:
     # sort minimum rating_count threshold
     ratingRatePerMinute: "20"
     topRatedMinRatings: "5"
+    # Moderation appeals: max simultaneous open appeals per user
+    appealMaxOpen: "5"
 
 frontend:
   replicaCount: 1

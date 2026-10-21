@@ -48,6 +48,8 @@ services:
       # sort minimum rating_count threshold
       RATING_RATE_PER_MINUTE: ${RATING_RATE_PER_MINUTE:-20}
       TOP_RATED_MIN_RATINGS: ${TOP_RATED_MIN_RATINGS:-5}
+      # Moderation appeals: max simultaneous open appeals per user
+      APPEAL_MAX_OPEN: ${APPEAL_MAX_OPEN:-5}
     depends_on:
       - postgres
       - redis

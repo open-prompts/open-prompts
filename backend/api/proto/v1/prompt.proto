@@ -128,6 +128,55 @@ service PromptService {
 
   // DeleteRating removes the caller's rating for a template (idempotent).
   rpc DeleteRating(DeleteRatingRequest) returns (RateTemplateResponse);
+
+  // CreateAppeal opens an appeal against a moderation action on one of the
+  // caller's templates (one appeal per action, FR-3).
+  rpc CreateAppeal(CreateAppealRequest) returns (Appeal);
+
+  // ListAppeals returns the caller's own appeals, newest first, paginated.
+  rpc ListAppeals(ListAppealsRequest) returns (ListAppealsResponse);
+
+  // GetAppeal returns a single appeal (owner-only).
+  rpc GetAppeal(GetAppealRequest) returns (Appeal);
+}
+
+// Appeal is a creator's contest of a moderation action on their template.
+message Appeal {
+  string id = 1;
+  string moderation_action_id = 2;
+  string template_id = 3;
+  string template_title = 4;      // joined at read time
+  string action_type = 5;         // "unpublish" | "lock" | "soft_delete"
+  string action_reason = 6;       // the original moderation reason
+  string actor_display_name = 7;  // the original action's actor
+  google.protobuf.Timestamp action_created_at = 8;
+  string statement = 9;
+  string state = 10;              // open | under_review | resolved_upheld | resolved_reversed
+  string resolution_note = 11;    // empty until resolved
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp resolved_at = 13;
+  bool superseded = 14;           // the underlying action was undone by a direct restore
+}
+
+message CreateAppealRequest {
+  string moderation_action_id = 1;
+  string statement = 2; // 50-2000 chars
+}
+
+message ListAppealsRequest {
+  int32 page = 1;      // 1-based
+  int32 per_page = 2;  // default 20
+}
+
+message ListAppealsResponse {
+  repeated Appeal appeals = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
+}
+
+message GetAppealRequest {
+  string appeal_id = 1;
 }
 
 // Visibility defines who can see the template.

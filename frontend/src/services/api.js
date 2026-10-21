@@ -298,3 +298,8 @@ export const listCollectionsContainingTemplate = (templateId) => {
 export const listMyCollections = () => {
   return api.get('/collections/mine');
 };
+
+// Moderation Appeals (user surface)
+export const createAppeal = (data) => api.post('/appeals', data);
+export const listAppeals = (params) => api.get('/appeals', { params });
+export const getAppeal = (id) => api.get(`/appeals/${id}`);

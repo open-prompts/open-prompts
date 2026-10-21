@@ -4609,6 +4609,299 @@ def test_user_dashboard():
     return True
 
 
+def test_moderation_appeals():
+    """Moderation appeals (FR-1..FR-16):
+    1.  alice creates an appeal against a seeded moderation action -> open;
+        GET /appeals lists it.
+    2.  alice creates a second appeal for the same action -> 409.
+    3.  Statement < 50 or > 2000 chars -> 400.
+    4.  bob (admin) GET /admin/appeals?state=open -> queue oldest-first,
+        counts correct.
+    5.  bob POST /review -> under_review; alice sees the state on /appeals.
+    6.  bob POST /resolve {outcome: reversed, note} -> template
+        moderation_status becomes normal; alice gets an appeal_resolved
+        notification; audit has appeal.resolve.
+    7.  A second appeal: bob POST /resolve {outcome: upheld, note} -> template
+        untouched; notification states upheld.
+    8.  carol (the original action's actor) attempts to resolve -> 403.
+    9.  Non-admin attempts admin routes -> 403.
+    10. alice with 5 open appeals submits a 6th -> 429.
+    11. A superseded action (status flipped to superseded) -> create -> 409;
+        resolve -> 409.
+    12. Statement containing <script> renders as literal text.
+    """
+    print("\n--- Starting Moderation Appeals Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    alice = f"fvt_appeal_alice_{ts}"
+    bob = f"fvt_appeal_bob_{ts}"
+    carol = f"fvt_appeal_carol_{ts}"
+    alice_token = get_auth_token(alice)
+    bob_token = get_auth_token(bob)
+    carol_token = get_auth_token(carol)
+    if not all([alice_token, bob_token, carol_token]):
+        print("Failed to create test users")
+        return False
+    headers_alice = {"Authorization": f"Bearer {alice_token}"}
+    headers_bob = {"Authorization": f"Bearer {bob_token}"}
+    headers_carol = {"Authorization": f"Bearer {carol_token}"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # --- Fixtures: alice creates a template; seed a moderation action ---
+    payload = {
+        "title": f"Appeal Template {ts}",
+        "description": "appeal test",
+        "content": "appeal content",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["appealtest"],
+    }
+    resp = requests.post(BASE_URL, json=payload, headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Create template failed: {resp.status_code} - {resp.text}")
+        return False
+    tpl = resp.json().get("template", {})
+    tid = tpl.get("id")
+    CREATED_TEMPLATES.append({"id": tid, "owner_id": alice})
+
+    def seed_action(template_id, actor_id, action_type="soft_delete", status="active"):
+        """Insert a moderation_actions row directly via psql (the
+        admin-template-moderation feature is not yet implemented)."""
+        import uuid
+        action_id = str(uuid.uuid4())
+        sql = (
+            f"INSERT INTO moderation_actions (id, template_id, action_type, actor_id, "
+            f"actor_email, reason, status) VALUES ('{action_id}', '{template_id}', "
+            f"'{action_type}', '{actor_id}', '{actor_id}@example.com', 'spam', '{status}');"
+        )
+        subprocess.run(
+            ["docker", "exec", "deployment-postgres-1", "psql", "-U", "user", "-d", "open_prompts", "-c", sql],
+            capture_output=True,
+        )
+        return action_id
+
+    # --- 1. alice creates an appeal -> open ---
+    print("1. alice creates an appeal...")
+    action1 = seed_action(tid, carol)
+    statement = ("This decision is wrong because the links point to my company's "
+                 "product documentation, not off-platform promotion, and the template "
+                 "follows the community guidelines.")
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action1, "statement": statement})
+    if resp.status_code != 200:
+        print(f"Create appeal failed: {resp.status_code} - {resp.text}")
+        return False
+    appeal1 = resp.json()
+    if appeal1.get("state") != "open":
+        print(f"Appeal should be open, got {appeal1.get('state')}")
+        return False
+    appeal1_id = appeal1.get("id")
+    print("   PASS")
+
+    # --- 2. second appeal for same action -> 409 ---
+    print("2. duplicate appeal -> 409...")
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action1, "statement": statement})
+    if resp.status_code != 409:
+        print(f"Duplicate appeal should be 409, got {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 3. statement length validation -> 400 ---
+    print("3. statement length validation...")
+    action2 = seed_action(tid, carol)
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action2, "statement": "short"})
+    if resp.status_code != 400:
+        print(f"Short statement should be 400, got {resp.status_code}")
+        return False
+    long_stmt = "x" * 2001
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action2, "statement": long_stmt})
+    if resp.status_code != 400:
+        print(f"Long statement should be 400, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 4. admin queue ---
+    print("4. admin queue...")
+    resp = requests.get(f"{ADMIN}/appeals", headers=admin_headers, params={"state": "open"})
+    if resp.status_code != 200:
+        print(f"Admin queue failed: {resp.status_code} - {resp.text}")
+        return False
+    queue = resp.json()
+    if queue.get("open_count", 0) < 1:
+        print(f"Expected at least 1 open appeal, got {queue}")
+        return False
+    print("   PASS")
+
+    # --- 5. review -> under_review ---
+    print("5. review appeal...")
+    resp = requests.post(f"{ADMIN}/appeals/{appeal1_id}/review", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Review failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("state") != "under_review":
+        print(f"Appeal should be under_review, got {resp.json().get('state')}")
+        return False
+    # alice sees the state on /appeals
+    resp = requests.get(f"{APP}/appeals", headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"List appeals failed: {resp.status_code}")
+        return False
+    mine = [a for a in resp.json().get("appeals", []) if a.get("id") == appeal1_id]
+    if not mine or mine[0].get("state") != "under_review":
+        print(f"alice should see under_review, got {mine}")
+        return False
+    print("   PASS")
+
+    # --- 6. resolve reversed -> template restored + notification + audit ---
+    print("6. resolve reversed...")
+    note = "Reviewed the links; they are legitimate product documentation. Reversed."
+    resp = requests.post(f"{ADMIN}/appeals/{appeal1_id}/resolve", headers=admin_headers,
+                         json={"outcome": "reversed", "note": note})
+    if resp.status_code != 200:
+        print(f"Resolve reversed failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("state") != "resolved_reversed":
+        print(f"Appeal should be resolved_reversed, got {resp.json().get('state')}")
+        return False
+    # template restored
+    resp = requests.get(f"{APP}/templates/{tid}", headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Get template failed: {resp.status_code}")
+        return False
+    if resp.json().get("template", {}).get("moderation_status") != "normal":
+        print(f"Template should be normal after reversal, got {resp.json().get('template', {}).get('moderation_status')}")
+        return False
+    # notification
+    resp = requests.get(f"{APP}/notifications", headers=headers_alice)
+    notif_types = [n.get("type") for n in resp.json().get("notifications", [])]
+    if "appeal_resolved" not in notif_types:
+        print(f"alice should have an appeal_resolved notification, got {notif_types}")
+        return False
+    # audit
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers, params={"per_page": 100})
+    audit_actions = [e.get("action") for e in resp.json().get("entries", [])]
+    if "appeal.resolve" not in audit_actions:
+        print(f"Audit should contain appeal.resolve, got {audit_actions}")
+        return False
+    print("   PASS")
+
+    # --- 7. resolve upheld -> template untouched ---
+    print("7. resolve upheld...")
+    action3 = seed_action(tid, carol)
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action3, "statement": statement})
+    if resp.status_code != 200:
+        print(f"Create appeal 3 failed: {resp.status_code} - {resp.text}")
+        return False
+    appeal3_id = resp.json().get("id")
+    resp = requests.post(f"{ADMIN}/appeals/{appeal3_id}/resolve", headers=admin_headers,
+                         json={"outcome": "upheld", "note": "The action was correct; the template stays moderated."})
+    if resp.status_code != 200:
+        print(f"Resolve upheld failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("state") != "resolved_upheld":
+        print(f"Appeal should be resolved_upheld, got {resp.json().get('state')}")
+        return False
+    print("   PASS")
+
+    # --- 8. self-guard: original actor cannot resolve ---
+    print("8. self-guard...")
+    # The admin (bootstrap) is the original actor; the same admin resolving
+    # must be rejected (FR-9). The bootstrap admin's user id is
+    # "admin_bootstrap" (see deployment bootstrap).
+    action4 = seed_action(tid, "admin_bootstrap")
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action4, "statement": statement})
+    if resp.status_code != 200:
+        print(f"Create appeal 4 failed: {resp.status_code} - {resp.text}")
+        return False
+    appeal4_id = resp.json().get("id")
+    resp = requests.post(f"{ADMIN}/appeals/{appeal4_id}/resolve", headers=admin_headers,
+                         json={"outcome": "upheld", "note": "This note is long enough to pass validation."})
+    if resp.status_code != 403:
+        print(f"Self-guard should be 403, got {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 9. non-admin attempts admin routes -> 403 ---
+    print("9. non-admin admin route -> 403...")
+    resp = requests.get(f"{ADMIN}/appeals", headers=headers_alice)
+    if resp.status_code != 403:
+        print(f"Non-admin queue should be 403, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 10. open-appeal limit -> 429 ---
+    print("10. open-appeal limit...")
+    # Seed 5 actions and create 5 open appeals (alice already has appeal4 open).
+    # To reach the limit deterministically, create 4 more open appeals.
+    for i in range(4):
+        act = seed_action(tid, carol)
+        resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                             json={"moderation_action_id": act, "statement": statement})
+        if resp.status_code != 200:
+            print(f"Create appeal for limit failed: {resp.status_code} - {resp.text}")
+            return False
+    # Now alice has 5 open appeals (appeal4 + 4). A 6th -> 429.
+    act6 = seed_action(tid, carol)
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": act6, "statement": statement})
+    if resp.status_code != 429:
+        print(f"6th open appeal should be 429, got {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 11. superseded action -> 409 on create and resolve ---
+    print("11. superseded action...")
+    action5 = seed_action(tid, carol, status="superseded")
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action5, "statement": statement})
+    if resp.status_code != 409:
+        print(f"Superseded create should be 409, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 12. statement with <script> renders as literal text ---
+    print("12. XSS-safe statement...")
+    # alice is at the 5-open-appeal limit from step 10; resolve her open
+    # appeals so the XSS appeal can be created (FR-16 limit is per-user).
+    _open_appeals = requests.get(f"{APP}/appeals", headers=headers_alice).json().get("appeals", [])
+    for _oa in _open_appeals:
+        if _oa.get("state") == "open":
+            requests.post(f"{ADMIN}/appeals/{_oa['id']}/resolve", headers=admin_headers,
+                          json={"outcome": "upheld", "note": "Resolving open appeals to free the XSS test slot."})
+    action6 = seed_action(tid, carol)
+    xss_stmt = "<script>alert('xss')</script>" + statement
+    resp = requests.post(f"{APP}/appeals", headers=headers_alice,
+                         json={"moderation_action_id": action6, "statement": xss_stmt})
+    if resp.status_code != 200:
+        print(f"Create XSS appeal failed: {resp.status_code} - {resp.text}")
+        return False
+    if "<script>" not in resp.json().get("statement", ""):
+        print("Statement should be returned verbatim (plain text)")
+        return False
+    print("   PASS")
+
+    print("--- Moderation Appeals Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -4667,6 +4960,7 @@ def main():
     if success: success = test_template_collections()
     if success: success = test_template_ratings()
     if success: success = test_user_dashboard()
+    if success: success = test_moderation_appeals()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

@@ -847,3 +847,92 @@ ALTER TABLE templates ADD COLUMN IF NOT EXISTS rating_count INT NOT NULL DEFAULT
 
 CREATE INDEX IF NOT EXISTS idx_templates_top_rated
     ON templates(rating_count, rating_sum);
+
+-- -----------------------------------------------------------------------------
+-- Feature: moderation-appeals
+-- Description: creators can contest a moderation action (unpublish/lock/
+-- soft-delete) with a structured, tracked appeal; admins triage a FIFO queue
+-- and reverse or uphold with a required resolution note. One appeal per
+-- moderation action (FR-3). The moderation_actions table is populated by
+-- admin-template-moderation when it lands; appeals only read it.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS moderation_actions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL CHECK (action_type IN ('unpublish', 'lock', 'soft_delete')),
+    actor_id TEXT NOT NULL,
+    actor_email TEXT NOT NULL,
+    reason TEXT NOT NULL CHECK (char_length(reason) BETWEEN 3 AND 500),
+    status TEXT NOT NULL DEFAULT 'active'
+        CHECK (status IN ('active', 'superseded', 'reversed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    superseded_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE moderation_actions IS 'Moderation actions on templates; appeals reference these';
+COMMENT ON COLUMN moderation_actions.status IS 'active (appealable) | superseded (undone by direct restore) | reversed (undone by appeal)';
+
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_template
+    ON moderation_actions (template_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_status_created
+    ON moderation_actions (status, created_at);
+
+-- Appeals: one per moderation action.
+CREATE TABLE IF NOT EXISTS appeals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    moderation_action_id UUID NOT NULL REFERENCES moderation_actions(id) ON DELETE CASCADE,
+    appellant_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    statement TEXT NOT NULL CHECK (char_length(statement) BETWEEN 50 AND 2000),
+    state TEXT NOT NULL DEFAULT 'open'
+        CHECK (state IN ('open', 'under_review', 'resolved_upheld', 'resolved_reversed')),
+    resolver_id TEXT,
+    resolution_note TEXT CHECK (resolution_note IS NULL OR char_length(resolution_note) BETWEEN 20 AND 1000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ,
+    UNIQUE (moderation_action_id)
+);
+
+COMMENT ON TABLE appeals IS 'Creator appeals against moderation actions; one per action';
+COMMENT ON COLUMN appeals.state IS 'open | under_review | resolved_upheld | resolved_reversed';
+
+CREATE INDEX IF NOT EXISTS idx_appeals_appellant_created
+    ON appeals (appellant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_appeals_state_created
+    ON appeals (state, created_at);
+
+-- Widen admin_audit_logs.action CHECK for appeal actions (guarded, idempotent).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_action_check';
+    IF def IS NOT NULL AND def NOT LIKE '%appeal.create%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_action_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_action_check
+            CHECK (action IN ('ban', 'unban', 'role_change', 'delete_comment',
+                              'review_approve', 'review_reject', 'settings_change',
+                              'template.warning_add', 'template.warning_remove',
+                              'appeal.create', 'appeal.review', 'appeal.resolve'));
+    END IF;
+END $$;
+
+-- Widen notifications.type CHECK for appeal_resolved (guarded, idempotent).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%appeal_resolved%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment',
+                            'template_approved', 'template_rejected',
+                            'template_warning_changed', 'follow',
+                            'appeal_resolved'));
+    END IF;
+END $$;

@@ -44,6 +44,7 @@ type AdminService struct {
 	APIKeyRepo       APIKeyLister
 	ReviewRepo       repository.ReviewRepository
 	NotificationRepo repository.NotificationRepository
+	AppealRepo       repository.AppealRepository
 	Redis            RedisStore
 	JWTSecret        []byte
 	SessionTTL       time.Duration
@@ -91,6 +92,11 @@ func (s *AdminService) SetPromptService(ps *PromptService) {
 // used by review-decision notifications.
 func (s *AdminService) SetNotificationRepo(repo repository.NotificationRepository) {
 	s.NotificationRepo = repo
+}
+
+// SetAppealRepo wires the appeal repository (post-construction; nil-safe).
+func (s *AdminService) SetAppealRepo(repo repository.AppealRepository) {
+	s.AppealRepo = repo
 }
 
 // ---- helpers ----
@@ -1456,4 +1462,287 @@ func (s *AdminService) ListWarningHistory(ctx context.Context, req *pb.ListWarni
 		})
 	}
 	return resp, nil
+}
+
+// ---- Moderation Appeals (admin) ----
+
+// adminAppealToDetail maps an appeal + its action into an AdminAppealDetail.
+func (s *AdminService) adminAppealToDetail(ctx context.Context, a *models.Appeal, action *models.ModerationAction) *pb.AdminAppealDetail {
+	d := &pb.AdminAppealDetail{
+		Id:                 a.ID,
+		ModerationActionId: a.ModerationActionID,
+		TemplateId:         action.TemplateID,
+		ActionType:         action.ActionType,
+		ActionReason:       action.Reason,
+		ActionActorId:      action.ActorID,
+		ActionActorEmail:   action.ActorEmail,
+		Statement:          a.Statement,
+		State:              a.State,
+		AppellantId:        a.AppellantID,
+		ResolutionNote:     a.ResolutionNote,
+		ResolverId:         a.ResolverID,
+		Superseded:         action.Status == "superseded",
+	}
+	if !action.CreatedAt.IsZero() {
+		d.ActionCreatedAt = timestamppb.New(action.CreatedAt)
+	}
+	if !a.CreatedAt.IsZero() {
+		d.CreatedAt = timestamppb.New(a.CreatedAt)
+	}
+	if a.ResolvedAt != nil {
+		d.ResolvedAt = timestamppb.New(*a.ResolvedAt)
+	}
+	// Template title + appellant display name (best-effort joins).
+	if tpl, _, err := s.AdminRepo.GetTemplateWithVersions(ctx, action.TemplateID); err == nil && tpl != nil {
+		d.TemplateTitle = tpl.Title
+	}
+	if u, err := s.UserRepo.GetByID(ctx, a.AppellantID); err == nil && u != nil {
+		d.AppellantDisplayName = u.DisplayName
+		if d.AppellantDisplayName == "" {
+			d.AppellantDisplayName = u.ID
+		}
+	}
+	// The original action's audit entry id (if any).
+	if entries, err := s.AdminRepo.ListAuditByTarget(ctx, action.TemplateID, 50); err == nil {
+		for _, e := range entries {
+			if e.Action == "template.warning_add" || e.Action == "template.warning_remove" {
+				continue
+			}
+			if e.CreatedAt.Equal(action.CreatedAt) || e.CreatedAt.After(action.CreatedAt.Add(-time.Minute)) {
+				d.AuditEntryId = e.ID
+				break
+			}
+		}
+	}
+	return d
+}
+
+// ListAppealQueue returns the appeal queue, oldest-first within state, with
+// per-state counts (FR-6, FR-12).
+func (s *AdminService) ListAppealQueue(ctx context.Context, req *pb.ListAppealQueueRequest) (*pb.ListAppealQueueResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	state := req.State
+	if state != "" && state != "open" && state != "under_review" && state != "resolved" {
+		return nil, status.Error(codes.InvalidArgument, "state must be one of: open, under_review, resolved")
+	}
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	items, total, err := s.AppealRepo.ListQueue(ctx, state, page, perPage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list appeal queue: %v", err)
+	}
+	openCount, underReviewCount, resolvedCount, err := s.AppealRepo.CountByState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to count appeals: %v", err)
+	}
+
+	resp := &pb.ListAppealQueueResponse{
+		OpenCount:        int32(openCount),
+		UnderReviewCount: int32(underReviewCount),
+		ResolvedCount:    int32(resolvedCount),
+		Total:            total,
+		Page:             int32(page),
+		PerPage:          int32(perPage),
+	}
+	for i := range items {
+		excerpt := items[i].Statement
+		if r := []rune(excerpt); len(r) > 80 {
+			excerpt = string(r[:80]) + "…"
+		}
+		resp.Entries = append(resp.Entries, &pb.AdminAppealEntry{
+			Id:                   items[i].ID,
+			TemplateId:           items[i].TemplateID,
+			TemplateTitle:        items[i].TemplateTitle,
+			ActionType:           items[i].ActionType,
+			StatementExcerpt:     excerpt,
+			State:                items[i].State,
+			AppellantDisplayName: items[i].AppellantDisplayName,
+		})
+		if !items[i].CreatedAt.IsZero() {
+			resp.Entries[len(resp.Entries)-1].CreatedAt = timestamppb.New(items[i].CreatedAt)
+		}
+	}
+	return resp, nil
+}
+
+// GetAppeal returns full appeal detail plus the original action's audit
+// context (FR-7, FR-12).
+func (s *AdminService) GetAppeal(ctx context.Context, req *pb.GetAdminAppealRequest) (*pb.AdminAppealDetail, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	appeal, err := s.AppealRepo.GetAppeal(ctx, req.AppealId)
+	if err != nil {
+		if err == repository.ErrAppealNotFound {
+			return nil, status.Error(codes.NotFound, "appeal not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get appeal: %v", err)
+	}
+	action, err := s.AppealRepo.GetModerationAction(ctx, appeal.ModerationActionID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get moderation action: %v", err)
+	}
+	return s.adminAppealToDetail(ctx, appeal, action), nil
+}
+
+// ReviewAppeal moves an open appeal to under_review (FR-6).
+func (s *AdminService) ReviewAppeal(ctx context.Context, req *pb.ReviewAppealRequest) (*pb.AdminAppealDetail, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	if req.AppealId == "" {
+		return nil, status.Error(codes.InvalidArgument, "appeal id is required")
+	}
+	appeal, err := s.AppealRepo.GetAppeal(ctx, req.AppealId)
+	if err != nil {
+		if err == repository.ErrAppealNotFound {
+			return nil, status.Error(codes.NotFound, "appeal not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get appeal: %v", err)
+	}
+	if appeal.State != "open" {
+		return nil, status.Error(codes.AlreadyExists, "only open appeals can be reviewed")
+	}
+	if err := s.AppealRepo.SetState(ctx, req.AppealId, "under_review"); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to review appeal: %v", err)
+	}
+	s.writeAudit(ctx, actor, "appeal.review", "template", appeal.ModerationActionID, "appeal="+req.AppealId)
+	action, err := s.AppealRepo.GetModerationAction(ctx, appeal.ModerationActionID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get moderation action: %v", err)
+	}
+	appeal.State = "under_review"
+	return s.adminAppealToDetail(ctx, appeal, action), nil
+}
+
+// ResolveAppeal resolves an appeal as upheld or reversed; reversed restores
+// the template atomically (FR-7..FR-10).
+func (s *AdminService) ResolveAppeal(ctx context.Context, req *pb.ResolveAppealRequest) (*pb.AdminAppealDetail, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	if req.AppealId == "" {
+		return nil, status.Error(codes.InvalidArgument, "appeal id is required")
+	}
+	if req.Outcome != "upheld" && req.Outcome != "reversed" {
+		return nil, status.Error(codes.InvalidArgument, "outcome must be one of: upheld, reversed")
+	}
+	note := strings.TrimSpace(req.Note)
+	if len([]rune(note)) < 20 || len([]rune(note)) > 1000 {
+		return nil, status.Error(codes.InvalidArgument, "note must be between 20 and 1000 characters")
+	}
+
+	appeal, err := s.AppealRepo.GetAppeal(ctx, req.AppealId)
+	if err != nil {
+		if err == repository.ErrAppealNotFound {
+			return nil, status.Error(codes.NotFound, "appeal not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get appeal: %v", err)
+	}
+	action, err := s.AppealRepo.GetModerationAction(ctx, appeal.ModerationActionID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get moderation action: %v", err)
+	}
+
+	// Self-guard: the resolver must not be the original action's actor (FR-9).
+	if action.ActorID == actor.ID {
+		return nil, status.Error(codes.PermissionDenied, "the original action's actor cannot resolve this appeal")
+	}
+	// Already resolved.
+	if appeal.State == "resolved_upheld" || appeal.State == "resolved_reversed" {
+		return nil, status.Error(codes.AlreadyExists, "appeal already resolved")
+	}
+	// Superseded action (undone by a direct restore) — nothing to reverse.
+	if action.Status == "superseded" {
+		return nil, status.Error(codes.AlreadyExists, "this action has been superseded and can no longer be resolved")
+	}
+
+	if err := s.AppealRepo.ResolveAppeal(ctx, req.AppealId, req.Outcome, note, actor.ID); err != nil {
+		if err == repository.ErrAppealAlreadyResolved {
+			return nil, status.Error(codes.AlreadyExists, "appeal already resolved")
+		}
+		if err == repository.ErrAppealNotFound {
+			return nil, status.Error(codes.NotFound, "appeal not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to resolve appeal: %v", err)
+	}
+
+	// Decrement the open-appeal counter (best-effort).
+	if s.promptSvc != nil {
+		s.promptSvc.decrementOpenAppeal(ctx, appeal.AppellantID)
+	}
+
+	// Audit (FR-13). The reversal restore reuses template.restore with an
+	// appeal reference (OQ-3).
+	s.writeAudit(ctx, actor, "appeal.resolve", "template", appeal.ModerationActionID,
+		"outcome="+req.Outcome+" appeal="+req.AppealId)
+	if req.Outcome == "reversed" {
+		s.writeAudit(ctx, actor, "template.restore", "template", action.TemplateID,
+			"appeal="+req.AppealId)
+	}
+
+	// Notify the creator (FR-10).
+	s.notifyAppealResolved(ctx, actor, appeal.AppellantID, action.TemplateID, req.Outcome, note)
+
+	appeal.State = "resolved_upheld"
+	if req.Outcome == "reversed" {
+		appeal.State = "resolved_reversed"
+	}
+	appeal.ResolverID = actor.ID
+	appeal.ResolutionNote = note
+	return s.adminAppealToDetail(ctx, appeal, action), nil
+}
+
+// notifyAppealResolved emits the appeal_resolved notification to the creator
+// (best-effort). The actor_display_name slot carries a JSON payload with the
+// outcome, note excerpt, and appeal id so the client can render the sentence
+// and deep-link to the appeal detail.
+func (s *AdminService) notifyAppealResolved(ctx context.Context, actor *models.User, appellantID, templateID, outcome, note string) {
+	if s.NotificationRepo == nil {
+		return
+	}
+	excerpt := note
+	if r := []rune(excerpt); len(r) > 140 {
+		excerpt = string(r[:140]) + "…"
+	}
+	payload, _ := json.Marshal(map[string]string{
+		"outcome":   outcome,
+		"note":      excerpt,
+		"appeal_id": "",
+	})
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      appellantID,
+		ActorID:          actor.ID,
+		TemplateID:       templateID,
+		Type:             "appeal_resolved",
+		ActorDisplayName: string(payload),
+	}); err != nil {
+		zap.S().Errorf("appeal resolved notification: failed (template=%s appellant=%s): %v", templateID, appellantID, err)
+	}
 }

@@ -1,0 +1,45 @@
+.appeals-queue {
+  padding: 24px;
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  &__tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  &__tab {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 13px;
+    &--active {
+      background: #007aff;
+      border-color: #007aff;
+      color: #fff;
+    }
+  }
+  &__age {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+  &__title {
+    font-weight: 600;
+  }
+  &__excerpt {
+    font-size: 13px;
+    opacity: 0.85;
+    display: block;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

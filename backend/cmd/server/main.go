@@ -162,6 +162,13 @@ func main() {
 	adminSvc.SetNotificationRepo(notificationRepo)
 	adminSvc.SetPromptService(svc)
 
+	// Moderation appeals: the appeal repository backs the user + admin appeal
+	// RPCs and the moderation_actions reads.
+	appealRepo := repository.NewAppealRepository(pgConn.DB)
+	svc.SetAppealRepo(appealRepo)
+	svc.SetAdminRepo(adminRepo)
+	adminSvc.SetAppealRepo(appealRepo)
+
 	// Notification Service (engagement notifications)
 	notificationReadRetentionDays := 90
 	if v := os.Getenv("NOTIFICATION_READ_RETENTION_DAYS"); v != "" {
@@ -1881,6 +1888,117 @@ func main() {
 		http.Error(w, "Not found", http.StatusNotFound)
 	})
 
+	// Moderation Appeals — /api/v1/appeals (POST create, GET list) and
+	// /api/v1/appeals/{id} (GET detail, owner-only).
+	http.HandleFunc("/api/v1/appeals", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		switch r.Method {
+		case http.MethodPost:
+			var req pb.CreateAppealRequest
+			body, berr := io.ReadAll(r.Body)
+			if berr != nil {
+				http.Error(w, "Failed to read body", http.StatusBadRequest)
+				return
+			}
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			resp, err := svc.CreateAppeal(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case http.MethodGet:
+			q := r.URL.Query()
+			req := &pb.ListAppealsRequest{}
+			if v := q.Get("page"); v != "" {
+				if i, cerr := strconv.Atoi(v); cerr == nil {
+					req.Page = int32(i)
+				}
+			}
+			if v := q.Get("per_page"); v != "" {
+				if i, cerr := strconv.Atoi(v); cerr == nil {
+					req.PerPage = int32(i)
+				}
+			}
+			resp, err := svc.ListAppeals(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/v1/appeals/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		id := strings.TrimPrefix(r.URL.Path, "/api/v1/appeals/")
+		if id == "" {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+		resp, err := svc.GetAppeal(ctx, &pb.GetAppealRequest{AppealId: id})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
 	// Collection Handlers — /api/v1/collections (list/create) and
 	// /api/v1/collections/... (mine, {id}, {id}/templates, ...).
 	http.HandleFunc("/api/v1/dashboard/overview", func(w http.ResponseWriter, r *http.Request) {
@@ -3160,6 +3278,120 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		b, _ := marshaler.Marshal(resp)
 		_, _ = w.Write(b)
+	})
+
+	// Moderation Appeals (admin) — /api/v1/admin/appeals (GET queue) and
+	// /api/v1/admin/appeals/{id} (GET detail, POST review/resolve).
+	http.HandleFunc("/api/v1/admin/appeals", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		q := r.URL.Query()
+		req := &pb.ListAppealQueueRequest{State: q.Get("state")}
+		if v := q.Get("page"); v != "" {
+			if i, cerr := strconv.Atoi(v); cerr == nil {
+				req.Page = int32(i)
+			}
+		}
+		if v := q.Get("per_page"); v != "" {
+			if i, cerr := strconv.Atoi(v); cerr == nil {
+				req.PerPage = int32(i)
+			}
+		}
+		resp, err := adminSvc.ListAppealQueue(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/appeals/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/appeals/")
+		parts := strings.Split(rest, "/")
+		if parts[0] == "" {
+			http.Error(w, "ID required", http.StatusBadRequest)
+			return
+		}
+
+		// GET /api/v1/admin/appeals/{id}
+		if r.Method == http.MethodGet && len(parts) == 1 {
+			resp, err := adminSvc.GetAppeal(ctx, &pb.GetAdminAppealRequest{AppealId: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		if r.Method != http.MethodPost || len(parts) != 2 {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+
+		switch parts[1] {
+		case "review":
+			resp, err := adminSvc.ReviewAppeal(ctx, &pb.ReviewAppealRequest{AppealId: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case "resolve":
+			var req pb.ResolveAppealRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.AppealId = parts[0]
+			resp, err := adminSvc.ResolveAppeal(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		default:
+			http.Error(w, "Unknown action", http.StatusNotFound)
+		}
 	})
 
 	zap.S().Info("HTTP server listening at :8080")

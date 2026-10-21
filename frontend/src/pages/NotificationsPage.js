@@ -70,6 +70,18 @@ const NotificationsPage = () => {
     if (!notification.read_at) {
       dispatch(markRead(notification.id));
     }
+    if (notification.type === 'appeal_resolved') {
+      let appealId = '';
+      try {
+        appealId = (JSON.parse(notification.actor_display_name || '{}') || {}).appeal_id || '';
+      } catch (e) {
+        appealId = '';
+      }
+      if (appealId) {
+        navigate(`/appeals/${appealId}`);
+        return;
+      }
+    }
     navigate(`/templates/${notification.template_id}`);
   };
 

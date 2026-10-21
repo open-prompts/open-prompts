@@ -32,6 +32,10 @@ const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout'));
 const DashboardOverviewPage = lazy(() => import('./pages/dashboard/OverviewPage'));
 const DashboardTemplatesPage = lazy(() => import('./pages/dashboard/TemplatesPage'));
 const DashboardPromptsPage = lazy(() => import('./pages/dashboard/PromptsPage'));
+const AppealsPage = lazy(() => import('./pages/AppealsPage'));
+const AppealDetailPage = lazy(() => import('./pages/AppealDetailPage'));
+const AdminAppealsPage = lazy(() => import('./pages/admin/AppealsPage'));
+const AdminAppealDetailPage = lazy(() => import('./pages/admin/AppealDetailPage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -106,6 +110,22 @@ function App() {
               element={
                 <Suspense fallback={<PageSpinner />}>
                   <CollectionDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/appeals"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <AppealsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/appeals/:id"
+              element={
+                <Suspense fallback={<PageSpinner />}>
+                  <AppealDetailPage />
                 </Suspense>
               }
             />
@@ -219,6 +239,22 @@ function App() {
                 element={
                   <Suspense fallback={<PageSpinner />}>
                     <AuditLogPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="appeals"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <AdminAppealsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="appeals/:id"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <AdminAppealDetailPage />
                   </Suspense>
                 }
               />

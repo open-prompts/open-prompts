@@ -37,6 +37,8 @@ type PromptService struct {
 	ReviewRepo          repository.ReviewRepository
 	FollowRepo          repository.FollowRepository
 	AnalyticsRepo       AnalyticsRepo
+	AppealRepo          repository.AppealRepository
+	AdminRepo           repository.AdminRepository
 	Redis               RedisStore
 
 	// settingsCache caches platform settings (review thresholds) for
@@ -112,6 +114,37 @@ func (s *PromptService) SetFollowRepo(repo repository.FollowRepository) {
 // (nil-safe; analytics methods return errors when absent).
 func (s *PromptService) SetAnalyticsRepo(repo AnalyticsRepo) {
 	s.AnalyticsRepo = repo
+}
+
+// SetAppealRepo wires the appeal repository after construction (nil-safe;
+// appeal methods return errors when absent).
+func (s *PromptService) SetAppealRepo(repo repository.AppealRepository) {
+	s.AppealRepo = repo
+}
+
+// SetAdminRepo wires the admin repository after construction (nil-safe;
+// appeal-create audit is skipped when absent).
+func (s *PromptService) SetAdminRepo(repo repository.AdminRepository) {
+	s.AdminRepo = repo
+}
+
+// writeAppealAudit persists an appeal audit entry (best-effort; failures are
+// logged, never fatal). The actor is the appellant for appeal.create.
+func (s *PromptService) writeAppealAudit(ctx context.Context, actorID string, action *models.ModerationAction, appealID string) {
+	if s.AdminRepo == nil {
+		return
+	}
+	entry := &models.AdminAuditLog{
+		ActorID:    actorID,
+		ActorEmail: actorID,
+		Action:     "appeal.create",
+		TargetType: "template",
+		TargetID:   action.TemplateID,
+		Reason:     "appeal=" + appealID,
+	}
+	if err := s.AdminRepo.InsertAuditLog(ctx, entry); err != nil {
+		zap.S().Errorf("PromptService: failed to write appeal.create audit (appeal=%s): %v", appealID, err)
+	}
 }
 
 // getSettingInt returns a platform setting as an int, through the 60s
@@ -1191,6 +1224,266 @@ func ratingResponse(sum int64, count int32, myRating int32) *pb.RateTemplateResp
 		RatingCount: count,
 		MyRating:    myRating,
 	}
+}
+
+// appealMaxOpen returns the configurable open-appeal limit (APPEAL_MAX_OPEN,
+// default 5). Mirrors the RATING_RATE_PER_MINUTE config pattern.
+func appealMaxOpen() int {
+	max, _ := strconv.Atoi(os.Getenv("APPEAL_MAX_OPEN"))
+	if max <= 0 {
+		return 5
+	}
+	return max
+}
+
+// checkOpenAppealLimit enforces the simultaneous open-appeal limit using a
+// Redis counter (appeal_open:{user_id}). Returns (retryAfterSeconds, false)
+// when over limit. Fail-open when Redis is unavailable.
+func (s *PromptService) checkOpenAppealLimit(ctx context.Context, userID string) (int, bool) {
+	if s.Redis == nil {
+		return 0, true
+	}
+	key := "appeal_open:" + userID
+	max := appealMaxOpen()
+	window := 24 * time.Hour
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if time.Now().Unix() >= expires { // window elapsed: reset
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if count >= max {
+		return int(expires - time.Now().Unix()), false
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count+1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+	return 0, true
+}
+
+// decrementOpenAppeal decrements the open-appeal counter on resolution.
+// Fail-open when Redis is unavailable.
+func (s *PromptService) decrementOpenAppeal(ctx context.Context, userID string) {
+	if s.Redis == nil {
+		return
+	}
+	key := "appeal_open:" + userID
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		return
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		return
+	}
+	if count <= 1 {
+		_ = s.Redis.Del(ctx, key)
+		return
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count-1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+}
+
+// appealToProto maps a models.Appeal (with joined action/template fields) to
+// the proto Appeal message.
+func appealToProto(a *models.Appeal) *pb.Appeal {
+	superseded := a.ActionStatus == "superseded"
+	resp := &pb.Appeal{
+		Id:                 a.ID,
+		ModerationActionId: a.ModerationActionID,
+		TemplateId:         a.TemplateID,
+		TemplateTitle:      a.TemplateTitle,
+		ActionType:         a.ActionType,
+		ActionReason:       a.ActionReason,
+		ActorDisplayName:   a.ActorEmail,
+		Statement:          a.Statement,
+		State:              a.State,
+		ResolutionNote:     a.ResolutionNote,
+		Superseded:         superseded,
+	}
+	if !a.ActionCreatedAt.IsZero() {
+		resp.ActionCreatedAt = timestamppb.New(a.ActionCreatedAt)
+	}
+	if !a.CreatedAt.IsZero() {
+		resp.CreatedAt = timestamppb.New(a.CreatedAt)
+	}
+	if a.ResolvedAt != nil {
+		resp.ResolvedAt = timestamppb.New(*a.ResolvedAt)
+	}
+	return resp
+}
+
+// CreateAppeal opens an appeal against a moderation action on one of the
+// caller's templates (FR-1..FR-3, FR-14, FR-16).
+func (s *PromptService) CreateAppeal(ctx context.Context, req *pb.CreateAppealRequest) (*pb.Appeal, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	zap.S().Infof("PromptService.CreateAppeal: user_id=%s action=%s", userID, req.ModerationActionId)
+
+	// Validate the statement length (50-2000 chars).
+	statement := strings.TrimSpace(req.Statement)
+	if len([]rune(statement)) < 50 || len([]rune(statement)) > 2000 {
+		return nil, status.Error(codes.InvalidArgument, "statement must be between 50 and 2000 characters")
+	}
+
+	// The action must exist and target one of the caller's templates (404 on
+	// missing or foreign — no existence leak).
+	action, err := s.AppealRepo.GetModerationAction(ctx, req.ModerationActionId)
+	if err != nil {
+		if err == repository.ErrActionNotFound {
+			return nil, status.Error(codes.NotFound, "moderation action not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to load moderation action: %v", err)
+	}
+	tpl, err := s.TemplateRepo.Get(ctx, action.TemplateID, userID)
+	if err != nil || tpl == nil || tpl.OwnerID != userID {
+		return nil, status.Error(codes.NotFound, "moderation action not found")
+	}
+
+	// A superseded action (undone by a direct restore) can no longer be
+	// appealed (FR-14).
+	if action.Status == "superseded" {
+		return nil, status.Error(codes.AlreadyExists, "this action has been superseded and can no longer be appealed")
+	}
+
+	// Reject a duplicate appeal for the same action BEFORE consuming the
+	// open-appeal quota (FR-2). Checking here (rather than relying on the
+	// unique-violation from CreateAppeal) keeps the Redis counter accurate:
+	// a 409 must not increment the open-appeal count.
+	if _, err := s.AppealRepo.GetAppealByAction(ctx, action.ID); err == nil {
+		return nil, status.Error(codes.AlreadyExists, "this action has already been appealed")
+	} else if err != repository.ErrAppealNotFound {
+		return nil, status.Errorf(codes.Internal, "failed to check existing appeal: %v", err)
+	}
+
+	// Open-appeal rate limit (FR-16).
+	if retryAfter, ok := s.checkOpenAppealLimit(ctx, userID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+
+	appeal := &models.Appeal{
+		ModerationActionID: action.ID,
+		AppellantID:        userID,
+		Statement:          statement,
+		State:              "open",
+	}
+	if err := s.AppealRepo.CreateAppeal(ctx, appeal); err != nil {
+		if err == repository.ErrAppealAlreadyExists {
+			return nil, status.Error(codes.AlreadyExists, "this action has already been appealed")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to create appeal: %v", err)
+	}
+
+	// Audit the appeal creation (FR-13). Best-effort.
+	s.writeAppealAudit(ctx, userID, action, appeal.ID)
+
+	// Re-read with joined fields for the response.
+	full, err := s.AppealRepo.GetAppeal(ctx, appeal.ID)
+	if err != nil {
+		// Fall back to the minimal appeal.
+		return appealToProto(&models.Appeal{
+			ID:                 appeal.ID,
+			ModerationActionID: appeal.ModerationActionID,
+			AppellantID:        appeal.AppellantID,
+			Statement:          appeal.Statement,
+			State:              appeal.State,
+			CreatedAt:          appeal.CreatedAt,
+			TemplateID:         action.TemplateID,
+			ActionType:         action.ActionType,
+			ActionReason:       action.Reason,
+			ActorEmail:         action.ActorEmail,
+			ActionCreatedAt:    action.CreatedAt,
+			ActionStatus:       action.Status,
+		}), nil
+	}
+	return appealToProto(full), nil
+}
+
+// ListAppeals returns the caller's own appeals, newest first (FR-5).
+func (s *PromptService) ListAppeals(ctx context.Context, req *pb.ListAppealsRequest) (*pb.ListAppealsResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	items, total, err := s.AppealRepo.ListAppeals(ctx, userID, page, perPage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list appeals: %v", err)
+	}
+	appeals := make([]*pb.Appeal, 0, len(items))
+	for i := range items {
+		appeals = append(appeals, appealToProto(&items[i]))
+	}
+	return &pb.ListAppealsResponse{
+		Appeals: appeals,
+		Total:   total,
+		Page:    int32(page),
+		PerPage: int32(perPage),
+	}, nil
+}
+
+// GetAppeal returns a single appeal (owner-only, FR-5).
+func (s *PromptService) GetAppeal(ctx context.Context, req *pb.GetAppealRequest) (*pb.Appeal, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.AppealRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "appeal repository not configured")
+	}
+	appeal, err := s.AppealRepo.GetAppeal(ctx, req.AppealId)
+	if err != nil {
+		if err == repository.ErrAppealNotFound {
+			return nil, status.Error(codes.NotFound, "appeal not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get appeal: %v", err)
+	}
+	if appeal.AppellantID != userID {
+		return nil, status.Error(codes.NotFound, "appeal not found")
+	}
+	// Enrich with action/template context.
+	action, err := s.AppealRepo.GetModerationAction(ctx, appeal.ModerationActionID)
+	if err == nil {
+		appeal.TemplateID = action.TemplateID
+		appeal.ActionType = action.ActionType
+		appeal.ActionReason = action.Reason
+		appeal.ActorEmail = action.ActorEmail
+		appeal.ActionCreatedAt = action.CreatedAt
+		appeal.ActionStatus = action.Status
+		if tpl, terr := s.TemplateRepo.Get(ctx, action.TemplateID, userID); terr == nil && tpl != nil {
+			appeal.TemplateTitle = tpl.Title
+		}
+	}
+	return appealToProto(appeal), nil
 }
 
 func (s *PromptService) ListCategories(ctx context.Context, req *pb.ListCategoriesRequest) (*pb.ListCategoriesResponse, error) {

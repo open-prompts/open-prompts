@@ -1,0 +1,59 @@
+.appeal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__context {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(127, 127, 127, 0.08);
+  }
+  &__context-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+  }
+  &__context-value {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  &__context-meta {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  &__textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    &:focus {
+      outline: none;
+      border-color: #007aff;
+    }
+  }
+  &__counter {
+    font-size: 12px;
+    text-align: right;
+    opacity: 0.7;
+  }
+  &__error {
+    color: #ff453a;
+    font-size: 13px;
+  }
+  &__conflict {
+    padding: 16px;
+    text-align: center;
+    color: #b26a00;
+  }
+}

@@ -10,6 +10,7 @@ const EVENT_ICONS = {
   template_approved: { Icon: CheckIcon, className: 'event-icon-approved' },
   template_rejected: { Icon: AlertIcon, className: 'event-icon-rejected' },
   template_warning_changed: { Icon: AlertIcon, className: 'event-icon-warning' },
+  appeal_resolved: { Icon: CheckIcon, className: 'event-icon-approved' },
 };
 
 /**
@@ -35,9 +36,24 @@ const NotificationItem = ({ notification, onOpen, onMarkRead, onDelete, compact 
   // actor_display_name slot carries the rejection reason code instead.
   const isReviewDecision = n.type === 'template_approved' || n.type === 'template_rejected';
   const isWarningChange = n.type === 'template_warning_changed';
+  const isAppealResolved = n.type === 'appeal_resolved';
 
   let sentence;
-  if (isReviewDecision) {
+  if (isAppealResolved) {
+    // The actor_display_name slot carries a JSON payload
+    // {"outcome":"...","note":"...","appeal_id":"..."}.
+    let payload = {};
+    try {
+      payload = JSON.parse(n.actor_display_name || '{}');
+    } catch (e) {
+      payload = {};
+    }
+    sentence = t('appeal.notif.resolved', {
+      outcome: t(`appeal.state.${payload.outcome}`, { defaultValue: payload.outcome || '' }),
+      note: payload.note || '',
+      defaultValue: `Your appeal was ${payload.outcome || ''}: ${payload.note || ''}`,
+    });
+  } else if (isReviewDecision) {
     sentence = t(`notifications.event.${n.type}`, {
       title: n.template_title,
       reason: n.actor_display_name,

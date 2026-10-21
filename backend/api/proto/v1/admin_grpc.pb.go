@@ -41,6 +41,10 @@ const (
 	AdminService_UpdatePlatformSetting_FullMethodName   = "/v1.AdminService/UpdatePlatformSetting"
 	AdminService_UpdateTemplateWarnings_FullMethodName  = "/v1.AdminService/UpdateTemplateWarnings"
 	AdminService_ListWarningHistory_FullMethodName      = "/v1.AdminService/ListWarningHistory"
+	AdminService_ListAppealQueue_FullMethodName         = "/v1.AdminService/ListAppealQueue"
+	AdminService_GetAppeal_FullMethodName               = "/v1.AdminService/GetAppeal"
+	AdminService_ReviewAppeal_FullMethodName            = "/v1.AdminService/ReviewAppeal"
+	AdminService_ResolveAppeal_FullMethodName           = "/v1.AdminService/ResolveAppeal"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -99,6 +103,17 @@ type AdminServiceClient interface {
 	UpdateTemplateWarnings(ctx context.Context, in *UpdateTemplateWarningsRequest, opts ...grpc.CallOption) (*UpdateTemplateWarningsResponse, error)
 	// ListWarningHistory returns the warning-change history for a template.
 	ListWarningHistory(ctx context.Context, in *ListWarningHistoryRequest, opts ...grpc.CallOption) (*ListWarningHistoryResponse, error)
+	// ListAppealQueue returns the appeal queue, oldest-first within state,
+	// with per-state counts.
+	ListAppealQueue(ctx context.Context, in *ListAppealQueueRequest, opts ...grpc.CallOption) (*ListAppealQueueResponse, error)
+	// GetAppeal returns full appeal detail plus the original action's audit
+	// context.
+	GetAppeal(ctx context.Context, in *GetAdminAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error)
+	// ReviewAppeal moves an open appeal to under_review.
+	ReviewAppeal(ctx context.Context, in *ReviewAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error)
+	// ResolveAppeal resolves an appeal as upheld or reversed; reversed
+	// restores the template atomically.
+	ResolveAppeal(ctx context.Context, in *ResolveAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error)
 }
 
 type adminServiceClient struct {
@@ -329,6 +344,46 @@ func (c *adminServiceClient) ListWarningHistory(ctx context.Context, in *ListWar
 	return out, nil
 }
 
+func (c *adminServiceClient) ListAppealQueue(ctx context.Context, in *ListAppealQueueRequest, opts ...grpc.CallOption) (*ListAppealQueueResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAppealQueueResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListAppealQueue_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) GetAppeal(ctx context.Context, in *GetAdminAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminAppealDetail)
+	err := c.cc.Invoke(ctx, AdminService_GetAppeal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ReviewAppeal(ctx context.Context, in *ReviewAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminAppealDetail)
+	err := c.cc.Invoke(ctx, AdminService_ReviewAppeal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ResolveAppeal(ctx context.Context, in *ResolveAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminAppealDetail)
+	err := c.cc.Invoke(ctx, AdminService_ResolveAppeal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -385,6 +440,17 @@ type AdminServiceServer interface {
 	UpdateTemplateWarnings(context.Context, *UpdateTemplateWarningsRequest) (*UpdateTemplateWarningsResponse, error)
 	// ListWarningHistory returns the warning-change history for a template.
 	ListWarningHistory(context.Context, *ListWarningHistoryRequest) (*ListWarningHistoryResponse, error)
+	// ListAppealQueue returns the appeal queue, oldest-first within state,
+	// with per-state counts.
+	ListAppealQueue(context.Context, *ListAppealQueueRequest) (*ListAppealQueueResponse, error)
+	// GetAppeal returns full appeal detail plus the original action's audit
+	// context.
+	GetAppeal(context.Context, *GetAdminAppealRequest) (*AdminAppealDetail, error)
+	// ReviewAppeal moves an open appeal to under_review.
+	ReviewAppeal(context.Context, *ReviewAppealRequest) (*AdminAppealDetail, error)
+	// ResolveAppeal resolves an appeal as upheld or reversed; reversed
+	// restores the template atomically.
+	ResolveAppeal(context.Context, *ResolveAppealRequest) (*AdminAppealDetail, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -460,6 +526,18 @@ func (UnimplementedAdminServiceServer) UpdateTemplateWarnings(context.Context, *
 }
 func (UnimplementedAdminServiceServer) ListWarningHistory(context.Context, *ListWarningHistoryRequest) (*ListWarningHistoryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListWarningHistory not implemented")
+}
+func (UnimplementedAdminServiceServer) ListAppealQueue(context.Context, *ListAppealQueueRequest) (*ListAppealQueueResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAppealQueue not implemented")
+}
+func (UnimplementedAdminServiceServer) GetAppeal(context.Context, *GetAdminAppealRequest) (*AdminAppealDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAppeal not implemented")
+}
+func (UnimplementedAdminServiceServer) ReviewAppeal(context.Context, *ReviewAppealRequest) (*AdminAppealDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReviewAppeal not implemented")
+}
+func (UnimplementedAdminServiceServer) ResolveAppeal(context.Context, *ResolveAppealRequest) (*AdminAppealDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveAppeal not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -878,6 +956,78 @@ func _AdminService_ListWarningHistory_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_ListAppealQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAppealQueueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListAppealQueue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListAppealQueue_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListAppealQueue(ctx, req.(*ListAppealQueueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_GetAppeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAdminAppealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).GetAppeal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_GetAppeal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).GetAppeal(ctx, req.(*GetAdminAppealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ReviewAppeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReviewAppealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ReviewAppeal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ReviewAppeal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ReviewAppeal(ctx, req.(*ReviewAppealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ResolveAppeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveAppealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ResolveAppeal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ResolveAppeal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ResolveAppeal(ctx, req.(*ResolveAppealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -972,6 +1122,22 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListWarningHistory",
 			Handler:    _AdminService_ListWarningHistory_Handler,
+		},
+		{
+			MethodName: "ListAppealQueue",
+			Handler:    _AdminService_ListAppealQueue_Handler,
+		},
+		{
+			MethodName: "GetAppeal",
+			Handler:    _AdminService_GetAppeal_Handler,
+		},
+		{
+			MethodName: "ReviewAppeal",
+			Handler:    _AdminService_ReviewAppeal_Handler,
+		},
+		{
+			MethodName: "ResolveAppeal",
+			Handler:    _AdminService_ResolveAppeal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

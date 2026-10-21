@@ -70,7 +70,11 @@
     "initial_fallback": "U",
     "show_password": "Show password",
     "hide_password": "Hide password",
-    "id_prefix": "ID: {{id}}"
+    "id_prefix": "ID: {{id}}",
+    "prev": "Prev",
+    "next": "Next",
+    "page": "Page {{page}} of {{total}}",
+    "notFound": "Not found"
   },
   "home": {
     "title": "Home",
@@ -171,22 +175,71 @@
   },
   "analytics": {
     "title": "Analytics",
-    "range": { "7": "7 days", "30": "30 days", "90": "90 days" },
-    "kpi": { "views": "Views", "uses": "Uses", "likes": "New Likes", "favorites": "New Favorites" },
+    "range": {
+      "7": "7 days",
+      "30": "30 days",
+      "90": "90 days"
+    },
+    "kpi": {
+      "views": "Views",
+      "uses": "Uses",
+      "likes": "New Likes",
+      "favorites": "New Favorites"
+    },
     "kpi_tooltip": {
       "views": "Template detail page views, deduplicated per session per 30 minutes.",
       "uses": "Prompts created from your templates via web UI or API key.",
       "likes": "New likes in the selected range.",
       "favorites": "New favorites in the selected range."
     },
-    "delta": { "up": "+{{value}}% vs. previous period", "down": "-{{value}}% vs. previous period", "flat": "No change vs. previous period" },
-    "chart": { "title": "Daily activity", "empty": "No activity in this range", "view_as_table": "View as table", "date": "Date", "views": "Views", "uses": "Uses", "likes": "Likes", "favorites": "Favorites" },
-    "source": { "title": "Uses by source", "web": "Web", "api": "API", "empty": "No uses in this range" },
-    "top": { "title": "Top templates", "views": "Views", "uses": "Uses", "likes": "New likes", "favorites": "New favorites", "rate": "View→Use", "empty": "No template activity yet" },
-    "owner_stats": { "title": "Owner stats (last 30 days)", "rate": "View→Use rate", "sparkline": "Daily views and uses over the last 30 days, peak {{peak}}" },
-    "public": { "views": "views", "uses": "uses" },
-    "empty": { "title": "No templates yet", "body": "Create your first template to see analytics.", "cta": "Create a template" },
-    "error": { "fetch": "Failed to load analytics.", "retry": "Retry" }
+    "delta": {
+      "up": "+{{value}}% vs. previous period",
+      "down": "-{{value}}% vs. previous period",
+      "flat": "No change vs. previous period"
+    },
+    "chart": {
+      "title": "Daily activity",
+      "empty": "No activity in this range",
+      "view_as_table": "View as table",
+      "date": "Date",
+      "views": "Views",
+      "uses": "Uses",
+      "likes": "Likes",
+      "favorites": "Favorites"
+    },
+    "source": {
+      "title": "Uses by source",
+      "web": "Web",
+      "api": "API",
+      "empty": "No uses in this range"
+    },
+    "top": {
+      "title": "Top templates",
+      "views": "Views",
+      "uses": "Uses",
+      "likes": "New likes",
+      "favorites": "New favorites",
+      "rate": "View→Use",
+      "empty": "No template activity yet"
+    },
+    "owner_stats": {
+      "title": "Owner stats (last 30 days)",
+      "rate": "View→Use rate",
+      "sparkline": "Daily views and uses over the last 30 days, peak {{peak}}"
+    },
+    "public": {
+      "views": "views",
+      "uses": "uses"
+    },
+    "empty": {
+      "title": "No templates yet",
+      "body": "Create your first template to see analytics.",
+      "cta": "Create a template"
+    },
+    "error": {
+      "fetch": "Failed to load analytics.",
+      "retry": "Retry"
+    }
   },
   "sidebar": {
     "error_fetch": "Failed to fetch categories or tags.",
@@ -480,7 +533,8 @@
       "review": "Review",
       "audit_log": "Audit Log",
       "back_to_app": "Back to App",
-      "brand": "Open Prompts Admin"
+      "brand": "Open Prompts Admin",
+      "appeals": "Appeals"
     },
     "login": {
       "title": "Open Prompts Admin",
@@ -926,5 +980,79 @@
       "fetch": "Failed to load dashboard.",
       "retry": "Retry"
     }
+  },
+  "appeal": {
+    "cta": {
+      "appeal": "Appeal this decision",
+      "onePerAction": "One appeal per action",
+      "status": {
+        "open": "Appeal open",
+        "underReview": "Appeal under review",
+        "reversed": "Appeal reversed — template restored",
+        "upheld": "Appeal upheld"
+      }
+    },
+    "form": {
+      "title": "Appeal this decision",
+      "actionContext": "Action",
+      "statement": "Why should this decision be reversed?",
+      "statementHint": "One appeal per action. Be specific and factual.",
+      "submit": "Submit appeal",
+      "conflict": "This action has already been appealed",
+      "tooShort": "Statement must be at least 50 characters",
+      "tooLong": "Statement must be at most 2000 characters"
+    },
+    "list": {
+      "title": "My appeals",
+      "empty": "No appeals — nothing to contest"
+    },
+    "detail": {
+      "statement": "Your statement",
+      "resolution": "Resolution",
+      "pending": "Pending"
+    },
+    "state": {
+      "open": "Open",
+      "under_review": "Under review",
+      "upheld": "Upheld",
+      "reversed": "Reversed",
+      "resolved": "Resolved"
+    },
+    "superseded": "Superseded",
+    "admin": {
+      "queue": {
+        "title": "Appeals",
+        "empty": "No appeals in this state",
+        "col_age": "Age",
+        "col_template": "Template",
+        "col_action": "Action",
+        "col_statement": "Statement",
+        "col_appellant": "Appellant",
+        "col_state": "State"
+      },
+      "detail": {
+        "originalAction": "Original action",
+        "appeal": "Appeal",
+        "filed": "Filed",
+        "review": "Review",
+        "resolve": "Resolve appeal",
+        "outcome": "Outcome",
+        "upheld": "Upheld",
+        "reversed": "Reversed",
+        "note": "Note (required, shown to the creator)",
+        "noteRule": "20–1000 characters",
+        "selfGuard": "The original action's actor cannot resolve this appeal"
+      },
+      "confirm": {
+        "reversed": "Reversing will restore the template to normal"
+      },
+      "toast": {
+        "resolved": "Appeal resolved"
+      }
+    },
+    "notif": {
+      "resolved": "Your appeal was {{outcome}}: {{note}}"
+    },
+    "rateLimit": "You can have at most 5 open appeals"
   }
 }

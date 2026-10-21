@@ -122,6 +122,371 @@ func (TemplateType) EnumDescriptor() ([]byte, []int) {
 	return file_prompt_proto_rawDescGZIP(), []int{1}
 }
 
+// Appeal is a creator's contest of a moderation action on their template.
+type Appeal struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ModerationActionId string                 `protobuf:"bytes,2,opt,name=moderation_action_id,json=moderationActionId,proto3" json:"moderation_action_id,omitempty"`
+	TemplateId         string                 `protobuf:"bytes,3,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	TemplateTitle      string                 `protobuf:"bytes,4,opt,name=template_title,json=templateTitle,proto3" json:"template_title,omitempty"`            // joined at read time
+	ActionType         string                 `protobuf:"bytes,5,opt,name=action_type,json=actionType,proto3" json:"action_type,omitempty"`                     // "unpublish" | "lock" | "soft_delete"
+	ActionReason       string                 `protobuf:"bytes,6,opt,name=action_reason,json=actionReason,proto3" json:"action_reason,omitempty"`               // the original moderation reason
+	ActorDisplayName   string                 `protobuf:"bytes,7,opt,name=actor_display_name,json=actorDisplayName,proto3" json:"actor_display_name,omitempty"` // the original action's actor
+	ActionCreatedAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=action_created_at,json=actionCreatedAt,proto3" json:"action_created_at,omitempty"`
+	Statement          string                 `protobuf:"bytes,9,opt,name=statement,proto3" json:"statement,omitempty"`
+	State              string                 `protobuf:"bytes,10,opt,name=state,proto3" json:"state,omitempty"`                                         // open | under_review | resolved_upheld | resolved_reversed
+	ResolutionNote     string                 `protobuf:"bytes,11,opt,name=resolution_note,json=resolutionNote,proto3" json:"resolution_note,omitempty"` // empty until resolved
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ResolvedAt         *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
+	Superseded         bool                   `protobuf:"varint,14,opt,name=superseded,proto3" json:"superseded,omitempty"` // the underlying action was undone by a direct restore
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *Appeal) Reset() {
+	*x = Appeal{}
+	mi := &file_prompt_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Appeal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Appeal) ProtoMessage() {}
+
+func (x *Appeal) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Appeal.ProtoReflect.Descriptor instead.
+func (*Appeal) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Appeal) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Appeal) GetModerationActionId() string {
+	if x != nil {
+		return x.ModerationActionId
+	}
+	return ""
+}
+
+func (x *Appeal) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *Appeal) GetTemplateTitle() string {
+	if x != nil {
+		return x.TemplateTitle
+	}
+	return ""
+}
+
+func (x *Appeal) GetActionType() string {
+	if x != nil {
+		return x.ActionType
+	}
+	return ""
+}
+
+func (x *Appeal) GetActionReason() string {
+	if x != nil {
+		return x.ActionReason
+	}
+	return ""
+}
+
+func (x *Appeal) GetActorDisplayName() string {
+	if x != nil {
+		return x.ActorDisplayName
+	}
+	return ""
+}
+
+func (x *Appeal) GetActionCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ActionCreatedAt
+	}
+	return nil
+}
+
+func (x *Appeal) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+func (x *Appeal) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Appeal) GetResolutionNote() string {
+	if x != nil {
+		return x.ResolutionNote
+	}
+	return ""
+}
+
+func (x *Appeal) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Appeal) GetResolvedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResolvedAt
+	}
+	return nil
+}
+
+func (x *Appeal) GetSuperseded() bool {
+	if x != nil {
+		return x.Superseded
+	}
+	return false
+}
+
+type CreateAppealRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ModerationActionId string                 `protobuf:"bytes,1,opt,name=moderation_action_id,json=moderationActionId,proto3" json:"moderation_action_id,omitempty"`
+	Statement          string                 `protobuf:"bytes,2,opt,name=statement,proto3" json:"statement,omitempty"` // 50-2000 chars
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *CreateAppealRequest) Reset() {
+	*x = CreateAppealRequest{}
+	mi := &file_prompt_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateAppealRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateAppealRequest) ProtoMessage() {}
+
+func (x *CreateAppealRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateAppealRequest.ProtoReflect.Descriptor instead.
+func (*CreateAppealRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CreateAppealRequest) GetModerationActionId() string {
+	if x != nil {
+		return x.ModerationActionId
+	}
+	return ""
+}
+
+func (x *CreateAppealRequest) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+type ListAppealsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`                      // 1-based
+	PerPage       int32                  `protobuf:"varint,2,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"` // default 20
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAppealsRequest) Reset() {
+	*x = ListAppealsRequest{}
+	mi := &file_prompt_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAppealsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAppealsRequest) ProtoMessage() {}
+
+func (x *ListAppealsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAppealsRequest.ProtoReflect.Descriptor instead.
+func (*ListAppealsRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListAppealsRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListAppealsRequest) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type ListAppealsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Appeals       []*Appeal              `protobuf:"bytes,1,rep,name=appeals,proto3" json:"appeals,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAppealsResponse) Reset() {
+	*x = ListAppealsResponse{}
+	mi := &file_prompt_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAppealsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAppealsResponse) ProtoMessage() {}
+
+func (x *ListAppealsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAppealsResponse.ProtoReflect.Descriptor instead.
+func (*ListAppealsResponse) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListAppealsResponse) GetAppeals() []*Appeal {
+	if x != nil {
+		return x.Appeals
+	}
+	return nil
+}
+
+func (x *ListAppealsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *ListAppealsResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListAppealsResponse) GetPerPage() int32 {
+	if x != nil {
+		return x.PerPage
+	}
+	return 0
+}
+
+type GetAppealRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AppealId      string                 `protobuf:"bytes,1,opt,name=appeal_id,json=appealId,proto3" json:"appeal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAppealRequest) Reset() {
+	*x = GetAppealRequest{}
+	mi := &file_prompt_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAppealRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAppealRequest) ProtoMessage() {}
+
+func (x *GetAppealRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_prompt_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAppealRequest.ProtoReflect.Descriptor instead.
+func (*GetAppealRequest) Descriptor() ([]byte, []int) {
+	return file_prompt_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetAppealRequest) GetAppealId() string {
+	if x != nil {
+		return x.AppealId
+	}
+	return ""
+}
+
 // Template represents a prompt template metadata.
 type Template struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -191,7 +556,7 @@ type Template struct {
 
 func (x *Template) Reset() {
 	*x = Template{}
-	mi := &file_prompt_proto_msgTypes[0]
+	mi := &file_prompt_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +568,7 @@ func (x *Template) String() string {
 func (*Template) ProtoMessage() {}
 
 func (x *Template) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[0]
+	mi := &file_prompt_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +581,7 @@ func (x *Template) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Template.ProtoReflect.Descriptor instead.
 func (*Template) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{0}
+	return file_prompt_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Template) GetId() string {
@@ -439,7 +804,7 @@ type TemplateVersion struct {
 
 func (x *TemplateVersion) Reset() {
 	*x = TemplateVersion{}
-	mi := &file_prompt_proto_msgTypes[1]
+	mi := &file_prompt_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -451,7 +816,7 @@ func (x *TemplateVersion) String() string {
 func (*TemplateVersion) ProtoMessage() {}
 
 func (x *TemplateVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[1]
+	mi := &file_prompt_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -464,7 +829,7 @@ func (x *TemplateVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TemplateVersion.ProtoReflect.Descriptor instead.
 func (*TemplateVersion) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{1}
+	return file_prompt_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TemplateVersion) GetId() int32 {
@@ -528,7 +893,7 @@ type ListTemplateVersionsRequest struct {
 
 func (x *ListTemplateVersionsRequest) Reset() {
 	*x = ListTemplateVersionsRequest{}
-	mi := &file_prompt_proto_msgTypes[2]
+	mi := &file_prompt_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -540,7 +905,7 @@ func (x *ListTemplateVersionsRequest) String() string {
 func (*ListTemplateVersionsRequest) ProtoMessage() {}
 
 func (x *ListTemplateVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[2]
+	mi := &file_prompt_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -553,7 +918,7 @@ func (x *ListTemplateVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTemplateVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListTemplateVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{2}
+	return file_prompt_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListTemplateVersionsRequest) GetTemplateId() string {
@@ -588,7 +953,7 @@ type ListTemplateVersionsResponse struct {
 
 func (x *ListTemplateVersionsResponse) Reset() {
 	*x = ListTemplateVersionsResponse{}
-	mi := &file_prompt_proto_msgTypes[3]
+	mi := &file_prompt_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -600,7 +965,7 @@ func (x *ListTemplateVersionsResponse) String() string {
 func (*ListTemplateVersionsResponse) ProtoMessage() {}
 
 func (x *ListTemplateVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[3]
+	mi := &file_prompt_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -613,7 +978,7 @@ func (x *ListTemplateVersionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTemplateVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListTemplateVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{3}
+	return file_prompt_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListTemplateVersionsResponse) GetVersions() []*TemplateVersion {
@@ -655,7 +1020,7 @@ type Prompt struct {
 
 func (x *Prompt) Reset() {
 	*x = Prompt{}
-	mi := &file_prompt_proto_msgTypes[4]
+	mi := &file_prompt_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -667,7 +1032,7 @@ func (x *Prompt) String() string {
 func (*Prompt) ProtoMessage() {}
 
 func (x *Prompt) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[4]
+	mi := &file_prompt_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -680,7 +1045,7 @@ func (x *Prompt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Prompt.ProtoReflect.Descriptor instead.
 func (*Prompt) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{4}
+	return file_prompt_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Prompt) GetId() string {
@@ -761,7 +1126,7 @@ type CreateTemplateRequest struct {
 
 func (x *CreateTemplateRequest) Reset() {
 	*x = CreateTemplateRequest{}
-	mi := &file_prompt_proto_msgTypes[5]
+	mi := &file_prompt_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -773,7 +1138,7 @@ func (x *CreateTemplateRequest) String() string {
 func (*CreateTemplateRequest) ProtoMessage() {}
 
 func (x *CreateTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[5]
+	mi := &file_prompt_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -786,7 +1151,7 @@ func (x *CreateTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTemplateRequest.ProtoReflect.Descriptor instead.
 func (*CreateTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{5}
+	return file_prompt_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateTemplateRequest) GetOwnerId() string {
@@ -870,7 +1235,7 @@ type CreateTemplateResponse struct {
 
 func (x *CreateTemplateResponse) Reset() {
 	*x = CreateTemplateResponse{}
-	mi := &file_prompt_proto_msgTypes[6]
+	mi := &file_prompt_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -882,7 +1247,7 @@ func (x *CreateTemplateResponse) String() string {
 func (*CreateTemplateResponse) ProtoMessage() {}
 
 func (x *CreateTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[6]
+	mi := &file_prompt_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -895,7 +1260,7 @@ func (x *CreateTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTemplateResponse.ProtoReflect.Descriptor instead.
 func (*CreateTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{6}
+	return file_prompt_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateTemplateResponse) GetTemplate() *Template {
@@ -937,7 +1302,7 @@ type UpdateTemplateRequest struct {
 
 func (x *UpdateTemplateRequest) Reset() {
 	*x = UpdateTemplateRequest{}
-	mi := &file_prompt_proto_msgTypes[7]
+	mi := &file_prompt_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -949,7 +1314,7 @@ func (x *UpdateTemplateRequest) String() string {
 func (*UpdateTemplateRequest) ProtoMessage() {}
 
 func (x *UpdateTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[7]
+	mi := &file_prompt_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -962,7 +1327,7 @@ func (x *UpdateTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTemplateRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{7}
+	return file_prompt_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateTemplateRequest) GetTemplateId() string {
@@ -1053,7 +1418,7 @@ type UpdateTemplateResponse struct {
 
 func (x *UpdateTemplateResponse) Reset() {
 	*x = UpdateTemplateResponse{}
-	mi := &file_prompt_proto_msgTypes[8]
+	mi := &file_prompt_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1065,7 +1430,7 @@ func (x *UpdateTemplateResponse) String() string {
 func (*UpdateTemplateResponse) ProtoMessage() {}
 
 func (x *UpdateTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[8]
+	mi := &file_prompt_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1078,7 +1443,7 @@ func (x *UpdateTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTemplateResponse.ProtoReflect.Descriptor instead.
 func (*UpdateTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{8}
+	return file_prompt_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateTemplateResponse) GetTemplate() *Template {
@@ -1105,7 +1470,7 @@ type GetTemplateRequest struct {
 
 func (x *GetTemplateRequest) Reset() {
 	*x = GetTemplateRequest{}
-	mi := &file_prompt_proto_msgTypes[9]
+	mi := &file_prompt_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1117,7 +1482,7 @@ func (x *GetTemplateRequest) String() string {
 func (*GetTemplateRequest) ProtoMessage() {}
 
 func (x *GetTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[9]
+	mi := &file_prompt_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1130,7 +1495,7 @@ func (x *GetTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{9}
+	return file_prompt_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetTemplateRequest) GetId() string {
@@ -1158,7 +1523,7 @@ type GetTemplateResponse struct {
 
 func (x *GetTemplateResponse) Reset() {
 	*x = GetTemplateResponse{}
-	mi := &file_prompt_proto_msgTypes[10]
+	mi := &file_prompt_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1170,7 +1535,7 @@ func (x *GetTemplateResponse) String() string {
 func (*GetTemplateResponse) ProtoMessage() {}
 
 func (x *GetTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[10]
+	mi := &file_prompt_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1183,7 +1548,7 @@ func (x *GetTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{10}
+	return file_prompt_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetTemplateResponse) GetTemplate() *Template {
@@ -1225,7 +1590,7 @@ type RateTemplateRequest struct {
 
 func (x *RateTemplateRequest) Reset() {
 	*x = RateTemplateRequest{}
-	mi := &file_prompt_proto_msgTypes[11]
+	mi := &file_prompt_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1237,7 +1602,7 @@ func (x *RateTemplateRequest) String() string {
 func (*RateTemplateRequest) ProtoMessage() {}
 
 func (x *RateTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[11]
+	mi := &file_prompt_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1250,7 +1615,7 @@ func (x *RateTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RateTemplateRequest.ProtoReflect.Descriptor instead.
 func (*RateTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{11}
+	return file_prompt_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RateTemplateRequest) GetTemplateId() string {
@@ -1277,7 +1642,7 @@ type DeleteRatingRequest struct {
 
 func (x *DeleteRatingRequest) Reset() {
 	*x = DeleteRatingRequest{}
-	mi := &file_prompt_proto_msgTypes[12]
+	mi := &file_prompt_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1654,7 @@ func (x *DeleteRatingRequest) String() string {
 func (*DeleteRatingRequest) ProtoMessage() {}
 
 func (x *DeleteRatingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[12]
+	mi := &file_prompt_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1667,7 @@ func (x *DeleteRatingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRatingRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRatingRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{12}
+	return file_prompt_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteRatingRequest) GetTemplateId() string {
@@ -1324,7 +1689,7 @@ type RateTemplateResponse struct {
 
 func (x *RateTemplateResponse) Reset() {
 	*x = RateTemplateResponse{}
-	mi := &file_prompt_proto_msgTypes[13]
+	mi := &file_prompt_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1336,7 +1701,7 @@ func (x *RateTemplateResponse) String() string {
 func (*RateTemplateResponse) ProtoMessage() {}
 
 func (x *RateTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[13]
+	mi := &file_prompt_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1349,7 +1714,7 @@ func (x *RateTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RateTemplateResponse.ProtoReflect.Descriptor instead.
 func (*RateTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{13}
+	return file_prompt_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RateTemplateResponse) GetRatingAvg() float64 {
@@ -1406,7 +1771,7 @@ type ListTemplatesRequest struct {
 
 func (x *ListTemplatesRequest) Reset() {
 	*x = ListTemplatesRequest{}
-	mi := &file_prompt_proto_msgTypes[14]
+	mi := &file_prompt_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1418,7 +1783,7 @@ func (x *ListTemplatesRequest) String() string {
 func (*ListTemplatesRequest) ProtoMessage() {}
 
 func (x *ListTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[14]
+	mi := &file_prompt_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1431,7 +1796,7 @@ func (x *ListTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{14}
+	return file_prompt_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListTemplatesRequest) GetPageSize() int32 {
@@ -1535,7 +1900,7 @@ type ListTemplatesResponse struct {
 
 func (x *ListTemplatesResponse) Reset() {
 	*x = ListTemplatesResponse{}
-	mi := &file_prompt_proto_msgTypes[15]
+	mi := &file_prompt_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1547,7 +1912,7 @@ func (x *ListTemplatesResponse) String() string {
 func (*ListTemplatesResponse) ProtoMessage() {}
 
 func (x *ListTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[15]
+	mi := &file_prompt_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1560,7 +1925,7 @@ func (x *ListTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{15}
+	return file_prompt_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListTemplatesResponse) GetTemplates() []*Template {
@@ -1616,7 +1981,7 @@ type DeleteTemplateRequest struct {
 
 func (x *DeleteTemplateRequest) Reset() {
 	*x = DeleteTemplateRequest{}
-	mi := &file_prompt_proto_msgTypes[16]
+	mi := &file_prompt_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1628,7 +1993,7 @@ func (x *DeleteTemplateRequest) String() string {
 func (*DeleteTemplateRequest) ProtoMessage() {}
 
 func (x *DeleteTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[16]
+	mi := &file_prompt_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1641,7 +2006,7 @@ func (x *DeleteTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{16}
+	return file_prompt_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *DeleteTemplateRequest) GetId() string {
@@ -1668,7 +2033,7 @@ type DeleteTemplateResponse struct {
 
 func (x *DeleteTemplateResponse) Reset() {
 	*x = DeleteTemplateResponse{}
-	mi := &file_prompt_proto_msgTypes[17]
+	mi := &file_prompt_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1680,7 +2045,7 @@ func (x *DeleteTemplateResponse) String() string {
 func (*DeleteTemplateResponse) ProtoMessage() {}
 
 func (x *DeleteTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[17]
+	mi := &file_prompt_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1693,7 +2058,7 @@ func (x *DeleteTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{17}
+	return file_prompt_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DeleteTemplateResponse) GetSuccess() bool {
@@ -1713,7 +2078,7 @@ type ToggleLikeRequest struct {
 
 func (x *ToggleLikeRequest) Reset() {
 	*x = ToggleLikeRequest{}
-	mi := &file_prompt_proto_msgTypes[18]
+	mi := &file_prompt_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +2090,7 @@ func (x *ToggleLikeRequest) String() string {
 func (*ToggleLikeRequest) ProtoMessage() {}
 
 func (x *ToggleLikeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[18]
+	mi := &file_prompt_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +2103,7 @@ func (x *ToggleLikeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleLikeRequest.ProtoReflect.Descriptor instead.
 func (*ToggleLikeRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{18}
+	return file_prompt_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ToggleLikeRequest) GetTemplateId() string {
@@ -1759,7 +2124,7 @@ type ToggleLikeResponse struct {
 
 func (x *ToggleLikeResponse) Reset() {
 	*x = ToggleLikeResponse{}
-	mi := &file_prompt_proto_msgTypes[19]
+	mi := &file_prompt_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1771,7 +2136,7 @@ func (x *ToggleLikeResponse) String() string {
 func (*ToggleLikeResponse) ProtoMessage() {}
 
 func (x *ToggleLikeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[19]
+	mi := &file_prompt_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1784,7 +2149,7 @@ func (x *ToggleLikeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleLikeResponse.ProtoReflect.Descriptor instead.
 func (*ToggleLikeResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{19}
+	return file_prompt_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ToggleLikeResponse) GetIsLiked() bool {
@@ -1811,7 +2176,7 @@ type ToggleFavoriteRequest struct {
 
 func (x *ToggleFavoriteRequest) Reset() {
 	*x = ToggleFavoriteRequest{}
-	mi := &file_prompt_proto_msgTypes[20]
+	mi := &file_prompt_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1823,7 +2188,7 @@ func (x *ToggleFavoriteRequest) String() string {
 func (*ToggleFavoriteRequest) ProtoMessage() {}
 
 func (x *ToggleFavoriteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[20]
+	mi := &file_prompt_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1836,7 +2201,7 @@ func (x *ToggleFavoriteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleFavoriteRequest.ProtoReflect.Descriptor instead.
 func (*ToggleFavoriteRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{20}
+	return file_prompt_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ToggleFavoriteRequest) GetTemplateId() string {
@@ -1857,7 +2222,7 @@ type ToggleFavoriteResponse struct {
 
 func (x *ToggleFavoriteResponse) Reset() {
 	*x = ToggleFavoriteResponse{}
-	mi := &file_prompt_proto_msgTypes[21]
+	mi := &file_prompt_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1869,7 +2234,7 @@ func (x *ToggleFavoriteResponse) String() string {
 func (*ToggleFavoriteResponse) ProtoMessage() {}
 
 func (x *ToggleFavoriteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[21]
+	mi := &file_prompt_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1882,7 +2247,7 @@ func (x *ToggleFavoriteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleFavoriteResponse.ProtoReflect.Descriptor instead.
 func (*ToggleFavoriteResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{21}
+	return file_prompt_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ToggleFavoriteResponse) GetIsFavorited() bool {
@@ -1912,7 +2277,7 @@ type CreatePromptRequest struct {
 
 func (x *CreatePromptRequest) Reset() {
 	*x = CreatePromptRequest{}
-	mi := &file_prompt_proto_msgTypes[22]
+	mi := &file_prompt_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1924,7 +2289,7 @@ func (x *CreatePromptRequest) String() string {
 func (*CreatePromptRequest) ProtoMessage() {}
 
 func (x *CreatePromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[22]
+	mi := &file_prompt_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1937,7 +2302,7 @@ func (x *CreatePromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePromptRequest.ProtoReflect.Descriptor instead.
 func (*CreatePromptRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{22}
+	return file_prompt_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *CreatePromptRequest) GetTemplateId() string {
@@ -1978,7 +2343,7 @@ type CreatePromptResponse struct {
 
 func (x *CreatePromptResponse) Reset() {
 	*x = CreatePromptResponse{}
-	mi := &file_prompt_proto_msgTypes[23]
+	mi := &file_prompt_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1990,7 +2355,7 @@ func (x *CreatePromptResponse) String() string {
 func (*CreatePromptResponse) ProtoMessage() {}
 
 func (x *CreatePromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[23]
+	mi := &file_prompt_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2003,7 +2368,7 @@ func (x *CreatePromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePromptResponse.ProtoReflect.Descriptor instead.
 func (*CreatePromptResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{23}
+	return file_prompt_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CreatePromptResponse) GetPrompt() *Prompt {
@@ -2023,7 +2388,7 @@ type GetPromptRequest struct {
 
 func (x *GetPromptRequest) Reset() {
 	*x = GetPromptRequest{}
-	mi := &file_prompt_proto_msgTypes[24]
+	mi := &file_prompt_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2035,7 +2400,7 @@ func (x *GetPromptRequest) String() string {
 func (*GetPromptRequest) ProtoMessage() {}
 
 func (x *GetPromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[24]
+	mi := &file_prompt_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2048,7 +2413,7 @@ func (x *GetPromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromptRequest.ProtoReflect.Descriptor instead.
 func (*GetPromptRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{24}
+	return file_prompt_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetPromptRequest) GetId() string {
@@ -2068,7 +2433,7 @@ type GetPromptResponse struct {
 
 func (x *GetPromptResponse) Reset() {
 	*x = GetPromptResponse{}
-	mi := &file_prompt_proto_msgTypes[25]
+	mi := &file_prompt_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2080,7 +2445,7 @@ func (x *GetPromptResponse) String() string {
 func (*GetPromptResponse) ProtoMessage() {}
 
 func (x *GetPromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[25]
+	mi := &file_prompt_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2093,7 +2458,7 @@ func (x *GetPromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromptResponse.ProtoReflect.Descriptor instead.
 func (*GetPromptResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{25}
+	return file_prompt_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetPromptResponse) GetPrompt() *Prompt {
@@ -2117,7 +2482,7 @@ type ListPromptsRequest struct {
 
 func (x *ListPromptsRequest) Reset() {
 	*x = ListPromptsRequest{}
-	mi := &file_prompt_proto_msgTypes[26]
+	mi := &file_prompt_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2129,7 +2494,7 @@ func (x *ListPromptsRequest) String() string {
 func (*ListPromptsRequest) ProtoMessage() {}
 
 func (x *ListPromptsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[26]
+	mi := &file_prompt_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2142,7 +2507,7 @@ func (x *ListPromptsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromptsRequest.ProtoReflect.Descriptor instead.
 func (*ListPromptsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{26}
+	return file_prompt_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListPromptsRequest) GetPageSize() int32 {
@@ -2184,7 +2549,7 @@ type ListPromptsResponse struct {
 
 func (x *ListPromptsResponse) Reset() {
 	*x = ListPromptsResponse{}
-	mi := &file_prompt_proto_msgTypes[27]
+	mi := &file_prompt_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2196,7 +2561,7 @@ func (x *ListPromptsResponse) String() string {
 func (*ListPromptsResponse) ProtoMessage() {}
 
 func (x *ListPromptsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[27]
+	mi := &file_prompt_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2209,7 +2574,7 @@ func (x *ListPromptsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromptsResponse.ProtoReflect.Descriptor instead.
 func (*ListPromptsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{27}
+	return file_prompt_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListPromptsResponse) GetPrompts() []*Prompt {
@@ -2237,7 +2602,7 @@ type DeletePromptRequest struct {
 
 func (x *DeletePromptRequest) Reset() {
 	*x = DeletePromptRequest{}
-	mi := &file_prompt_proto_msgTypes[28]
+	mi := &file_prompt_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2249,7 +2614,7 @@ func (x *DeletePromptRequest) String() string {
 func (*DeletePromptRequest) ProtoMessage() {}
 
 func (x *DeletePromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[28]
+	mi := &file_prompt_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2262,7 +2627,7 @@ func (x *DeletePromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePromptRequest.ProtoReflect.Descriptor instead.
 func (*DeletePromptRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{28}
+	return file_prompt_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *DeletePromptRequest) GetId() string {
@@ -2289,7 +2654,7 @@ type DeletePromptResponse struct {
 
 func (x *DeletePromptResponse) Reset() {
 	*x = DeletePromptResponse{}
-	mi := &file_prompt_proto_msgTypes[29]
+	mi := &file_prompt_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2301,7 +2666,7 @@ func (x *DeletePromptResponse) String() string {
 func (*DeletePromptResponse) ProtoMessage() {}
 
 func (x *DeletePromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[29]
+	mi := &file_prompt_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2314,7 +2679,7 @@ func (x *DeletePromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePromptResponse.ProtoReflect.Descriptor instead.
 func (*DeletePromptResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{29}
+	return file_prompt_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *DeletePromptResponse) GetSuccess() bool {
@@ -2339,7 +2704,7 @@ type RegisterRequest struct {
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_prompt_proto_msgTypes[30]
+	mi := &file_prompt_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2351,7 +2716,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[30]
+	mi := &file_prompt_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2364,7 +2729,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{30}
+	return file_prompt_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *RegisterRequest) GetId() string {
@@ -2420,7 +2785,7 @@ type RegisterResponse struct {
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
-	mi := &file_prompt_proto_msgTypes[31]
+	mi := &file_prompt_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2432,7 +2797,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[31]
+	mi := &file_prompt_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2445,7 +2810,7 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{31}
+	return file_prompt_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RegisterResponse) GetId() string {
@@ -2473,7 +2838,7 @@ type LoginRequest struct {
 
 func (x *LoginRequest) Reset() {
 	*x = LoginRequest{}
-	mi := &file_prompt_proto_msgTypes[32]
+	mi := &file_prompt_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2485,7 +2850,7 @@ func (x *LoginRequest) String() string {
 func (*LoginRequest) ProtoMessage() {}
 
 func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[32]
+	mi := &file_prompt_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2498,7 +2863,7 @@ func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{32}
+	return file_prompt_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *LoginRequest) GetEmail() string {
@@ -2528,7 +2893,7 @@ type LoginResponse struct {
 
 func (x *LoginResponse) Reset() {
 	*x = LoginResponse{}
-	mi := &file_prompt_proto_msgTypes[33]
+	mi := &file_prompt_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2540,7 +2905,7 @@ func (x *LoginResponse) String() string {
 func (*LoginResponse) ProtoMessage() {}
 
 func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[33]
+	mi := &file_prompt_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2553,7 +2918,7 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{33}
+	return file_prompt_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *LoginResponse) GetId() string {
@@ -2595,7 +2960,7 @@ type LoginWithOAuthRequest struct {
 
 func (x *LoginWithOAuthRequest) Reset() {
 	*x = LoginWithOAuthRequest{}
-	mi := &file_prompt_proto_msgTypes[34]
+	mi := &file_prompt_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2607,7 +2972,7 @@ func (x *LoginWithOAuthRequest) String() string {
 func (*LoginWithOAuthRequest) ProtoMessage() {}
 
 func (x *LoginWithOAuthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[34]
+	mi := &file_prompt_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2620,7 +2985,7 @@ func (x *LoginWithOAuthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginWithOAuthRequest.ProtoReflect.Descriptor instead.
 func (*LoginWithOAuthRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{34}
+	return file_prompt_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *LoginWithOAuthRequest) GetProvider() string {
@@ -2647,7 +3012,7 @@ type SendVerificationCodeRequest struct {
 
 func (x *SendVerificationCodeRequest) Reset() {
 	*x = SendVerificationCodeRequest{}
-	mi := &file_prompt_proto_msgTypes[35]
+	mi := &file_prompt_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2659,7 +3024,7 @@ func (x *SendVerificationCodeRequest) String() string {
 func (*SendVerificationCodeRequest) ProtoMessage() {}
 
 func (x *SendVerificationCodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[35]
+	mi := &file_prompt_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2672,7 +3037,7 @@ func (x *SendVerificationCodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendVerificationCodeRequest.ProtoReflect.Descriptor instead.
 func (*SendVerificationCodeRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{35}
+	return file_prompt_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *SendVerificationCodeRequest) GetEmail() string {
@@ -2698,7 +3063,7 @@ type SendVerificationCodeResponse struct {
 
 func (x *SendVerificationCodeResponse) Reset() {
 	*x = SendVerificationCodeResponse{}
-	mi := &file_prompt_proto_msgTypes[36]
+	mi := &file_prompt_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2710,7 +3075,7 @@ func (x *SendVerificationCodeResponse) String() string {
 func (*SendVerificationCodeResponse) ProtoMessage() {}
 
 func (x *SendVerificationCodeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[36]
+	mi := &file_prompt_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2723,7 +3088,7 @@ func (x *SendVerificationCodeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendVerificationCodeResponse.ProtoReflect.Descriptor instead.
 func (*SendVerificationCodeResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{36}
+	return file_prompt_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *SendVerificationCodeResponse) GetSuccess() bool {
@@ -2744,7 +3109,7 @@ type ListCategoriesRequest struct {
 
 func (x *ListCategoriesRequest) Reset() {
 	*x = ListCategoriesRequest{}
-	mi := &file_prompt_proto_msgTypes[37]
+	mi := &file_prompt_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2756,7 +3121,7 @@ func (x *ListCategoriesRequest) String() string {
 func (*ListCategoriesRequest) ProtoMessage() {}
 
 func (x *ListCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[37]
+	mi := &file_prompt_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2769,7 +3134,7 @@ func (x *ListCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{37}
+	return file_prompt_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ListCategoriesRequest) GetOwnerId() string {
@@ -2797,7 +3162,7 @@ type CategoryStats struct {
 
 func (x *CategoryStats) Reset() {
 	*x = CategoryStats{}
-	mi := &file_prompt_proto_msgTypes[38]
+	mi := &file_prompt_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2809,7 +3174,7 @@ func (x *CategoryStats) String() string {
 func (*CategoryStats) ProtoMessage() {}
 
 func (x *CategoryStats) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[38]
+	mi := &file_prompt_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2822,7 +3187,7 @@ func (x *CategoryStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CategoryStats.ProtoReflect.Descriptor instead.
 func (*CategoryStats) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{38}
+	return file_prompt_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *CategoryStats) GetName() string {
@@ -2849,7 +3214,7 @@ type ListCategoriesResponse struct {
 
 func (x *ListCategoriesResponse) Reset() {
 	*x = ListCategoriesResponse{}
-	mi := &file_prompt_proto_msgTypes[39]
+	mi := &file_prompt_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2861,7 +3226,7 @@ func (x *ListCategoriesResponse) String() string {
 func (*ListCategoriesResponse) ProtoMessage() {}
 
 func (x *ListCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[39]
+	mi := &file_prompt_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2874,7 +3239,7 @@ func (x *ListCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{39}
+	return file_prompt_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListCategoriesResponse) GetCategories() []*CategoryStats {
@@ -2894,7 +3259,7 @@ type ListTagsRequest struct {
 
 func (x *ListTagsRequest) Reset() {
 	*x = ListTagsRequest{}
-	mi := &file_prompt_proto_msgTypes[40]
+	mi := &file_prompt_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2906,7 +3271,7 @@ func (x *ListTagsRequest) String() string {
 func (*ListTagsRequest) ProtoMessage() {}
 
 func (x *ListTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[40]
+	mi := &file_prompt_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2919,7 +3284,7 @@ func (x *ListTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTagsRequest.ProtoReflect.Descriptor instead.
 func (*ListTagsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{40}
+	return file_prompt_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ListTagsRequest) GetLanguage() string {
@@ -2940,7 +3305,7 @@ type TagStats struct {
 
 func (x *TagStats) Reset() {
 	*x = TagStats{}
-	mi := &file_prompt_proto_msgTypes[41]
+	mi := &file_prompt_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2952,7 +3317,7 @@ func (x *TagStats) String() string {
 func (*TagStats) ProtoMessage() {}
 
 func (x *TagStats) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[41]
+	mi := &file_prompt_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2965,7 +3330,7 @@ func (x *TagStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TagStats.ProtoReflect.Descriptor instead.
 func (*TagStats) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{41}
+	return file_prompt_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *TagStats) GetName() string {
@@ -2992,7 +3357,7 @@ type ListTagsResponse struct {
 
 func (x *ListTagsResponse) Reset() {
 	*x = ListTagsResponse{}
-	mi := &file_prompt_proto_msgTypes[42]
+	mi := &file_prompt_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3004,7 +3369,7 @@ func (x *ListTagsResponse) String() string {
 func (*ListTagsResponse) ProtoMessage() {}
 
 func (x *ListTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[42]
+	mi := &file_prompt_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3017,7 +3382,7 @@ func (x *ListTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTagsResponse.ProtoReflect.Descriptor instead.
 func (*ListTagsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{42}
+	return file_prompt_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ListTagsResponse) GetTags() []*TagStats {
@@ -3044,7 +3409,7 @@ type UpdateProfileRequest struct {
 
 func (x *UpdateProfileRequest) Reset() {
 	*x = UpdateProfileRequest{}
-	mi := &file_prompt_proto_msgTypes[43]
+	mi := &file_prompt_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3056,7 +3421,7 @@ func (x *UpdateProfileRequest) String() string {
 func (*UpdateProfileRequest) ProtoMessage() {}
 
 func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[43]
+	mi := &file_prompt_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3069,7 +3434,7 @@ func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProfileRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{43}
+	return file_prompt_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *UpdateProfileRequest) GetId() string {
@@ -3128,7 +3493,7 @@ type UpdateProfileResponse struct {
 
 func (x *UpdateProfileResponse) Reset() {
 	*x = UpdateProfileResponse{}
-	mi := &file_prompt_proto_msgTypes[44]
+	mi := &file_prompt_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3140,7 +3505,7 @@ func (x *UpdateProfileResponse) String() string {
 func (*UpdateProfileResponse) ProtoMessage() {}
 
 func (x *UpdateProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[44]
+	mi := &file_prompt_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3153,7 +3518,7 @@ func (x *UpdateProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProfileResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProfileResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{44}
+	return file_prompt_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *UpdateProfileResponse) GetId() string {
@@ -3201,7 +3566,7 @@ type GetProfileRequest struct {
 
 func (x *GetProfileRequest) Reset() {
 	*x = GetProfileRequest{}
-	mi := &file_prompt_proto_msgTypes[45]
+	mi := &file_prompt_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3213,7 +3578,7 @@ func (x *GetProfileRequest) String() string {
 func (*GetProfileRequest) ProtoMessage() {}
 
 func (x *GetProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[45]
+	mi := &file_prompt_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3226,7 +3591,7 @@ func (x *GetProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProfileRequest.ProtoReflect.Descriptor instead.
 func (*GetProfileRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{45}
+	return file_prompt_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *GetProfileRequest) GetId() string {
@@ -3251,7 +3616,7 @@ type GetProfileResponse struct {
 
 func (x *GetProfileResponse) Reset() {
 	*x = GetProfileResponse{}
-	mi := &file_prompt_proto_msgTypes[46]
+	mi := &file_prompt_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3263,7 +3628,7 @@ func (x *GetProfileResponse) String() string {
 func (*GetProfileResponse) ProtoMessage() {}
 
 func (x *GetProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[46]
+	mi := &file_prompt_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3276,7 +3641,7 @@ func (x *GetProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProfileResponse.ProtoReflect.Descriptor instead.
 func (*GetProfileResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{46}
+	return file_prompt_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *GetProfileResponse) GetId() string {
@@ -3332,7 +3697,7 @@ type FollowUserRequest struct {
 
 func (x *FollowUserRequest) Reset() {
 	*x = FollowUserRequest{}
-	mi := &file_prompt_proto_msgTypes[47]
+	mi := &file_prompt_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3344,7 +3709,7 @@ func (x *FollowUserRequest) String() string {
 func (*FollowUserRequest) ProtoMessage() {}
 
 func (x *FollowUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[47]
+	mi := &file_prompt_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3357,7 +3722,7 @@ func (x *FollowUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FollowUserRequest.ProtoReflect.Descriptor instead.
 func (*FollowUserRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{47}
+	return file_prompt_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *FollowUserRequest) GetUserId() string {
@@ -3385,7 +3750,7 @@ type FollowUserResponse struct {
 
 func (x *FollowUserResponse) Reset() {
 	*x = FollowUserResponse{}
-	mi := &file_prompt_proto_msgTypes[48]
+	mi := &file_prompt_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3397,7 +3762,7 @@ func (x *FollowUserResponse) String() string {
 func (*FollowUserResponse) ProtoMessage() {}
 
 func (x *FollowUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[48]
+	mi := &file_prompt_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3410,7 +3775,7 @@ func (x *FollowUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FollowUserResponse.ProtoReflect.Descriptor instead.
 func (*FollowUserResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{48}
+	return file_prompt_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *FollowUserResponse) GetFollowing() bool {
@@ -3438,7 +3803,7 @@ type GetCreatorProfileRequest struct {
 
 func (x *GetCreatorProfileRequest) Reset() {
 	*x = GetCreatorProfileRequest{}
-	mi := &file_prompt_proto_msgTypes[49]
+	mi := &file_prompt_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3450,7 +3815,7 @@ func (x *GetCreatorProfileRequest) String() string {
 func (*GetCreatorProfileRequest) ProtoMessage() {}
 
 func (x *GetCreatorProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[49]
+	mi := &file_prompt_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3463,7 +3828,7 @@ func (x *GetCreatorProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCreatorProfileRequest.ProtoReflect.Descriptor instead.
 func (*GetCreatorProfileRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{49}
+	return file_prompt_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetCreatorProfileRequest) GetUserId() string {
@@ -3498,7 +3863,7 @@ type GetCreatorProfileResponse struct {
 
 func (x *GetCreatorProfileResponse) Reset() {
 	*x = GetCreatorProfileResponse{}
-	mi := &file_prompt_proto_msgTypes[50]
+	mi := &file_prompt_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3510,7 +3875,7 @@ func (x *GetCreatorProfileResponse) String() string {
 func (*GetCreatorProfileResponse) ProtoMessage() {}
 
 func (x *GetCreatorProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[50]
+	mi := &file_prompt_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3523,7 +3888,7 @@ func (x *GetCreatorProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCreatorProfileResponse.ProtoReflect.Descriptor instead.
 func (*GetCreatorProfileResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{50}
+	return file_prompt_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *GetCreatorProfileResponse) GetId() string {
@@ -3601,7 +3966,7 @@ type ListUserRelationsRequest struct {
 
 func (x *ListUserRelationsRequest) Reset() {
 	*x = ListUserRelationsRequest{}
-	mi := &file_prompt_proto_msgTypes[51]
+	mi := &file_prompt_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3613,7 +3978,7 @@ func (x *ListUserRelationsRequest) String() string {
 func (*ListUserRelationsRequest) ProtoMessage() {}
 
 func (x *ListUserRelationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[51]
+	mi := &file_prompt_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3626,7 +3991,7 @@ func (x *ListUserRelationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserRelationsRequest.ProtoReflect.Descriptor instead.
 func (*ListUserRelationsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{51}
+	return file_prompt_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ListUserRelationsRequest) GetUserId() string {
@@ -3664,7 +4029,7 @@ type UserCard struct {
 
 func (x *UserCard) Reset() {
 	*x = UserCard{}
-	mi := &file_prompt_proto_msgTypes[52]
+	mi := &file_prompt_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3676,7 +4041,7 @@ func (x *UserCard) String() string {
 func (*UserCard) ProtoMessage() {}
 
 func (x *UserCard) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[52]
+	mi := &file_prompt_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3689,7 +4054,7 @@ func (x *UserCard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserCard.ProtoReflect.Descriptor instead.
 func (*UserCard) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{52}
+	return file_prompt_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *UserCard) GetId() string {
@@ -3740,7 +4105,7 @@ type ListUserRelationsResponse struct {
 
 func (x *ListUserRelationsResponse) Reset() {
 	*x = ListUserRelationsResponse{}
-	mi := &file_prompt_proto_msgTypes[53]
+	mi := &file_prompt_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3752,7 +4117,7 @@ func (x *ListUserRelationsResponse) String() string {
 func (*ListUserRelationsResponse) ProtoMessage() {}
 
 func (x *ListUserRelationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[53]
+	mi := &file_prompt_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3765,7 +4130,7 @@ func (x *ListUserRelationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserRelationsResponse.ProtoReflect.Descriptor instead.
 func (*ListUserRelationsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{53}
+	return file_prompt_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListUserRelationsResponse) GetUsers() []*UserCard {
@@ -3808,7 +4173,7 @@ type GetFollowingFeedRequest struct {
 
 func (x *GetFollowingFeedRequest) Reset() {
 	*x = GetFollowingFeedRequest{}
-	mi := &file_prompt_proto_msgTypes[54]
+	mi := &file_prompt_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3820,7 +4185,7 @@ func (x *GetFollowingFeedRequest) String() string {
 func (*GetFollowingFeedRequest) ProtoMessage() {}
 
 func (x *GetFollowingFeedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[54]
+	mi := &file_prompt_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3833,7 +4198,7 @@ func (x *GetFollowingFeedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFollowingFeedRequest.ProtoReflect.Descriptor instead.
 func (*GetFollowingFeedRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{54}
+	return file_prompt_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *GetFollowingFeedRequest) GetUserId() string {
@@ -3869,7 +4234,7 @@ type GetFollowingFeedResponse struct {
 
 func (x *GetFollowingFeedResponse) Reset() {
 	*x = GetFollowingFeedResponse{}
-	mi := &file_prompt_proto_msgTypes[55]
+	mi := &file_prompt_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3881,7 +4246,7 @@ func (x *GetFollowingFeedResponse) String() string {
 func (*GetFollowingFeedResponse) ProtoMessage() {}
 
 func (x *GetFollowingFeedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[55]
+	mi := &file_prompt_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3894,7 +4259,7 @@ func (x *GetFollowingFeedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFollowingFeedResponse.ProtoReflect.Descriptor instead.
 func (*GetFollowingFeedResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{55}
+	return file_prompt_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *GetFollowingFeedResponse) GetTemplates() []*Template {
@@ -3928,7 +4293,7 @@ type ListTopCreatorsRequest struct {
 
 func (x *ListTopCreatorsRequest) Reset() {
 	*x = ListTopCreatorsRequest{}
-	mi := &file_prompt_proto_msgTypes[56]
+	mi := &file_prompt_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3940,7 +4305,7 @@ func (x *ListTopCreatorsRequest) String() string {
 func (*ListTopCreatorsRequest) ProtoMessage() {}
 
 func (x *ListTopCreatorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[56]
+	mi := &file_prompt_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3953,7 +4318,7 @@ func (x *ListTopCreatorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTopCreatorsRequest.ProtoReflect.Descriptor instead.
 func (*ListTopCreatorsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{56}
+	return file_prompt_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListTopCreatorsRequest) GetLimit() int32 {
@@ -3974,7 +4339,7 @@ type ListTopCreatorsResponse struct {
 
 func (x *ListTopCreatorsResponse) Reset() {
 	*x = ListTopCreatorsResponse{}
-	mi := &file_prompt_proto_msgTypes[57]
+	mi := &file_prompt_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3986,7 +4351,7 @@ func (x *ListTopCreatorsResponse) String() string {
 func (*ListTopCreatorsResponse) ProtoMessage() {}
 
 func (x *ListTopCreatorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[57]
+	mi := &file_prompt_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3999,7 +4364,7 @@ func (x *ListTopCreatorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTopCreatorsResponse.ProtoReflect.Descriptor instead.
 func (*ListTopCreatorsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{57}
+	return file_prompt_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListTopCreatorsResponse) GetUsers() []*UserCard {
@@ -4030,7 +4395,7 @@ type OwnerInfo struct {
 
 func (x *OwnerInfo) Reset() {
 	*x = OwnerInfo{}
-	mi := &file_prompt_proto_msgTypes[58]
+	mi := &file_prompt_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4042,7 +4407,7 @@ func (x *OwnerInfo) String() string {
 func (*OwnerInfo) ProtoMessage() {}
 
 func (x *OwnerInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[58]
+	mi := &file_prompt_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4055,7 +4420,7 @@ func (x *OwnerInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OwnerInfo.ProtoReflect.Descriptor instead.
 func (*OwnerInfo) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{58}
+	return file_prompt_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *OwnerInfo) GetId() string {
@@ -4106,7 +4471,7 @@ type Alias struct {
 
 func (x *Alias) Reset() {
 	*x = Alias{}
-	mi := &file_prompt_proto_msgTypes[59]
+	mi := &file_prompt_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4118,7 +4483,7 @@ func (x *Alias) String() string {
 func (*Alias) ProtoMessage() {}
 
 func (x *Alias) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[59]
+	mi := &file_prompt_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4131,7 +4496,7 @@ func (x *Alias) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Alias.ProtoReflect.Descriptor instead.
 func (*Alias) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{59}
+	return file_prompt_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *Alias) GetId() string {
@@ -4173,7 +4538,7 @@ type CreateAliasRequest struct {
 
 func (x *CreateAliasRequest) Reset() {
 	*x = CreateAliasRequest{}
-	mi := &file_prompt_proto_msgTypes[60]
+	mi := &file_prompt_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4185,7 +4550,7 @@ func (x *CreateAliasRequest) String() string {
 func (*CreateAliasRequest) ProtoMessage() {}
 
 func (x *CreateAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[60]
+	mi := &file_prompt_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4198,7 +4563,7 @@ func (x *CreateAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAliasRequest.ProtoReflect.Descriptor instead.
 func (*CreateAliasRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{60}
+	return file_prompt_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *CreateAliasRequest) GetTemplateId() string {
@@ -4231,7 +4596,7 @@ type ListAliasesRequest struct {
 
 func (x *ListAliasesRequest) Reset() {
 	*x = ListAliasesRequest{}
-	mi := &file_prompt_proto_msgTypes[61]
+	mi := &file_prompt_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4243,7 +4608,7 @@ func (x *ListAliasesRequest) String() string {
 func (*ListAliasesRequest) ProtoMessage() {}
 
 func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[61]
+	mi := &file_prompt_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4256,7 +4621,7 @@ func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasesRequest.ProtoReflect.Descriptor instead.
 func (*ListAliasesRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{61}
+	return file_prompt_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ListAliasesRequest) GetTemplateId() string {
@@ -4275,7 +4640,7 @@ type ListAliasesResponse struct {
 
 func (x *ListAliasesResponse) Reset() {
 	*x = ListAliasesResponse{}
-	mi := &file_prompt_proto_msgTypes[62]
+	mi := &file_prompt_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4287,7 +4652,7 @@ func (x *ListAliasesResponse) String() string {
 func (*ListAliasesResponse) ProtoMessage() {}
 
 func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[62]
+	mi := &file_prompt_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4300,7 +4665,7 @@ func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasesResponse.ProtoReflect.Descriptor instead.
 func (*ListAliasesResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{62}
+	return file_prompt_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListAliasesResponse) GetAliases() []*Alias {
@@ -4321,7 +4686,7 @@ type UpdateAliasRequest struct {
 
 func (x *UpdateAliasRequest) Reset() {
 	*x = UpdateAliasRequest{}
-	mi := &file_prompt_proto_msgTypes[63]
+	mi := &file_prompt_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4333,7 +4698,7 @@ func (x *UpdateAliasRequest) String() string {
 func (*UpdateAliasRequest) ProtoMessage() {}
 
 func (x *UpdateAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[63]
+	mi := &file_prompt_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4346,7 +4711,7 @@ func (x *UpdateAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAliasRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAliasRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{63}
+	return file_prompt_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *UpdateAliasRequest) GetTemplateId() string {
@@ -4380,7 +4745,7 @@ type DeleteAliasRequest struct {
 
 func (x *DeleteAliasRequest) Reset() {
 	*x = DeleteAliasRequest{}
-	mi := &file_prompt_proto_msgTypes[64]
+	mi := &file_prompt_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4392,7 +4757,7 @@ func (x *DeleteAliasRequest) String() string {
 func (*DeleteAliasRequest) ProtoMessage() {}
 
 func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[64]
+	mi := &file_prompt_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4405,7 +4770,7 @@ func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAliasRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAliasRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{64}
+	return file_prompt_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *DeleteAliasRequest) GetTemplateId() string {
@@ -4432,7 +4797,7 @@ type GetPromptByAliasRequest struct {
 
 func (x *GetPromptByAliasRequest) Reset() {
 	*x = GetPromptByAliasRequest{}
-	mi := &file_prompt_proto_msgTypes[65]
+	mi := &file_prompt_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4444,7 +4809,7 @@ func (x *GetPromptByAliasRequest) String() string {
 func (*GetPromptByAliasRequest) ProtoMessage() {}
 
 func (x *GetPromptByAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[65]
+	mi := &file_prompt_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4457,7 +4822,7 @@ func (x *GetPromptByAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromptByAliasRequest.ProtoReflect.Descriptor instead.
 func (*GetPromptByAliasRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{65}
+	return file_prompt_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *GetPromptByAliasRequest) GetTemplateId() string {
@@ -4490,7 +4855,7 @@ type APIKey struct {
 
 func (x *APIKey) Reset() {
 	*x = APIKey{}
-	mi := &file_prompt_proto_msgTypes[66]
+	mi := &file_prompt_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4502,7 +4867,7 @@ func (x *APIKey) String() string {
 func (*APIKey) ProtoMessage() {}
 
 func (x *APIKey) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[66]
+	mi := &file_prompt_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4515,7 +4880,7 @@ func (x *APIKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use APIKey.ProtoReflect.Descriptor instead.
 func (*APIKey) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{66}
+	return file_prompt_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *APIKey) GetId() string {
@@ -4584,7 +4949,7 @@ type CreateAPIKeyRequest struct {
 
 func (x *CreateAPIKeyRequest) Reset() {
 	*x = CreateAPIKeyRequest{}
-	mi := &file_prompt_proto_msgTypes[67]
+	mi := &file_prompt_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4596,7 +4961,7 @@ func (x *CreateAPIKeyRequest) String() string {
 func (*CreateAPIKeyRequest) ProtoMessage() {}
 
 func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[67]
+	mi := &file_prompt_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4609,7 +4974,7 @@ func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{67}
+	return file_prompt_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *CreateAPIKeyRequest) GetName() string {
@@ -4637,7 +5002,7 @@ type CreateAPIKeyResponse struct {
 
 func (x *CreateAPIKeyResponse) Reset() {
 	*x = CreateAPIKeyResponse{}
-	mi := &file_prompt_proto_msgTypes[68]
+	mi := &file_prompt_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4649,7 +5014,7 @@ func (x *CreateAPIKeyResponse) String() string {
 func (*CreateAPIKeyResponse) ProtoMessage() {}
 
 func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[68]
+	mi := &file_prompt_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4662,7 +5027,7 @@ func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{68}
+	return file_prompt_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *CreateAPIKeyResponse) GetId() string {
@@ -4696,7 +5061,7 @@ type ListAPIKeysRequest struct {
 
 func (x *ListAPIKeysRequest) Reset() {
 	*x = ListAPIKeysRequest{}
-	mi := &file_prompt_proto_msgTypes[69]
+	mi := &file_prompt_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4708,7 +5073,7 @@ func (x *ListAPIKeysRequest) String() string {
 func (*ListAPIKeysRequest) ProtoMessage() {}
 
 func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[69]
+	mi := &file_prompt_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4721,7 +5086,7 @@ func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysRequest.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{69}
+	return file_prompt_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ListAPIKeysRequest) GetPageToken() string {
@@ -4748,7 +5113,7 @@ type ListAPIKeysResponse struct {
 
 func (x *ListAPIKeysResponse) Reset() {
 	*x = ListAPIKeysResponse{}
-	mi := &file_prompt_proto_msgTypes[70]
+	mi := &file_prompt_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4760,7 +5125,7 @@ func (x *ListAPIKeysResponse) String() string {
 func (*ListAPIKeysResponse) ProtoMessage() {}
 
 func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[70]
+	mi := &file_prompt_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4773,7 +5138,7 @@ func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{70}
+	return file_prompt_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ListAPIKeysResponse) GetApiKeys() []*APIKey {
@@ -4799,7 +5164,7 @@ type DeleteAPIKeyRequest struct {
 
 func (x *DeleteAPIKeyRequest) Reset() {
 	*x = DeleteAPIKeyRequest{}
-	mi := &file_prompt_proto_msgTypes[71]
+	mi := &file_prompt_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4811,7 +5176,7 @@ func (x *DeleteAPIKeyRequest) String() string {
 func (*DeleteAPIKeyRequest) ProtoMessage() {}
 
 func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[71]
+	mi := &file_prompt_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4824,7 +5189,7 @@ func (x *DeleteAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{71}
+	return file_prompt_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *DeleteAPIKeyRequest) GetId() string {
@@ -4843,7 +5208,7 @@ type DeleteAPIKeyResponse struct {
 
 func (x *DeleteAPIKeyResponse) Reset() {
 	*x = DeleteAPIKeyResponse{}
-	mi := &file_prompt_proto_msgTypes[72]
+	mi := &file_prompt_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4855,7 +5220,7 @@ func (x *DeleteAPIKeyResponse) String() string {
 func (*DeleteAPIKeyResponse) ProtoMessage() {}
 
 func (x *DeleteAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[72]
+	mi := &file_prompt_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4868,7 +5233,7 @@ func (x *DeleteAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{72}
+	return file_prompt_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *DeleteAPIKeyResponse) GetSuccess() bool {
@@ -4890,7 +5255,7 @@ type CommentAuthor struct {
 
 func (x *CommentAuthor) Reset() {
 	*x = CommentAuthor{}
-	mi := &file_prompt_proto_msgTypes[73]
+	mi := &file_prompt_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4902,7 +5267,7 @@ func (x *CommentAuthor) String() string {
 func (*CommentAuthor) ProtoMessage() {}
 
 func (x *CommentAuthor) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[73]
+	mi := &file_prompt_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4915,7 +5280,7 @@ func (x *CommentAuthor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommentAuthor.ProtoReflect.Descriptor instead.
 func (*CommentAuthor) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{73}
+	return file_prompt_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *CommentAuthor) GetId() string {
@@ -4960,7 +5325,7 @@ type Comment struct {
 
 func (x *Comment) Reset() {
 	*x = Comment{}
-	mi := &file_prompt_proto_msgTypes[74]
+	mi := &file_prompt_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4972,7 +5337,7 @@ func (x *Comment) String() string {
 func (*Comment) ProtoMessage() {}
 
 func (x *Comment) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[74]
+	mi := &file_prompt_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4985,7 +5350,7 @@ func (x *Comment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Comment.ProtoReflect.Descriptor instead.
 func (*Comment) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{74}
+	return file_prompt_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *Comment) GetId() string {
@@ -5062,7 +5427,7 @@ type ListCommentsRequest struct {
 
 func (x *ListCommentsRequest) Reset() {
 	*x = ListCommentsRequest{}
-	mi := &file_prompt_proto_msgTypes[75]
+	mi := &file_prompt_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5074,7 +5439,7 @@ func (x *ListCommentsRequest) String() string {
 func (*ListCommentsRequest) ProtoMessage() {}
 
 func (x *ListCommentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[75]
+	mi := &file_prompt_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5087,7 +5452,7 @@ func (x *ListCommentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommentsRequest.ProtoReflect.Descriptor instead.
 func (*ListCommentsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{75}
+	return file_prompt_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ListCommentsRequest) GetTemplateId() string {
@@ -5123,7 +5488,7 @@ type ListCommentsResponse struct {
 
 func (x *ListCommentsResponse) Reset() {
 	*x = ListCommentsResponse{}
-	mi := &file_prompt_proto_msgTypes[76]
+	mi := &file_prompt_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5135,7 +5500,7 @@ func (x *ListCommentsResponse) String() string {
 func (*ListCommentsResponse) ProtoMessage() {}
 
 func (x *ListCommentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[76]
+	mi := &file_prompt_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5148,7 +5513,7 @@ func (x *ListCommentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommentsResponse.ProtoReflect.Descriptor instead.
 func (*ListCommentsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{76}
+	return file_prompt_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *ListCommentsResponse) GetComments() []*Comment {
@@ -5189,7 +5554,7 @@ type CreateCommentRequest struct {
 
 func (x *CreateCommentRequest) Reset() {
 	*x = CreateCommentRequest{}
-	mi := &file_prompt_proto_msgTypes[77]
+	mi := &file_prompt_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5201,7 +5566,7 @@ func (x *CreateCommentRequest) String() string {
 func (*CreateCommentRequest) ProtoMessage() {}
 
 func (x *CreateCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[77]
+	mi := &file_prompt_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5214,7 +5579,7 @@ func (x *CreateCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCommentRequest.ProtoReflect.Descriptor instead.
 func (*CreateCommentRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{77}
+	return file_prompt_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *CreateCommentRequest) GetTemplateId() string {
@@ -5241,7 +5606,7 @@ type UpdateCommentRequest struct {
 
 func (x *UpdateCommentRequest) Reset() {
 	*x = UpdateCommentRequest{}
-	mi := &file_prompt_proto_msgTypes[78]
+	mi := &file_prompt_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5253,7 +5618,7 @@ func (x *UpdateCommentRequest) String() string {
 func (*UpdateCommentRequest) ProtoMessage() {}
 
 func (x *UpdateCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[78]
+	mi := &file_prompt_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5266,7 +5631,7 @@ func (x *UpdateCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCommentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCommentRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{78}
+	return file_prompt_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *UpdateCommentRequest) GetCommentId() string {
@@ -5292,7 +5657,7 @@ type DeleteCommentRequest struct {
 
 func (x *DeleteCommentRequest) Reset() {
 	*x = DeleteCommentRequest{}
-	mi := &file_prompt_proto_msgTypes[79]
+	mi := &file_prompt_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5304,7 +5669,7 @@ func (x *DeleteCommentRequest) String() string {
 func (*DeleteCommentRequest) ProtoMessage() {}
 
 func (x *DeleteCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[79]
+	mi := &file_prompt_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5317,7 +5682,7 @@ func (x *DeleteCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCommentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCommentRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{79}
+	return file_prompt_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *DeleteCommentRequest) GetCommentId() string {
@@ -5336,7 +5701,7 @@ type DeleteCommentResponse struct {
 
 func (x *DeleteCommentResponse) Reset() {
 	*x = DeleteCommentResponse{}
-	mi := &file_prompt_proto_msgTypes[80]
+	mi := &file_prompt_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5348,7 +5713,7 @@ func (x *DeleteCommentResponse) String() string {
 func (*DeleteCommentResponse) ProtoMessage() {}
 
 func (x *DeleteCommentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[80]
+	mi := &file_prompt_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5361,7 +5726,7 @@ func (x *DeleteCommentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCommentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCommentResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{80}
+	return file_prompt_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *DeleteCommentResponse) GetSuccess() bool {
@@ -5386,7 +5751,7 @@ type RecordTemplateEventRequest struct {
 
 func (x *RecordTemplateEventRequest) Reset() {
 	*x = RecordTemplateEventRequest{}
-	mi := &file_prompt_proto_msgTypes[81]
+	mi := &file_prompt_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5398,7 +5763,7 @@ func (x *RecordTemplateEventRequest) String() string {
 func (*RecordTemplateEventRequest) ProtoMessage() {}
 
 func (x *RecordTemplateEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[81]
+	mi := &file_prompt_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5411,7 +5776,7 @@ func (x *RecordTemplateEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordTemplateEventRequest.ProtoReflect.Descriptor instead.
 func (*RecordTemplateEventRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{81}
+	return file_prompt_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *RecordTemplateEventRequest) GetTemplateId() string {
@@ -5443,7 +5808,7 @@ type RecordTemplateEventResponse struct {
 
 func (x *RecordTemplateEventResponse) Reset() {
 	*x = RecordTemplateEventResponse{}
-	mi := &file_prompt_proto_msgTypes[82]
+	mi := &file_prompt_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5455,7 +5820,7 @@ func (x *RecordTemplateEventResponse) String() string {
 func (*RecordTemplateEventResponse) ProtoMessage() {}
 
 func (x *RecordTemplateEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[82]
+	mi := &file_prompt_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5468,7 +5833,7 @@ func (x *RecordTemplateEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordTemplateEventResponse.ProtoReflect.Descriptor instead.
 func (*RecordTemplateEventResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{82}
+	return file_prompt_proto_rawDescGZIP(), []int{87}
 }
 
 // TemplateStatsSummary is a range total for the four tracked metrics.
@@ -5484,7 +5849,7 @@ type TemplateStatsSummary struct {
 
 func (x *TemplateStatsSummary) Reset() {
 	*x = TemplateStatsSummary{}
-	mi := &file_prompt_proto_msgTypes[83]
+	mi := &file_prompt_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5496,7 +5861,7 @@ func (x *TemplateStatsSummary) String() string {
 func (*TemplateStatsSummary) ProtoMessage() {}
 
 func (x *TemplateStatsSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[83]
+	mi := &file_prompt_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5509,7 +5874,7 @@ func (x *TemplateStatsSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TemplateStatsSummary.ProtoReflect.Descriptor instead.
 func (*TemplateStatsSummary) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{83}
+	return file_prompt_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *TemplateStatsSummary) GetViews() int32 {
@@ -5555,7 +5920,7 @@ type DailyMetricPoint struct {
 
 func (x *DailyMetricPoint) Reset() {
 	*x = DailyMetricPoint{}
-	mi := &file_prompt_proto_msgTypes[84]
+	mi := &file_prompt_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5567,7 +5932,7 @@ func (x *DailyMetricPoint) String() string {
 func (*DailyMetricPoint) ProtoMessage() {}
 
 func (x *DailyMetricPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[84]
+	mi := &file_prompt_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5580,7 +5945,7 @@ func (x *DailyMetricPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DailyMetricPoint.ProtoReflect.Descriptor instead.
 func (*DailyMetricPoint) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{84}
+	return file_prompt_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *DailyMetricPoint) GetDate() string {
@@ -5629,7 +5994,7 @@ type SourceSplit struct {
 
 func (x *SourceSplit) Reset() {
 	*x = SourceSplit{}
-	mi := &file_prompt_proto_msgTypes[85]
+	mi := &file_prompt_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5641,7 +6006,7 @@ func (x *SourceSplit) String() string {
 func (*SourceSplit) ProtoMessage() {}
 
 func (x *SourceSplit) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[85]
+	mi := &file_prompt_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5654,7 +6019,7 @@ func (x *SourceSplit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceSplit.ProtoReflect.Descriptor instead.
 func (*SourceSplit) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{85}
+	return file_prompt_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *SourceSplit) GetWeb() int32 {
@@ -5682,7 +6047,7 @@ type GetTemplateStatsRequest struct {
 
 func (x *GetTemplateStatsRequest) Reset() {
 	*x = GetTemplateStatsRequest{}
-	mi := &file_prompt_proto_msgTypes[86]
+	mi := &file_prompt_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5694,7 +6059,7 @@ func (x *GetTemplateStatsRequest) String() string {
 func (*GetTemplateStatsRequest) ProtoMessage() {}
 
 func (x *GetTemplateStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[86]
+	mi := &file_prompt_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5707,7 +6072,7 @@ func (x *GetTemplateStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTemplateStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetTemplateStatsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{86}
+	return file_prompt_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *GetTemplateStatsRequest) GetTemplateId() string {
@@ -5742,7 +6107,7 @@ type GetTemplateStatsResponse struct {
 
 func (x *GetTemplateStatsResponse) Reset() {
 	*x = GetTemplateStatsResponse{}
-	mi := &file_prompt_proto_msgTypes[87]
+	mi := &file_prompt_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5754,7 +6119,7 @@ func (x *GetTemplateStatsResponse) String() string {
 func (*GetTemplateStatsResponse) ProtoMessage() {}
 
 func (x *GetTemplateStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[87]
+	mi := &file_prompt_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5767,7 +6132,7 @@ func (x *GetTemplateStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTemplateStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetTemplateStatsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{87}
+	return file_prompt_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *GetTemplateStatsResponse) GetCurrent() *TemplateStatsSummary {
@@ -5822,7 +6187,7 @@ type TopTemplateRow struct {
 
 func (x *TopTemplateRow) Reset() {
 	*x = TopTemplateRow{}
-	mi := &file_prompt_proto_msgTypes[88]
+	mi := &file_prompt_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5834,7 +6199,7 @@ func (x *TopTemplateRow) String() string {
 func (*TopTemplateRow) ProtoMessage() {}
 
 func (x *TopTemplateRow) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[88]
+	mi := &file_prompt_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5847,7 +6212,7 @@ func (x *TopTemplateRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TopTemplateRow.ProtoReflect.Descriptor instead.
 func (*TopTemplateRow) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{88}
+	return file_prompt_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *TopTemplateRow) GetId() string {
@@ -5909,7 +6274,7 @@ type GetCreatorStatsRequest struct {
 
 func (x *GetCreatorStatsRequest) Reset() {
 	*x = GetCreatorStatsRequest{}
-	mi := &file_prompt_proto_msgTypes[89]
+	mi := &file_prompt_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5921,7 +6286,7 @@ func (x *GetCreatorStatsRequest) String() string {
 func (*GetCreatorStatsRequest) ProtoMessage() {}
 
 func (x *GetCreatorStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[89]
+	mi := &file_prompt_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5934,7 +6299,7 @@ func (x *GetCreatorStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCreatorStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetCreatorStatsRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{89}
+	return file_prompt_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *GetCreatorStatsRequest) GetDays() int32 {
@@ -5960,7 +6325,7 @@ type GetCreatorStatsResponse struct {
 
 func (x *GetCreatorStatsResponse) Reset() {
 	*x = GetCreatorStatsResponse{}
-	mi := &file_prompt_proto_msgTypes[90]
+	mi := &file_prompt_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5972,7 +6337,7 @@ func (x *GetCreatorStatsResponse) String() string {
 func (*GetCreatorStatsResponse) ProtoMessage() {}
 
 func (x *GetCreatorStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[90]
+	mi := &file_prompt_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5985,7 +6350,7 @@ func (x *GetCreatorStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCreatorStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetCreatorStatsResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{90}
+	return file_prompt_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *GetCreatorStatsResponse) GetCurrent() *TemplateStatsSummary {
@@ -6041,7 +6406,7 @@ type GetRelatedTemplatesRequest struct {
 
 func (x *GetRelatedTemplatesRequest) Reset() {
 	*x = GetRelatedTemplatesRequest{}
-	mi := &file_prompt_proto_msgTypes[91]
+	mi := &file_prompt_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6053,7 +6418,7 @@ func (x *GetRelatedTemplatesRequest) String() string {
 func (*GetRelatedTemplatesRequest) ProtoMessage() {}
 
 func (x *GetRelatedTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[91]
+	mi := &file_prompt_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6066,7 +6431,7 @@ func (x *GetRelatedTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRelatedTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*GetRelatedTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{91}
+	return file_prompt_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *GetRelatedTemplatesRequest) GetTemplateId() string {
@@ -6094,7 +6459,7 @@ type GetRelatedTemplatesResponse struct {
 
 func (x *GetRelatedTemplatesResponse) Reset() {
 	*x = GetRelatedTemplatesResponse{}
-	mi := &file_prompt_proto_msgTypes[92]
+	mi := &file_prompt_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6106,7 +6471,7 @@ func (x *GetRelatedTemplatesResponse) String() string {
 func (*GetRelatedTemplatesResponse) ProtoMessage() {}
 
 func (x *GetRelatedTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[92]
+	mi := &file_prompt_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6119,7 +6484,7 @@ func (x *GetRelatedTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRelatedTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*GetRelatedTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{92}
+	return file_prompt_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *GetRelatedTemplatesResponse) GetItems() []*Template {
@@ -6147,7 +6512,7 @@ type ListMoreFromAuthorRequest struct {
 
 func (x *ListMoreFromAuthorRequest) Reset() {
 	*x = ListMoreFromAuthorRequest{}
-	mi := &file_prompt_proto_msgTypes[93]
+	mi := &file_prompt_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6159,7 +6524,7 @@ func (x *ListMoreFromAuthorRequest) String() string {
 func (*ListMoreFromAuthorRequest) ProtoMessage() {}
 
 func (x *ListMoreFromAuthorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[93]
+	mi := &file_prompt_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6172,7 +6537,7 @@ func (x *ListMoreFromAuthorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMoreFromAuthorRequest.ProtoReflect.Descriptor instead.
 func (*ListMoreFromAuthorRequest) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{93}
+	return file_prompt_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *ListMoreFromAuthorRequest) GetTemplateId() string {
@@ -6198,7 +6563,7 @@ type ListMoreFromAuthorResponse struct {
 
 func (x *ListMoreFromAuthorResponse) Reset() {
 	*x = ListMoreFromAuthorResponse{}
-	mi := &file_prompt_proto_msgTypes[94]
+	mi := &file_prompt_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6210,7 +6575,7 @@ func (x *ListMoreFromAuthorResponse) String() string {
 func (*ListMoreFromAuthorResponse) ProtoMessage() {}
 
 func (x *ListMoreFromAuthorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prompt_proto_msgTypes[94]
+	mi := &file_prompt_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6223,7 +6588,7 @@ func (x *ListMoreFromAuthorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMoreFromAuthorResponse.ProtoReflect.Descriptor instead.
 func (*ListMoreFromAuthorResponse) Descriptor() ([]byte, []int) {
-	return file_prompt_proto_rawDescGZIP(), []int{94}
+	return file_prompt_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *ListMoreFromAuthorResponse) GetItems() []*Template {
@@ -6237,7 +6602,43 @@ var File_prompt_proto protoreflect.FileDescriptor
 
 const file_prompt_proto_rawDesc = "" +
 	"\n" +
-	"\fprompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x96\b\n" +
+	"\fprompt.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc3\x04\n" +
+	"\x06Appeal\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x120\n" +
+	"\x14moderation_action_id\x18\x02 \x01(\tR\x12moderationActionId\x12\x1f\n" +
+	"\vtemplate_id\x18\x03 \x01(\tR\n" +
+	"templateId\x12%\n" +
+	"\x0etemplate_title\x18\x04 \x01(\tR\rtemplateTitle\x12\x1f\n" +
+	"\vaction_type\x18\x05 \x01(\tR\n" +
+	"actionType\x12#\n" +
+	"\raction_reason\x18\x06 \x01(\tR\factionReason\x12,\n" +
+	"\x12actor_display_name\x18\a \x01(\tR\x10actorDisplayName\x12F\n" +
+	"\x11action_created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x0factionCreatedAt\x12\x1c\n" +
+	"\tstatement\x18\t \x01(\tR\tstatement\x12\x14\n" +
+	"\x05state\x18\n" +
+	" \x01(\tR\x05state\x12'\n" +
+	"\x0fresolution_note\x18\v \x01(\tR\x0eresolutionNote\x129\n" +
+	"\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12;\n" +
+	"\vresolved_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"resolvedAt\x12\x1e\n" +
+	"\n" +
+	"superseded\x18\x0e \x01(\bR\n" +
+	"superseded\"e\n" +
+	"\x13CreateAppealRequest\x120\n" +
+	"\x14moderation_action_id\x18\x01 \x01(\tR\x12moderationActionId\x12\x1c\n" +
+	"\tstatement\x18\x02 \x01(\tR\tstatement\"C\n" +
+	"\x12ListAppealsRequest\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x02 \x01(\x05R\aperPage\"\x80\x01\n" +
+	"\x13ListAppealsResponse\x12$\n" +
+	"\aappeals\x18\x01 \x03(\v2\n" +
+	".v1.AppealR\aappeals\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
+	"\bper_page\x18\x04 \x01(\x05R\aperPage\"/\n" +
+	"\x10GetAppealRequest\x12\x1b\n" +
+	"\tappeal_id\x18\x01 \x01(\tR\bappealId\"\x96\b\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
@@ -6773,7 +7174,7 @@ const file_prompt_proto_rawDesc = "" +
 	"\rListFollowers\x12\x1c.v1.ListUserRelationsRequest\x1a\x1d.v1.ListUserRelationsResponse\x12L\n" +
 	"\rListFollowing\x12\x1c.v1.ListUserRelationsRequest\x1a\x1d.v1.ListUserRelationsResponse\x12M\n" +
 	"\x10GetFollowingFeed\x12\x1b.v1.GetFollowingFeedRequest\x1a\x1c.v1.GetFollowingFeedResponse\x12J\n" +
-	"\x0fListTopCreators\x12\x1a.v1.ListTopCreatorsRequest\x1a\x1b.v1.ListTopCreatorsResponse2\xc0\r\n" +
+	"\x0fListTopCreators\x12\x1a.v1.ListTopCreatorsRequest\x1a\x1b.v1.ListTopCreatorsResponse2\xe4\x0e\n" +
 	"\rPromptService\x12G\n" +
 	"\x0eCreateTemplate\x12\x19.v1.CreateTemplateRequest\x1a\x1a.v1.CreateTemplateResponse\x12G\n" +
 	"\x0eUpdateTemplate\x12\x19.v1.UpdateTemplateRequest\x1a\x1a.v1.UpdateTemplateResponse\x12>\n" +
@@ -6798,7 +7199,12 @@ const file_prompt_proto_rawDesc = "" +
 	"\x13GetRelatedTemplates\x12\x1e.v1.GetRelatedTemplatesRequest\x1a\x1f.v1.GetRelatedTemplatesResponse\x12S\n" +
 	"\x12ListMoreFromAuthor\x12\x1d.v1.ListMoreFromAuthorRequest\x1a\x1e.v1.ListMoreFromAuthorResponse\x12A\n" +
 	"\fRateTemplate\x12\x17.v1.RateTemplateRequest\x1a\x18.v1.RateTemplateResponse\x12A\n" +
-	"\fDeleteRating\x12\x17.v1.DeleteRatingRequest\x1a\x18.v1.RateTemplateResponseB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
+	"\fDeleteRating\x12\x17.v1.DeleteRatingRequest\x1a\x18.v1.RateTemplateResponse\x123\n" +
+	"\fCreateAppeal\x12\x17.v1.CreateAppealRequest\x1a\n" +
+	".v1.Appeal\x12>\n" +
+	"\vListAppeals\x12\x16.v1.ListAppealsRequest\x1a\x17.v1.ListAppealsResponse\x12-\n" +
+	"\tGetAppeal\x12\x14.v1.GetAppealRequest\x1a\n" +
+	".v1.AppealB&Z$open-prompts/backend/api/proto/v1;v1b\x06proto3"
 
 var (
 	file_prompt_proto_rawDescOnce sync.Once
@@ -6813,259 +7219,274 @@ func file_prompt_proto_rawDescGZIP() []byte {
 }
 
 var file_prompt_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 97)
+var file_prompt_proto_msgTypes = make([]protoimpl.MessageInfo, 102)
 var file_prompt_proto_goTypes = []any{
 	(Visibility)(0),                      // 0: v1.Visibility
 	(TemplateType)(0),                    // 1: v1.TemplateType
-	(*Template)(nil),                     // 2: v1.Template
-	(*TemplateVersion)(nil),              // 3: v1.TemplateVersion
-	(*ListTemplateVersionsRequest)(nil),  // 4: v1.ListTemplateVersionsRequest
-	(*ListTemplateVersionsResponse)(nil), // 5: v1.ListTemplateVersionsResponse
-	(*Prompt)(nil),                       // 6: v1.Prompt
-	(*CreateTemplateRequest)(nil),        // 7: v1.CreateTemplateRequest
-	(*CreateTemplateResponse)(nil),       // 8: v1.CreateTemplateResponse
-	(*UpdateTemplateRequest)(nil),        // 9: v1.UpdateTemplateRequest
-	(*UpdateTemplateResponse)(nil),       // 10: v1.UpdateTemplateResponse
-	(*GetTemplateRequest)(nil),           // 11: v1.GetTemplateRequest
-	(*GetTemplateResponse)(nil),          // 12: v1.GetTemplateResponse
-	(*RateTemplateRequest)(nil),          // 13: v1.RateTemplateRequest
-	(*DeleteRatingRequest)(nil),          // 14: v1.DeleteRatingRequest
-	(*RateTemplateResponse)(nil),         // 15: v1.RateTemplateResponse
-	(*ListTemplatesRequest)(nil),         // 16: v1.ListTemplatesRequest
-	(*ListTemplatesResponse)(nil),        // 17: v1.ListTemplatesResponse
-	(*DeleteTemplateRequest)(nil),        // 18: v1.DeleteTemplateRequest
-	(*DeleteTemplateResponse)(nil),       // 19: v1.DeleteTemplateResponse
-	(*ToggleLikeRequest)(nil),            // 20: v1.ToggleLikeRequest
-	(*ToggleLikeResponse)(nil),           // 21: v1.ToggleLikeResponse
-	(*ToggleFavoriteRequest)(nil),        // 22: v1.ToggleFavoriteRequest
-	(*ToggleFavoriteResponse)(nil),       // 23: v1.ToggleFavoriteResponse
-	(*CreatePromptRequest)(nil),          // 24: v1.CreatePromptRequest
-	(*CreatePromptResponse)(nil),         // 25: v1.CreatePromptResponse
-	(*GetPromptRequest)(nil),             // 26: v1.GetPromptRequest
-	(*GetPromptResponse)(nil),            // 27: v1.GetPromptResponse
-	(*ListPromptsRequest)(nil),           // 28: v1.ListPromptsRequest
-	(*ListPromptsResponse)(nil),          // 29: v1.ListPromptsResponse
-	(*DeletePromptRequest)(nil),          // 30: v1.DeletePromptRequest
-	(*DeletePromptResponse)(nil),         // 31: v1.DeletePromptResponse
-	(*RegisterRequest)(nil),              // 32: v1.RegisterRequest
-	(*RegisterResponse)(nil),             // 33: v1.RegisterResponse
-	(*LoginRequest)(nil),                 // 34: v1.LoginRequest
-	(*LoginResponse)(nil),                // 35: v1.LoginResponse
-	(*LoginWithOAuthRequest)(nil),        // 36: v1.LoginWithOAuthRequest
-	(*SendVerificationCodeRequest)(nil),  // 37: v1.SendVerificationCodeRequest
-	(*SendVerificationCodeResponse)(nil), // 38: v1.SendVerificationCodeResponse
-	(*ListCategoriesRequest)(nil),        // 39: v1.ListCategoriesRequest
-	(*CategoryStats)(nil),                // 40: v1.CategoryStats
-	(*ListCategoriesResponse)(nil),       // 41: v1.ListCategoriesResponse
-	(*ListTagsRequest)(nil),              // 42: v1.ListTagsRequest
-	(*TagStats)(nil),                     // 43: v1.TagStats
-	(*ListTagsResponse)(nil),             // 44: v1.ListTagsResponse
-	(*UpdateProfileRequest)(nil),         // 45: v1.UpdateProfileRequest
-	(*UpdateProfileResponse)(nil),        // 46: v1.UpdateProfileResponse
-	(*GetProfileRequest)(nil),            // 47: v1.GetProfileRequest
-	(*GetProfileResponse)(nil),           // 48: v1.GetProfileResponse
-	(*FollowUserRequest)(nil),            // 49: v1.FollowUserRequest
-	(*FollowUserResponse)(nil),           // 50: v1.FollowUserResponse
-	(*GetCreatorProfileRequest)(nil),     // 51: v1.GetCreatorProfileRequest
-	(*GetCreatorProfileResponse)(nil),    // 52: v1.GetCreatorProfileResponse
-	(*ListUserRelationsRequest)(nil),     // 53: v1.ListUserRelationsRequest
-	(*UserCard)(nil),                     // 54: v1.UserCard
-	(*ListUserRelationsResponse)(nil),    // 55: v1.ListUserRelationsResponse
-	(*GetFollowingFeedRequest)(nil),      // 56: v1.GetFollowingFeedRequest
-	(*GetFollowingFeedResponse)(nil),     // 57: v1.GetFollowingFeedResponse
-	(*ListTopCreatorsRequest)(nil),       // 58: v1.ListTopCreatorsRequest
-	(*ListTopCreatorsResponse)(nil),      // 59: v1.ListTopCreatorsResponse
-	(*OwnerInfo)(nil),                    // 60: v1.OwnerInfo
-	(*Alias)(nil),                        // 61: v1.Alias
-	(*CreateAliasRequest)(nil),           // 62: v1.CreateAliasRequest
-	(*ListAliasesRequest)(nil),           // 63: v1.ListAliasesRequest
-	(*ListAliasesResponse)(nil),          // 64: v1.ListAliasesResponse
-	(*UpdateAliasRequest)(nil),           // 65: v1.UpdateAliasRequest
-	(*DeleteAliasRequest)(nil),           // 66: v1.DeleteAliasRequest
-	(*GetPromptByAliasRequest)(nil),      // 67: v1.GetPromptByAliasRequest
-	(*APIKey)(nil),                       // 68: v1.APIKey
-	(*CreateAPIKeyRequest)(nil),          // 69: v1.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil),         // 70: v1.CreateAPIKeyResponse
-	(*ListAPIKeysRequest)(nil),           // 71: v1.ListAPIKeysRequest
-	(*ListAPIKeysResponse)(nil),          // 72: v1.ListAPIKeysResponse
-	(*DeleteAPIKeyRequest)(nil),          // 73: v1.DeleteAPIKeyRequest
-	(*DeleteAPIKeyResponse)(nil),         // 74: v1.DeleteAPIKeyResponse
-	(*CommentAuthor)(nil),                // 75: v1.CommentAuthor
-	(*Comment)(nil),                      // 76: v1.Comment
-	(*ListCommentsRequest)(nil),          // 77: v1.ListCommentsRequest
-	(*ListCommentsResponse)(nil),         // 78: v1.ListCommentsResponse
-	(*CreateCommentRequest)(nil),         // 79: v1.CreateCommentRequest
-	(*UpdateCommentRequest)(nil),         // 80: v1.UpdateCommentRequest
-	(*DeleteCommentRequest)(nil),         // 81: v1.DeleteCommentRequest
-	(*DeleteCommentResponse)(nil),        // 82: v1.DeleteCommentResponse
-	(*RecordTemplateEventRequest)(nil),   // 83: v1.RecordTemplateEventRequest
-	(*RecordTemplateEventResponse)(nil),  // 84: v1.RecordTemplateEventResponse
-	(*TemplateStatsSummary)(nil),         // 85: v1.TemplateStatsSummary
-	(*DailyMetricPoint)(nil),             // 86: v1.DailyMetricPoint
-	(*SourceSplit)(nil),                  // 87: v1.SourceSplit
-	(*GetTemplateStatsRequest)(nil),      // 88: v1.GetTemplateStatsRequest
-	(*GetTemplateStatsResponse)(nil),     // 89: v1.GetTemplateStatsResponse
-	(*TopTemplateRow)(nil),               // 90: v1.TopTemplateRow
-	(*GetCreatorStatsRequest)(nil),       // 91: v1.GetCreatorStatsRequest
-	(*GetCreatorStatsResponse)(nil),      // 92: v1.GetCreatorStatsResponse
-	(*GetRelatedTemplatesRequest)(nil),   // 93: v1.GetRelatedTemplatesRequest
-	(*GetRelatedTemplatesResponse)(nil),  // 94: v1.GetRelatedTemplatesResponse
-	(*ListMoreFromAuthorRequest)(nil),    // 95: v1.ListMoreFromAuthorRequest
-	(*ListMoreFromAuthorResponse)(nil),   // 96: v1.ListMoreFromAuthorResponse
-	nil,                                  // 97: v1.Prompt.VariablesEntry
-	nil,                                  // 98: v1.CreatePromptRequest.VariablesEntry
-	(*timestamppb.Timestamp)(nil),        // 99: google.protobuf.Timestamp
+	(*Appeal)(nil),                       // 2: v1.Appeal
+	(*CreateAppealRequest)(nil),          // 3: v1.CreateAppealRequest
+	(*ListAppealsRequest)(nil),           // 4: v1.ListAppealsRequest
+	(*ListAppealsResponse)(nil),          // 5: v1.ListAppealsResponse
+	(*GetAppealRequest)(nil),             // 6: v1.GetAppealRequest
+	(*Template)(nil),                     // 7: v1.Template
+	(*TemplateVersion)(nil),              // 8: v1.TemplateVersion
+	(*ListTemplateVersionsRequest)(nil),  // 9: v1.ListTemplateVersionsRequest
+	(*ListTemplateVersionsResponse)(nil), // 10: v1.ListTemplateVersionsResponse
+	(*Prompt)(nil),                       // 11: v1.Prompt
+	(*CreateTemplateRequest)(nil),        // 12: v1.CreateTemplateRequest
+	(*CreateTemplateResponse)(nil),       // 13: v1.CreateTemplateResponse
+	(*UpdateTemplateRequest)(nil),        // 14: v1.UpdateTemplateRequest
+	(*UpdateTemplateResponse)(nil),       // 15: v1.UpdateTemplateResponse
+	(*GetTemplateRequest)(nil),           // 16: v1.GetTemplateRequest
+	(*GetTemplateResponse)(nil),          // 17: v1.GetTemplateResponse
+	(*RateTemplateRequest)(nil),          // 18: v1.RateTemplateRequest
+	(*DeleteRatingRequest)(nil),          // 19: v1.DeleteRatingRequest
+	(*RateTemplateResponse)(nil),         // 20: v1.RateTemplateResponse
+	(*ListTemplatesRequest)(nil),         // 21: v1.ListTemplatesRequest
+	(*ListTemplatesResponse)(nil),        // 22: v1.ListTemplatesResponse
+	(*DeleteTemplateRequest)(nil),        // 23: v1.DeleteTemplateRequest
+	(*DeleteTemplateResponse)(nil),       // 24: v1.DeleteTemplateResponse
+	(*ToggleLikeRequest)(nil),            // 25: v1.ToggleLikeRequest
+	(*ToggleLikeResponse)(nil),           // 26: v1.ToggleLikeResponse
+	(*ToggleFavoriteRequest)(nil),        // 27: v1.ToggleFavoriteRequest
+	(*ToggleFavoriteResponse)(nil),       // 28: v1.ToggleFavoriteResponse
+	(*CreatePromptRequest)(nil),          // 29: v1.CreatePromptRequest
+	(*CreatePromptResponse)(nil),         // 30: v1.CreatePromptResponse
+	(*GetPromptRequest)(nil),             // 31: v1.GetPromptRequest
+	(*GetPromptResponse)(nil),            // 32: v1.GetPromptResponse
+	(*ListPromptsRequest)(nil),           // 33: v1.ListPromptsRequest
+	(*ListPromptsResponse)(nil),          // 34: v1.ListPromptsResponse
+	(*DeletePromptRequest)(nil),          // 35: v1.DeletePromptRequest
+	(*DeletePromptResponse)(nil),         // 36: v1.DeletePromptResponse
+	(*RegisterRequest)(nil),              // 37: v1.RegisterRequest
+	(*RegisterResponse)(nil),             // 38: v1.RegisterResponse
+	(*LoginRequest)(nil),                 // 39: v1.LoginRequest
+	(*LoginResponse)(nil),                // 40: v1.LoginResponse
+	(*LoginWithOAuthRequest)(nil),        // 41: v1.LoginWithOAuthRequest
+	(*SendVerificationCodeRequest)(nil),  // 42: v1.SendVerificationCodeRequest
+	(*SendVerificationCodeResponse)(nil), // 43: v1.SendVerificationCodeResponse
+	(*ListCategoriesRequest)(nil),        // 44: v1.ListCategoriesRequest
+	(*CategoryStats)(nil),                // 45: v1.CategoryStats
+	(*ListCategoriesResponse)(nil),       // 46: v1.ListCategoriesResponse
+	(*ListTagsRequest)(nil),              // 47: v1.ListTagsRequest
+	(*TagStats)(nil),                     // 48: v1.TagStats
+	(*ListTagsResponse)(nil),             // 49: v1.ListTagsResponse
+	(*UpdateProfileRequest)(nil),         // 50: v1.UpdateProfileRequest
+	(*UpdateProfileResponse)(nil),        // 51: v1.UpdateProfileResponse
+	(*GetProfileRequest)(nil),            // 52: v1.GetProfileRequest
+	(*GetProfileResponse)(nil),           // 53: v1.GetProfileResponse
+	(*FollowUserRequest)(nil),            // 54: v1.FollowUserRequest
+	(*FollowUserResponse)(nil),           // 55: v1.FollowUserResponse
+	(*GetCreatorProfileRequest)(nil),     // 56: v1.GetCreatorProfileRequest
+	(*GetCreatorProfileResponse)(nil),    // 57: v1.GetCreatorProfileResponse
+	(*ListUserRelationsRequest)(nil),     // 58: v1.ListUserRelationsRequest
+	(*UserCard)(nil),                     // 59: v1.UserCard
+	(*ListUserRelationsResponse)(nil),    // 60: v1.ListUserRelationsResponse
+	(*GetFollowingFeedRequest)(nil),      // 61: v1.GetFollowingFeedRequest
+	(*GetFollowingFeedResponse)(nil),     // 62: v1.GetFollowingFeedResponse
+	(*ListTopCreatorsRequest)(nil),       // 63: v1.ListTopCreatorsRequest
+	(*ListTopCreatorsResponse)(nil),      // 64: v1.ListTopCreatorsResponse
+	(*OwnerInfo)(nil),                    // 65: v1.OwnerInfo
+	(*Alias)(nil),                        // 66: v1.Alias
+	(*CreateAliasRequest)(nil),           // 67: v1.CreateAliasRequest
+	(*ListAliasesRequest)(nil),           // 68: v1.ListAliasesRequest
+	(*ListAliasesResponse)(nil),          // 69: v1.ListAliasesResponse
+	(*UpdateAliasRequest)(nil),           // 70: v1.UpdateAliasRequest
+	(*DeleteAliasRequest)(nil),           // 71: v1.DeleteAliasRequest
+	(*GetPromptByAliasRequest)(nil),      // 72: v1.GetPromptByAliasRequest
+	(*APIKey)(nil),                       // 73: v1.APIKey
+	(*CreateAPIKeyRequest)(nil),          // 74: v1.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),         // 75: v1.CreateAPIKeyResponse
+	(*ListAPIKeysRequest)(nil),           // 76: v1.ListAPIKeysRequest
+	(*ListAPIKeysResponse)(nil),          // 77: v1.ListAPIKeysResponse
+	(*DeleteAPIKeyRequest)(nil),          // 78: v1.DeleteAPIKeyRequest
+	(*DeleteAPIKeyResponse)(nil),         // 79: v1.DeleteAPIKeyResponse
+	(*CommentAuthor)(nil),                // 80: v1.CommentAuthor
+	(*Comment)(nil),                      // 81: v1.Comment
+	(*ListCommentsRequest)(nil),          // 82: v1.ListCommentsRequest
+	(*ListCommentsResponse)(nil),         // 83: v1.ListCommentsResponse
+	(*CreateCommentRequest)(nil),         // 84: v1.CreateCommentRequest
+	(*UpdateCommentRequest)(nil),         // 85: v1.UpdateCommentRequest
+	(*DeleteCommentRequest)(nil),         // 86: v1.DeleteCommentRequest
+	(*DeleteCommentResponse)(nil),        // 87: v1.DeleteCommentResponse
+	(*RecordTemplateEventRequest)(nil),   // 88: v1.RecordTemplateEventRequest
+	(*RecordTemplateEventResponse)(nil),  // 89: v1.RecordTemplateEventResponse
+	(*TemplateStatsSummary)(nil),         // 90: v1.TemplateStatsSummary
+	(*DailyMetricPoint)(nil),             // 91: v1.DailyMetricPoint
+	(*SourceSplit)(nil),                  // 92: v1.SourceSplit
+	(*GetTemplateStatsRequest)(nil),      // 93: v1.GetTemplateStatsRequest
+	(*GetTemplateStatsResponse)(nil),     // 94: v1.GetTemplateStatsResponse
+	(*TopTemplateRow)(nil),               // 95: v1.TopTemplateRow
+	(*GetCreatorStatsRequest)(nil),       // 96: v1.GetCreatorStatsRequest
+	(*GetCreatorStatsResponse)(nil),      // 97: v1.GetCreatorStatsResponse
+	(*GetRelatedTemplatesRequest)(nil),   // 98: v1.GetRelatedTemplatesRequest
+	(*GetRelatedTemplatesResponse)(nil),  // 99: v1.GetRelatedTemplatesResponse
+	(*ListMoreFromAuthorRequest)(nil),    // 100: v1.ListMoreFromAuthorRequest
+	(*ListMoreFromAuthorResponse)(nil),   // 101: v1.ListMoreFromAuthorResponse
+	nil,                                  // 102: v1.Prompt.VariablesEntry
+	nil,                                  // 103: v1.CreatePromptRequest.VariablesEntry
+	(*timestamppb.Timestamp)(nil),        // 104: google.protobuf.Timestamp
 }
 var file_prompt_proto_depIdxs = []int32{
-	0,  // 0: v1.Template.visibility:type_name -> v1.Visibility
-	1,  // 1: v1.Template.type:type_name -> v1.TemplateType
-	99, // 2: v1.Template.created_at:type_name -> google.protobuf.Timestamp
-	99, // 3: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 4: v1.Template.latest_version:type_name -> v1.TemplateVersion
-	99, // 5: v1.Template.published_at:type_name -> google.protobuf.Timestamp
-	99, // 6: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 7: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
-	97, // 8: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
-	99, // 9: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 10: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
-	1,  // 11: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
-	2,  // 12: v1.CreateTemplateResponse.template:type_name -> v1.Template
-	3,  // 13: v1.CreateTemplateResponse.version:type_name -> v1.TemplateVersion
-	0,  // 14: v1.UpdateTemplateRequest.visibility:type_name -> v1.Visibility
-	2,  // 15: v1.UpdateTemplateResponse.template:type_name -> v1.Template
-	3,  // 16: v1.UpdateTemplateResponse.new_version:type_name -> v1.TemplateVersion
-	2,  // 17: v1.GetTemplateResponse.template:type_name -> v1.Template
-	3,  // 18: v1.GetTemplateResponse.latest_version:type_name -> v1.TemplateVersion
-	60, // 19: v1.GetTemplateResponse.owner:type_name -> v1.OwnerInfo
-	0,  // 20: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
-	2,  // 21: v1.ListTemplatesResponse.templates:type_name -> v1.Template
-	2,  // 22: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
-	98, // 23: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
-	6,  // 24: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
-	6,  // 25: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
-	6,  // 26: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
-	40, // 27: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
-	43, // 28: v1.ListTagsResponse.tags:type_name -> v1.TagStats
-	99, // 29: v1.GetCreatorProfileResponse.created_at:type_name -> google.protobuf.Timestamp
-	54, // 30: v1.ListUserRelationsResponse.users:type_name -> v1.UserCard
-	2,  // 31: v1.GetFollowingFeedResponse.templates:type_name -> v1.Template
-	54, // 32: v1.ListTopCreatorsResponse.users:type_name -> v1.UserCard
-	61, // 33: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
-	99, // 34: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
-	99, // 35: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
-	99, // 36: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
-	68, // 37: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
-	68, // 38: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
-	99, // 39: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
-	99, // 40: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 41: v1.Comment.author:type_name -> v1.CommentAuthor
-	76, // 42: v1.ListCommentsResponse.comments:type_name -> v1.Comment
-	85, // 43: v1.GetTemplateStatsResponse.current:type_name -> v1.TemplateStatsSummary
-	85, // 44: v1.GetTemplateStatsResponse.previous:type_name -> v1.TemplateStatsSummary
-	86, // 45: v1.GetTemplateStatsResponse.series:type_name -> v1.DailyMetricPoint
-	87, // 46: v1.GetTemplateStatsResponse.source_split:type_name -> v1.SourceSplit
-	85, // 47: v1.GetCreatorStatsResponse.current:type_name -> v1.TemplateStatsSummary
-	85, // 48: v1.GetCreatorStatsResponse.previous:type_name -> v1.TemplateStatsSummary
-	86, // 49: v1.GetCreatorStatsResponse.series:type_name -> v1.DailyMetricPoint
-	87, // 50: v1.GetCreatorStatsResponse.source_split:type_name -> v1.SourceSplit
-	90, // 51: v1.GetCreatorStatsResponse.top_templates:type_name -> v1.TopTemplateRow
-	2,  // 52: v1.GetRelatedTemplatesResponse.items:type_name -> v1.Template
-	2,  // 53: v1.ListMoreFromAuthorResponse.items:type_name -> v1.Template
-	32, // 54: v1.UserService.Register:input_type -> v1.RegisterRequest
-	34, // 55: v1.UserService.Login:input_type -> v1.LoginRequest
-	36, // 56: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
-	37, // 57: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
-	45, // 58: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
-	47, // 59: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
-	62, // 60: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
-	63, // 61: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
-	65, // 62: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
-	66, // 63: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
-	67, // 64: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
-	69, // 65: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
-	71, // 66: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
-	73, // 67: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
-	49, // 68: v1.UserService.FollowUser:input_type -> v1.FollowUserRequest
-	49, // 69: v1.UserService.UnfollowUser:input_type -> v1.FollowUserRequest
-	51, // 70: v1.UserService.GetCreatorProfile:input_type -> v1.GetCreatorProfileRequest
-	53, // 71: v1.UserService.ListFollowers:input_type -> v1.ListUserRelationsRequest
-	53, // 72: v1.UserService.ListFollowing:input_type -> v1.ListUserRelationsRequest
-	56, // 73: v1.UserService.GetFollowingFeed:input_type -> v1.GetFollowingFeedRequest
-	58, // 74: v1.UserService.ListTopCreators:input_type -> v1.ListTopCreatorsRequest
-	7,  // 75: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
-	9,  // 76: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
-	11, // 77: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
-	16, // 78: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
-	18, // 79: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
-	20, // 80: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
-	22, // 81: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
-	24, // 82: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
-	26, // 83: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
-	30, // 84: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
-	39, // 85: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
-	42, // 86: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
-	4,  // 87: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
-	77, // 88: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
-	79, // 89: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
-	80, // 90: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
-	81, // 91: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
-	83, // 92: v1.PromptService.RecordTemplateEvent:input_type -> v1.RecordTemplateEventRequest
-	88, // 93: v1.PromptService.GetTemplateStats:input_type -> v1.GetTemplateStatsRequest
-	91, // 94: v1.PromptService.GetCreatorStats:input_type -> v1.GetCreatorStatsRequest
-	93, // 95: v1.PromptService.GetRelatedTemplates:input_type -> v1.GetRelatedTemplatesRequest
-	95, // 96: v1.PromptService.ListMoreFromAuthor:input_type -> v1.ListMoreFromAuthorRequest
-	13, // 97: v1.PromptService.RateTemplate:input_type -> v1.RateTemplateRequest
-	14, // 98: v1.PromptService.DeleteRating:input_type -> v1.DeleteRatingRequest
-	33, // 99: v1.UserService.Register:output_type -> v1.RegisterResponse
-	35, // 100: v1.UserService.Login:output_type -> v1.LoginResponse
-	35, // 101: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
-	38, // 102: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
-	46, // 103: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
-	48, // 104: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
-	61, // 105: v1.UserService.CreateAlias:output_type -> v1.Alias
-	64, // 106: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
-	61, // 107: v1.UserService.UpdateAlias:output_type -> v1.Alias
-	19, // 108: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
-	3,  // 109: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
-	70, // 110: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
-	72, // 111: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
-	74, // 112: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
-	50, // 113: v1.UserService.FollowUser:output_type -> v1.FollowUserResponse
-	50, // 114: v1.UserService.UnfollowUser:output_type -> v1.FollowUserResponse
-	52, // 115: v1.UserService.GetCreatorProfile:output_type -> v1.GetCreatorProfileResponse
-	55, // 116: v1.UserService.ListFollowers:output_type -> v1.ListUserRelationsResponse
-	55, // 117: v1.UserService.ListFollowing:output_type -> v1.ListUserRelationsResponse
-	57, // 118: v1.UserService.GetFollowingFeed:output_type -> v1.GetFollowingFeedResponse
-	59, // 119: v1.UserService.ListTopCreators:output_type -> v1.ListTopCreatorsResponse
-	8,  // 120: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
-	10, // 121: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
-	12, // 122: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
-	17, // 123: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
-	19, // 124: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
-	21, // 125: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
-	23, // 126: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
-	25, // 127: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
-	27, // 128: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
-	31, // 129: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
-	41, // 130: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
-	44, // 131: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
-	5,  // 132: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
-	78, // 133: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
-	76, // 134: v1.PromptService.CreateComment:output_type -> v1.Comment
-	76, // 135: v1.PromptService.UpdateComment:output_type -> v1.Comment
-	82, // 136: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
-	84, // 137: v1.PromptService.RecordTemplateEvent:output_type -> v1.RecordTemplateEventResponse
-	89, // 138: v1.PromptService.GetTemplateStats:output_type -> v1.GetTemplateStatsResponse
-	92, // 139: v1.PromptService.GetCreatorStats:output_type -> v1.GetCreatorStatsResponse
-	94, // 140: v1.PromptService.GetRelatedTemplates:output_type -> v1.GetRelatedTemplatesResponse
-	96, // 141: v1.PromptService.ListMoreFromAuthor:output_type -> v1.ListMoreFromAuthorResponse
-	15, // 142: v1.PromptService.RateTemplate:output_type -> v1.RateTemplateResponse
-	15, // 143: v1.PromptService.DeleteRating:output_type -> v1.RateTemplateResponse
-	99, // [99:144] is the sub-list for method output_type
-	54, // [54:99] is the sub-list for method input_type
-	54, // [54:54] is the sub-list for extension type_name
-	54, // [54:54] is the sub-list for extension extendee
-	0,  // [0:54] is the sub-list for field type_name
+	104, // 0: v1.Appeal.action_created_at:type_name -> google.protobuf.Timestamp
+	104, // 1: v1.Appeal.created_at:type_name -> google.protobuf.Timestamp
+	104, // 2: v1.Appeal.resolved_at:type_name -> google.protobuf.Timestamp
+	2,   // 3: v1.ListAppealsResponse.appeals:type_name -> v1.Appeal
+	0,   // 4: v1.Template.visibility:type_name -> v1.Visibility
+	1,   // 5: v1.Template.type:type_name -> v1.TemplateType
+	104, // 6: v1.Template.created_at:type_name -> google.protobuf.Timestamp
+	104, // 7: v1.Template.updated_at:type_name -> google.protobuf.Timestamp
+	8,   // 8: v1.Template.latest_version:type_name -> v1.TemplateVersion
+	104, // 9: v1.Template.published_at:type_name -> google.protobuf.Timestamp
+	104, // 10: v1.TemplateVersion.created_at:type_name -> google.protobuf.Timestamp
+	8,   // 11: v1.ListTemplateVersionsResponse.versions:type_name -> v1.TemplateVersion
+	102, // 12: v1.Prompt.variables:type_name -> v1.Prompt.VariablesEntry
+	104, // 13: v1.Prompt.created_at:type_name -> google.protobuf.Timestamp
+	0,   // 14: v1.CreateTemplateRequest.visibility:type_name -> v1.Visibility
+	1,   // 15: v1.CreateTemplateRequest.type:type_name -> v1.TemplateType
+	7,   // 16: v1.CreateTemplateResponse.template:type_name -> v1.Template
+	8,   // 17: v1.CreateTemplateResponse.version:type_name -> v1.TemplateVersion
+	0,   // 18: v1.UpdateTemplateRequest.visibility:type_name -> v1.Visibility
+	7,   // 19: v1.UpdateTemplateResponse.template:type_name -> v1.Template
+	8,   // 20: v1.UpdateTemplateResponse.new_version:type_name -> v1.TemplateVersion
+	7,   // 21: v1.GetTemplateResponse.template:type_name -> v1.Template
+	8,   // 22: v1.GetTemplateResponse.latest_version:type_name -> v1.TemplateVersion
+	65,  // 23: v1.GetTemplateResponse.owner:type_name -> v1.OwnerInfo
+	0,   // 24: v1.ListTemplatesRequest.visibility:type_name -> v1.Visibility
+	7,   // 25: v1.ListTemplatesResponse.templates:type_name -> v1.Template
+	7,   // 26: v1.ListTemplatesResponse.private_templates:type_name -> v1.Template
+	103, // 27: v1.CreatePromptRequest.variables:type_name -> v1.CreatePromptRequest.VariablesEntry
+	11,  // 28: v1.CreatePromptResponse.prompt:type_name -> v1.Prompt
+	11,  // 29: v1.GetPromptResponse.prompt:type_name -> v1.Prompt
+	11,  // 30: v1.ListPromptsResponse.prompts:type_name -> v1.Prompt
+	45,  // 31: v1.ListCategoriesResponse.categories:type_name -> v1.CategoryStats
+	48,  // 32: v1.ListTagsResponse.tags:type_name -> v1.TagStats
+	104, // 33: v1.GetCreatorProfileResponse.created_at:type_name -> google.protobuf.Timestamp
+	59,  // 34: v1.ListUserRelationsResponse.users:type_name -> v1.UserCard
+	7,   // 35: v1.GetFollowingFeedResponse.templates:type_name -> v1.Template
+	59,  // 36: v1.ListTopCreatorsResponse.users:type_name -> v1.UserCard
+	66,  // 37: v1.ListAliasesResponse.aliases:type_name -> v1.Alias
+	104, // 38: v1.APIKey.created_at:type_name -> google.protobuf.Timestamp
+	104, // 39: v1.APIKey.expires_at:type_name -> google.protobuf.Timestamp
+	104, // 40: v1.APIKey.last_used_at:type_name -> google.protobuf.Timestamp
+	73,  // 41: v1.CreateAPIKeyResponse.metadata:type_name -> v1.APIKey
+	73,  // 42: v1.ListAPIKeysResponse.api_keys:type_name -> v1.APIKey
+	104, // 43: v1.Comment.created_at:type_name -> google.protobuf.Timestamp
+	104, // 44: v1.Comment.updated_at:type_name -> google.protobuf.Timestamp
+	80,  // 45: v1.Comment.author:type_name -> v1.CommentAuthor
+	81,  // 46: v1.ListCommentsResponse.comments:type_name -> v1.Comment
+	90,  // 47: v1.GetTemplateStatsResponse.current:type_name -> v1.TemplateStatsSummary
+	90,  // 48: v1.GetTemplateStatsResponse.previous:type_name -> v1.TemplateStatsSummary
+	91,  // 49: v1.GetTemplateStatsResponse.series:type_name -> v1.DailyMetricPoint
+	92,  // 50: v1.GetTemplateStatsResponse.source_split:type_name -> v1.SourceSplit
+	90,  // 51: v1.GetCreatorStatsResponse.current:type_name -> v1.TemplateStatsSummary
+	90,  // 52: v1.GetCreatorStatsResponse.previous:type_name -> v1.TemplateStatsSummary
+	91,  // 53: v1.GetCreatorStatsResponse.series:type_name -> v1.DailyMetricPoint
+	92,  // 54: v1.GetCreatorStatsResponse.source_split:type_name -> v1.SourceSplit
+	95,  // 55: v1.GetCreatorStatsResponse.top_templates:type_name -> v1.TopTemplateRow
+	7,   // 56: v1.GetRelatedTemplatesResponse.items:type_name -> v1.Template
+	7,   // 57: v1.ListMoreFromAuthorResponse.items:type_name -> v1.Template
+	37,  // 58: v1.UserService.Register:input_type -> v1.RegisterRequest
+	39,  // 59: v1.UserService.Login:input_type -> v1.LoginRequest
+	41,  // 60: v1.UserService.LoginWithOAuth:input_type -> v1.LoginWithOAuthRequest
+	42,  // 61: v1.UserService.SendVerificationCode:input_type -> v1.SendVerificationCodeRequest
+	50,  // 62: v1.UserService.UpdateProfile:input_type -> v1.UpdateProfileRequest
+	52,  // 63: v1.UserService.GetProfile:input_type -> v1.GetProfileRequest
+	67,  // 64: v1.UserService.CreateAlias:input_type -> v1.CreateAliasRequest
+	68,  // 65: v1.UserService.ListAliases:input_type -> v1.ListAliasesRequest
+	70,  // 66: v1.UserService.UpdateAlias:input_type -> v1.UpdateAliasRequest
+	71,  // 67: v1.UserService.DeleteAlias:input_type -> v1.DeleteAliasRequest
+	72,  // 68: v1.UserService.GetPromptByAlias:input_type -> v1.GetPromptByAliasRequest
+	74,  // 69: v1.UserService.CreateAPIKey:input_type -> v1.CreateAPIKeyRequest
+	76,  // 70: v1.UserService.ListAPIKeys:input_type -> v1.ListAPIKeysRequest
+	78,  // 71: v1.UserService.DeleteAPIKey:input_type -> v1.DeleteAPIKeyRequest
+	54,  // 72: v1.UserService.FollowUser:input_type -> v1.FollowUserRequest
+	54,  // 73: v1.UserService.UnfollowUser:input_type -> v1.FollowUserRequest
+	56,  // 74: v1.UserService.GetCreatorProfile:input_type -> v1.GetCreatorProfileRequest
+	58,  // 75: v1.UserService.ListFollowers:input_type -> v1.ListUserRelationsRequest
+	58,  // 76: v1.UserService.ListFollowing:input_type -> v1.ListUserRelationsRequest
+	61,  // 77: v1.UserService.GetFollowingFeed:input_type -> v1.GetFollowingFeedRequest
+	63,  // 78: v1.UserService.ListTopCreators:input_type -> v1.ListTopCreatorsRequest
+	12,  // 79: v1.PromptService.CreateTemplate:input_type -> v1.CreateTemplateRequest
+	14,  // 80: v1.PromptService.UpdateTemplate:input_type -> v1.UpdateTemplateRequest
+	16,  // 81: v1.PromptService.GetTemplate:input_type -> v1.GetTemplateRequest
+	21,  // 82: v1.PromptService.ListTemplates:input_type -> v1.ListTemplatesRequest
+	23,  // 83: v1.PromptService.DeleteTemplate:input_type -> v1.DeleteTemplateRequest
+	25,  // 84: v1.PromptService.ToggleLikeTemplate:input_type -> v1.ToggleLikeRequest
+	27,  // 85: v1.PromptService.ToggleFavoriteTemplate:input_type -> v1.ToggleFavoriteRequest
+	29,  // 86: v1.PromptService.CreatePrompt:input_type -> v1.CreatePromptRequest
+	31,  // 87: v1.PromptService.GetPrompt:input_type -> v1.GetPromptRequest
+	35,  // 88: v1.PromptService.DeletePrompt:input_type -> v1.DeletePromptRequest
+	44,  // 89: v1.PromptService.ListCategories:input_type -> v1.ListCategoriesRequest
+	47,  // 90: v1.PromptService.ListTags:input_type -> v1.ListTagsRequest
+	9,   // 91: v1.PromptService.ListTemplateVersions:input_type -> v1.ListTemplateVersionsRequest
+	82,  // 92: v1.PromptService.ListComments:input_type -> v1.ListCommentsRequest
+	84,  // 93: v1.PromptService.CreateComment:input_type -> v1.CreateCommentRequest
+	85,  // 94: v1.PromptService.UpdateComment:input_type -> v1.UpdateCommentRequest
+	86,  // 95: v1.PromptService.DeleteComment:input_type -> v1.DeleteCommentRequest
+	88,  // 96: v1.PromptService.RecordTemplateEvent:input_type -> v1.RecordTemplateEventRequest
+	93,  // 97: v1.PromptService.GetTemplateStats:input_type -> v1.GetTemplateStatsRequest
+	96,  // 98: v1.PromptService.GetCreatorStats:input_type -> v1.GetCreatorStatsRequest
+	98,  // 99: v1.PromptService.GetRelatedTemplates:input_type -> v1.GetRelatedTemplatesRequest
+	100, // 100: v1.PromptService.ListMoreFromAuthor:input_type -> v1.ListMoreFromAuthorRequest
+	18,  // 101: v1.PromptService.RateTemplate:input_type -> v1.RateTemplateRequest
+	19,  // 102: v1.PromptService.DeleteRating:input_type -> v1.DeleteRatingRequest
+	3,   // 103: v1.PromptService.CreateAppeal:input_type -> v1.CreateAppealRequest
+	4,   // 104: v1.PromptService.ListAppeals:input_type -> v1.ListAppealsRequest
+	6,   // 105: v1.PromptService.GetAppeal:input_type -> v1.GetAppealRequest
+	38,  // 106: v1.UserService.Register:output_type -> v1.RegisterResponse
+	40,  // 107: v1.UserService.Login:output_type -> v1.LoginResponse
+	40,  // 108: v1.UserService.LoginWithOAuth:output_type -> v1.LoginResponse
+	43,  // 109: v1.UserService.SendVerificationCode:output_type -> v1.SendVerificationCodeResponse
+	51,  // 110: v1.UserService.UpdateProfile:output_type -> v1.UpdateProfileResponse
+	53,  // 111: v1.UserService.GetProfile:output_type -> v1.GetProfileResponse
+	66,  // 112: v1.UserService.CreateAlias:output_type -> v1.Alias
+	69,  // 113: v1.UserService.ListAliases:output_type -> v1.ListAliasesResponse
+	66,  // 114: v1.UserService.UpdateAlias:output_type -> v1.Alias
+	24,  // 115: v1.UserService.DeleteAlias:output_type -> v1.DeleteTemplateResponse
+	8,   // 116: v1.UserService.GetPromptByAlias:output_type -> v1.TemplateVersion
+	75,  // 117: v1.UserService.CreateAPIKey:output_type -> v1.CreateAPIKeyResponse
+	77,  // 118: v1.UserService.ListAPIKeys:output_type -> v1.ListAPIKeysResponse
+	79,  // 119: v1.UserService.DeleteAPIKey:output_type -> v1.DeleteAPIKeyResponse
+	55,  // 120: v1.UserService.FollowUser:output_type -> v1.FollowUserResponse
+	55,  // 121: v1.UserService.UnfollowUser:output_type -> v1.FollowUserResponse
+	57,  // 122: v1.UserService.GetCreatorProfile:output_type -> v1.GetCreatorProfileResponse
+	60,  // 123: v1.UserService.ListFollowers:output_type -> v1.ListUserRelationsResponse
+	60,  // 124: v1.UserService.ListFollowing:output_type -> v1.ListUserRelationsResponse
+	62,  // 125: v1.UserService.GetFollowingFeed:output_type -> v1.GetFollowingFeedResponse
+	64,  // 126: v1.UserService.ListTopCreators:output_type -> v1.ListTopCreatorsResponse
+	13,  // 127: v1.PromptService.CreateTemplate:output_type -> v1.CreateTemplateResponse
+	15,  // 128: v1.PromptService.UpdateTemplate:output_type -> v1.UpdateTemplateResponse
+	17,  // 129: v1.PromptService.GetTemplate:output_type -> v1.GetTemplateResponse
+	22,  // 130: v1.PromptService.ListTemplates:output_type -> v1.ListTemplatesResponse
+	24,  // 131: v1.PromptService.DeleteTemplate:output_type -> v1.DeleteTemplateResponse
+	26,  // 132: v1.PromptService.ToggleLikeTemplate:output_type -> v1.ToggleLikeResponse
+	28,  // 133: v1.PromptService.ToggleFavoriteTemplate:output_type -> v1.ToggleFavoriteResponse
+	30,  // 134: v1.PromptService.CreatePrompt:output_type -> v1.CreatePromptResponse
+	32,  // 135: v1.PromptService.GetPrompt:output_type -> v1.GetPromptResponse
+	36,  // 136: v1.PromptService.DeletePrompt:output_type -> v1.DeletePromptResponse
+	46,  // 137: v1.PromptService.ListCategories:output_type -> v1.ListCategoriesResponse
+	49,  // 138: v1.PromptService.ListTags:output_type -> v1.ListTagsResponse
+	10,  // 139: v1.PromptService.ListTemplateVersions:output_type -> v1.ListTemplateVersionsResponse
+	83,  // 140: v1.PromptService.ListComments:output_type -> v1.ListCommentsResponse
+	81,  // 141: v1.PromptService.CreateComment:output_type -> v1.Comment
+	81,  // 142: v1.PromptService.UpdateComment:output_type -> v1.Comment
+	87,  // 143: v1.PromptService.DeleteComment:output_type -> v1.DeleteCommentResponse
+	89,  // 144: v1.PromptService.RecordTemplateEvent:output_type -> v1.RecordTemplateEventResponse
+	94,  // 145: v1.PromptService.GetTemplateStats:output_type -> v1.GetTemplateStatsResponse
+	97,  // 146: v1.PromptService.GetCreatorStats:output_type -> v1.GetCreatorStatsResponse
+	99,  // 147: v1.PromptService.GetRelatedTemplates:output_type -> v1.GetRelatedTemplatesResponse
+	101, // 148: v1.PromptService.ListMoreFromAuthor:output_type -> v1.ListMoreFromAuthorResponse
+	20,  // 149: v1.PromptService.RateTemplate:output_type -> v1.RateTemplateResponse
+	20,  // 150: v1.PromptService.DeleteRating:output_type -> v1.RateTemplateResponse
+	2,   // 151: v1.PromptService.CreateAppeal:output_type -> v1.Appeal
+	5,   // 152: v1.PromptService.ListAppeals:output_type -> v1.ListAppealsResponse
+	2,   // 153: v1.PromptService.GetAppeal:output_type -> v1.Appeal
+	106, // [106:154] is the sub-list for method output_type
+	58,  // [58:106] is the sub-list for method input_type
+	58,  // [58:58] is the sub-list for extension type_name
+	58,  // [58:58] is the sub-list for extension extendee
+	0,   // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_prompt_proto_init() }
@@ -7079,7 +7500,7 @@ func file_prompt_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_prompt_proto_rawDesc), len(file_prompt_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   97,
+			NumMessages:   102,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

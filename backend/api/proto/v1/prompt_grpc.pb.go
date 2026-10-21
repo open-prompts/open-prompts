@@ -927,6 +927,9 @@ const (
 	PromptService_ListMoreFromAuthor_FullMethodName     = "/v1.PromptService/ListMoreFromAuthor"
 	PromptService_RateTemplate_FullMethodName           = "/v1.PromptService/RateTemplate"
 	PromptService_DeleteRating_FullMethodName           = "/v1.PromptService/DeleteRating"
+	PromptService_CreateAppeal_FullMethodName           = "/v1.PromptService/CreateAppeal"
+	PromptService_ListAppeals_FullMethodName            = "/v1.PromptService/ListAppeals"
+	PromptService_GetAppeal_FullMethodName              = "/v1.PromptService/GetAppeal"
 )
 
 // PromptServiceClient is the client API for PromptService service.
@@ -986,6 +989,13 @@ type PromptServiceClient interface {
 	RateTemplate(ctx context.Context, in *RateTemplateRequest, opts ...grpc.CallOption) (*RateTemplateResponse, error)
 	// DeleteRating removes the caller's rating for a template (idempotent).
 	DeleteRating(ctx context.Context, in *DeleteRatingRequest, opts ...grpc.CallOption) (*RateTemplateResponse, error)
+	// CreateAppeal opens an appeal against a moderation action on one of the
+	// caller's templates (one appeal per action, FR-3).
+	CreateAppeal(ctx context.Context, in *CreateAppealRequest, opts ...grpc.CallOption) (*Appeal, error)
+	// ListAppeals returns the caller's own appeals, newest first, paginated.
+	ListAppeals(ctx context.Context, in *ListAppealsRequest, opts ...grpc.CallOption) (*ListAppealsResponse, error)
+	// GetAppeal returns a single appeal (owner-only).
+	GetAppeal(ctx context.Context, in *GetAppealRequest, opts ...grpc.CallOption) (*Appeal, error)
 }
 
 type promptServiceClient struct {
@@ -1236,6 +1246,36 @@ func (c *promptServiceClient) DeleteRating(ctx context.Context, in *DeleteRating
 	return out, nil
 }
 
+func (c *promptServiceClient) CreateAppeal(ctx context.Context, in *CreateAppealRequest, opts ...grpc.CallOption) (*Appeal, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Appeal)
+	err := c.cc.Invoke(ctx, PromptService_CreateAppeal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) ListAppeals(ctx context.Context, in *ListAppealsRequest, opts ...grpc.CallOption) (*ListAppealsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAppealsResponse)
+	err := c.cc.Invoke(ctx, PromptService_ListAppeals_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) GetAppeal(ctx context.Context, in *GetAppealRequest, opts ...grpc.CallOption) (*Appeal, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Appeal)
+	err := c.cc.Invoke(ctx, PromptService_GetAppeal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PromptServiceServer is the server API for PromptService service.
 // All implementations must embed UnimplementedPromptServiceServer
 // for forward compatibility.
@@ -1293,6 +1333,13 @@ type PromptServiceServer interface {
 	RateTemplate(context.Context, *RateTemplateRequest) (*RateTemplateResponse, error)
 	// DeleteRating removes the caller's rating for a template (idempotent).
 	DeleteRating(context.Context, *DeleteRatingRequest) (*RateTemplateResponse, error)
+	// CreateAppeal opens an appeal against a moderation action on one of the
+	// caller's templates (one appeal per action, FR-3).
+	CreateAppeal(context.Context, *CreateAppealRequest) (*Appeal, error)
+	// ListAppeals returns the caller's own appeals, newest first, paginated.
+	ListAppeals(context.Context, *ListAppealsRequest) (*ListAppealsResponse, error)
+	// GetAppeal returns a single appeal (owner-only).
+	GetAppeal(context.Context, *GetAppealRequest) (*Appeal, error)
 	mustEmbedUnimplementedPromptServiceServer()
 }
 
@@ -1374,6 +1421,15 @@ func (UnimplementedPromptServiceServer) RateTemplate(context.Context, *RateTempl
 }
 func (UnimplementedPromptServiceServer) DeleteRating(context.Context, *DeleteRatingRequest) (*RateTemplateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteRating not implemented")
+}
+func (UnimplementedPromptServiceServer) CreateAppeal(context.Context, *CreateAppealRequest) (*Appeal, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAppeal not implemented")
+}
+func (UnimplementedPromptServiceServer) ListAppeals(context.Context, *ListAppealsRequest) (*ListAppealsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAppeals not implemented")
+}
+func (UnimplementedPromptServiceServer) GetAppeal(context.Context, *GetAppealRequest) (*Appeal, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAppeal not implemented")
 }
 func (UnimplementedPromptServiceServer) mustEmbedUnimplementedPromptServiceServer() {}
 func (UnimplementedPromptServiceServer) testEmbeddedByValue()                       {}
@@ -1828,6 +1884,60 @@ func _PromptService_DeleteRating_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PromptService_CreateAppeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAppealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).CreateAppeal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_CreateAppeal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).CreateAppeal(ctx, req.(*CreateAppealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_ListAppeals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAppealsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).ListAppeals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_ListAppeals_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).ListAppeals(ctx, req.(*ListAppealsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_GetAppeal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAppealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).GetAppeal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_GetAppeal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).GetAppeal(ctx, req.(*GetAppealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PromptService_ServiceDesc is the grpc.ServiceDesc for PromptService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1930,6 +2040,18 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteRating",
 			Handler:    _PromptService_DeleteRating_Handler,
+		},
+		{
+			MethodName: "CreateAppeal",
+			Handler:    _PromptService_CreateAppeal_Handler,
+		},
+		{
+			MethodName: "ListAppeals",
+			Handler:    _PromptService_ListAppeals_Handler,
+		},
+		{
+			MethodName: "GetAppeal",
+			Handler:    _PromptService_GetAppeal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

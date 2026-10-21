@@ -79,6 +79,84 @@ service AdminService {
 
   // ListWarningHistory returns the warning-change history for a template.
   rpc ListWarningHistory(ListWarningHistoryRequest) returns (ListWarningHistoryResponse);
+
+  // ListAppealQueue returns the appeal queue, oldest-first within state,
+  // with per-state counts.
+  rpc ListAppealQueue(ListAppealQueueRequest) returns (ListAppealQueueResponse);
+
+  // GetAppeal returns full appeal detail plus the original action's audit
+  // context.
+  rpc GetAppeal(GetAdminAppealRequest) returns (AdminAppealDetail);
+
+  // ReviewAppeal moves an open appeal to under_review.
+  rpc ReviewAppeal(ReviewAppealRequest) returns (AdminAppealDetail);
+
+  // ResolveAppeal resolves an appeal as upheld or reversed; reversed
+  // restores the template atomically.
+  rpc ResolveAppeal(ResolveAppealRequest) returns (AdminAppealDetail);
+}
+
+message ListAppealQueueRequest {
+  string state = 1;   // "" | "open" | "under_review" | "resolved"
+  int32 page = 2;
+  int32 per_page = 3;
+}
+
+message ListAppealQueueResponse {
+  repeated AdminAppealEntry entries = 1;
+  int32 open_count = 2;
+  int32 under_review_count = 3;
+  int32 resolved_count = 4;
+  int64 total = 5;
+  int32 page = 6;
+  int32 per_page = 7;
+}
+
+message AdminAppealEntry {
+  string id = 1;
+  string template_id = 2;
+  string template_title = 3;
+  string action_type = 4;
+  string statement_excerpt = 5;   // first ~80 chars
+  string state = 6;
+  google.protobuf.Timestamp created_at = 7;
+  string appellant_display_name = 8;
+}
+
+message GetAdminAppealRequest {
+  string appeal_id = 1;
+}
+
+message ReviewAppealRequest {
+  string appeal_id = 1;
+}
+
+message ResolveAppealRequest {
+  string appeal_id = 1;
+  string outcome = 2;  // "upheld" | "reversed"
+  string note = 3;     // 20-1000 chars, required
+}
+
+message AdminAppealDetail {
+  string id = 1;
+  string moderation_action_id = 2;
+  string template_id = 3;
+  string template_title = 4;
+  string action_type = 5;
+  string action_reason = 6;
+  string action_actor_id = 7;
+  string action_actor_email = 8;
+  google.protobuf.Timestamp action_created_at = 9;
+  string statement = 10;
+  string state = 11;
+  string appellant_id = 12;
+  string appellant_display_name = 13;
+  string resolution_note = 14;
+  string resolver_id = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp resolved_at = 17;
+  bool superseded = 18;
+  string audit_entry_id = 19;   // the original action's audit entry id (if any)
 }
 
 // ---- Auth ----
