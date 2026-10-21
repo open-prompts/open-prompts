@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/open-prompts/open-prompts/compare/v1.31.1...v1.32.0) (2026-10-21)
+
+
+### Features
+
+* **moderation:** add moderation appeals ([49ef66e](https://github.com/open-prompts/open-prompts/commit/49ef66efaba2e664b7ed23afa7887eb13e0b0e39))
+
 ## [1.31.1](https://github.com/open-prompts/open-prompts/compare/v1.31.0...v1.31.1) (2026-10-21)
 
 
