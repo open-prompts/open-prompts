@@ -305,20 +305,21 @@ describe('User dashboard', function () {
     browser.assert.textContains('.overview-page__title', 'My Workspace');
   });
 
-  // Pending Issue #4: the OverviewPage reads camelCase fields while the API
-  // returns snake_case, so stat counts render 0 and the activity feed shows
-  // the empty state. Re-enable once the developer fixes the mapping.
-  it.skip('renders correct stat counts and a populated activity feed (Issue #4)', function (browser) {
+  it('renders correct stat counts and a populated activity feed (Issue #4)', function (browser) {
     browser.url(`${browser.launch_url}/dashboard`)
       .waitForElementVisible('.overview-page', 20000);
     browser.execute(function () {
       const cards = Array.from(document.querySelectorAll('.stat-card'));
-      return cards.map((c) => c.querySelector('.stat-card__count').textContent.trim());
+      return cards.map((c) => ({
+        label: c.querySelector('.stat-card__label').textContent.trim(),
+        count: c.querySelector('.stat-card__count').textContent.trim(),
+      }));
     }, [], function (res) {
-      browser.assert.deepStrictEqual(
-        res.value, ['3', '1', '1'],
-        'stat card counts reflect seeded data (templates=3, prompts=1, api_keys=1)'
-      );
+      const byLabel = {};
+      res.value.forEach((c) => { byLabel[c.label] = c.count; });
+      browser.assert.strictEqual(byLabel['Templates'], '3', 'templates stat card = 3');
+      browser.assert.strictEqual(byLabel['Prompts'], '1', 'prompts stat card = 1');
+      browser.assert.strictEqual(byLabel['API Keys'], '1', 'api_keys stat card = 1');
     });
     browser.waitForElementVisible('.activity-feed', 10000);
     browser.elements('css selector', '.activity-feed__item', function (res) {

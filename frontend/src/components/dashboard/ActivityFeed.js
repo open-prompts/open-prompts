@@ -10,6 +10,15 @@ const TYPE_ICON = {
   FAVORITE: '⭐',
 };
 
+// The API serializes the proto enum as its full name
+// (e.g. DASHBOARD_ACTIVITY_TYPE_PROMPT); map it to the short type used here.
+const TYPE_FROM_API = {
+  DASHBOARD_ACTIVITY_TYPE_TEMPLATE: 'TEMPLATE',
+  DASHBOARD_ACTIVITY_TYPE_PROMPT: 'PROMPT',
+  DASHBOARD_ACTIVITY_TYPE_LIKE: 'LIKE',
+  DASHBOARD_ACTIVITY_TYPE_FAVORITE: 'FAVORITE',
+};
+
 /**
  * ActivityFeed — the recent-activity list on the dashboard overview.
  * @param {Object} props
@@ -25,22 +34,23 @@ const ActivityFeed = ({ items }) => {
   return (
     <ul className="activity-feed">
       {items.map((item, idx) => {
-        const key = `${item.type}-${item.entityId}-${idx}`;
-        const isPrompt = item.type === 'PROMPT';
+        const type = TYPE_FROM_API[item.type] || item.type;
+        const key = `${type}-${item.entity_id}-${idx}`;
+        const isPrompt = type === 'PROMPT';
         const title = isPrompt
-          ? t('dashboard_v2.activity.prompt_used', { title: item.entityTitle })
-          : item.type === 'LIKE'
-            ? t('dashboard_v2.activity.liked', { title: item.entityTitle })
-            : item.type === 'FAVORITE'
-              ? t('dashboard_v2.activity.favorited', { title: item.entityTitle })
-              : t('dashboard_v2.activity.template_created', { title: item.entityTitle });
-        const href = isPrompt && item.templateId
-          ? `/templates/${item.templateId}`
-          : `/templates/${item.entityId}`;
+          ? t('dashboard_v2.activity.prompt_used', { title: item.entity_title })
+          : type === 'LIKE'
+            ? t('dashboard_v2.activity.liked', { title: item.entity_title })
+            : type === 'FAVORITE'
+              ? t('dashboard_v2.activity.favorited', { title: item.entity_title })
+              : t('dashboard_v2.activity.template_created', { title: item.entity_title });
+        const href = isPrompt && item.template_id
+          ? `/templates/${item.template_id}`
+          : `/templates/${item.entity_id}`;
         return (
           <li key={key} className="activity-feed__item">
             <span className="activity-feed__icon" aria-hidden="true">
-              {TYPE_ICON[item.type] || '•'}
+              {TYPE_ICON[type] || '•'}
             </span>
             <Link to={href} className="activity-feed__text">
               {title}

@@ -79,19 +79,19 @@ const OverviewPage = () => {
     <div className="overview-page">
       <h1 className="overview-page__title">{t('dashboard_v2.title')}</h1>
       <div className="overview-page__stats">
-        <StatCard to="/dashboard/templates" label="dashboard_v2.stats.templates" count={data?.templateCount ?? 0} />
-        <StatCard to="/dashboard/prompts" label="dashboard_v2.stats.prompts" count={data?.promptCount ?? 0} />
+        <StatCard to="/dashboard/templates" label="dashboard_v2.stats.templates" count={data?.template_count ?? 0} />
+        <StatCard to="/dashboard/prompts" label="dashboard_v2.stats.prompts" count={data?.prompt_count ?? 0} />
         <StatCard
           to="/collections/mine"
           label="dashboard_v2.stats.collections"
-          count={data?.collectionCount ?? 0}
+          count={data?.collection_count ?? 0}
           hidden={!collectionsAvailable}
         />
-        <StatCard to="/api-keys" label="dashboard_v2.stats.api_keys" count={data?.apiKeyCount ?? 0} />
+        <StatCard to="/api-keys" label="dashboard_v2.stats.api_keys" count={data?.api_key_count ?? 0} />
       </div>
       <section className="overview-page__activity" aria-labelledby="activity-title">
         <h2 id="activity-title">{t('dashboard_v2.activity.title')}</h2>
-        <ActivityFeed items={data?.recentActivity} />
+        <ActivityFeed items={data?.recent_activity} />
       </section>
       <QuickActions onNewTemplate={() => setCreateOpen(true)} />
       <CreateTemplateModal
