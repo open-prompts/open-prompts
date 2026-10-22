@@ -1,3 +1,10 @@
+## [1.34.1](https://github.com/open-prompts/open-prompts/compare/v1.34.0...v1.34.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **reporting:** return 403 for banned reporters and coalesce null queue fields ([fe24176](https://github.com/open-prompts/open-prompts/commit/fe24176f7ddcf7aabb583fa096690761e18ef38d))
+
 # [1.34.0](https://github.com/open-prompts/open-prompts/compare/v1.33.0...v1.34.0) (2026-10-22)
 
 
