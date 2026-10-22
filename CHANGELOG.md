@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/open-prompts/open-prompts/compare/v1.33.0...v1.34.0) (2026-10-22)
+
+
+### Features
+
+* **reporting:** add content reporting ([5391f77](https://github.com/open-prompts/open-prompts/commit/5391f7745fd11d298b0b27a232fe15df72d9c916))
+
 # [1.33.0](https://github.com/open-prompts/open-prompts/compare/v1.32.0...v1.33.0) (2026-10-22)
 
 
