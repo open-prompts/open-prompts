@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/open-prompts/open-prompts/compare/v1.32.0...v1.33.0) (2026-10-22)
+
+
+### Features
+
+* **comments:** add reply threads ([6205022](https://github.com/open-prompts/open-prompts/commit/62050222c4bf8e506999493beb1b3b95560a8792))
+
 # [1.32.0](https://github.com/open-prompts/open-prompts/compare/v1.31.1...v1.32.0) (2026-10-21)
 
 
