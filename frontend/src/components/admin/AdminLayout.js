@@ -80,6 +80,7 @@ const AdminLayout = () => {
     { to: '/admin/templates', label: t('admin.nav.templates') },
     { to: '/admin/review', label: t('admin.nav.review') },
     { to: '/admin/appeals', label: t('admin.nav.appeals') },
+    { to: '/admin/comments', label: t('admin.nav.comments') },
     { to: '/admin/audit-log', label: t('admin.nav.audit_log') },
   ];
 

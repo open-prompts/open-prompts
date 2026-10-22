@@ -870,6 +870,7 @@ func (s *AdminService) ListAdminComments(ctx context.Context, req *pb.ListAdminC
 			Content:                  e.Content,
 			CreatedAt:                timestamppb.New(e.CreatedAt),
 			UpdatedAt:                timestamppb.New(e.UpdatedAt),
+			ParentAuthorDisplayName:  e.ParentAuthorDisplayName,
 		})
 	}
 	return resp, nil

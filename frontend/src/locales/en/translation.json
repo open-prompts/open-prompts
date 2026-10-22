@@ -534,7 +534,8 @@
       "audit_log": "Audit Log",
       "back_to_app": "Back to App",
       "brand": "Open Prompts Admin",
-      "appeals": "Appeals"
+      "appeals": "Appeals",
+      "comments": "Comments"
     },
     "login": {
       "title": "Open Prompts Admin",
@@ -680,6 +681,11 @@
       "profile": "Profile",
       "language": "Language",
       "theme": "Theme"
+    },
+    "comments": {
+      "parent": "Parent",
+      "inReplyTo": "in reply to {{author}}",
+      "topLevel": "—"
     }
   },
   "notifications": {
@@ -701,7 +707,8 @@
       "fork": "{{actor}} forked your template \"{{title}}\"",
       "follow": "{{actor}} followed you",
       "template_approved": "Your template \"{{title}}\" is live",
-      "template_rejected": "Your template \"{{title}}\" was rejected: {{reason}}"
+      "template_rejected": "Your template \"{{title}}\" was rejected: {{reason}}",
+      "comment_reply": "{{actor}} replied to your comment on \"{{title}}\""
     },
     "empty": {
       "all": "No notifications yet — when someone likes, favorites, or forks your templates, you'll see it here.",
@@ -721,6 +728,9 @@
       "mark": "Failed to mark as read.",
       "delete": "Failed to delete notification.",
       "retry": "Retry"
+    },
+    "snippet": {
+      "comment_reply": "\"{{snippet}}\""
     }
   },
   "time": {
@@ -921,6 +931,45 @@
       "load": "Failed to load collections",
       "save": "Failed to save"
     }
+  },
+  "comments": {
+    "title": "Comments",
+    "count": "{{count}}",
+    "composer_label": "Add a comment",
+    "placeholder": "Share your thoughts…",
+    "post": "Post",
+    "posting": "Posting…",
+    "char_count": "{{count}} / 2000",
+    "sign_in_to_comment": "Log in to comment",
+    "empty": "No comments yet — be the first to share your thoughts.",
+    "load_more": "Load more comments",
+    "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edited": "edited",
+    "creator_badge": "CREATOR",
+    "confirm_delete": "Delete this comment? This cannot be undone.",
+    "confirm_delete_owner": "Delete this comment? This also removes its replies.",
+    "error_load": "Couldn't load comments.",
+    "error_post": "Couldn't post your comment.",
+    "error_edit": "Couldn't update your comment.",
+    "error_delete": "Couldn't delete the comment.",
+    "error_banned": "You can't comment while banned.",
+    "error_content_length": "Comment must be 1-2000 characters.",
+    "error_rate_limited": "You're commenting too fast — try again in {{seconds}}s.",
+    "error_window_expired": "The edit window has expired — delete and repost instead.",
+    "reply": "Reply",
+    "replyTo": "Reply to {{name}}…",
+    "loginToReply": "Log in to reply",
+    "viewReplies": "View {{count}} replies",
+    "viewOneReply": "View 1 reply",
+    "hideReplies": "Hide replies",
+    "answered": "Answered",
+    "threadFull": "This thread is full — post a new comment instead.",
+    "repliesError": "Couldn't load replies.",
+    "replyPosted": "Reply posted"
   },
   "dashboard_v2": {
     "title": "My Workspace",

@@ -17,6 +17,9 @@ type Notification struct {
 	ReadAt           *time.Time `json:"read_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 
+	// Snippet is a ≤100-char excerpt; only populated for comment_reply events.
+	Snippet string `json:"snippet"`
+
 	// Joined at read time (not stored):
 	ActorAvatar   sql.NullString `json:"actor_avatar"`
 	TemplateTitle string         `json:"template_title"`

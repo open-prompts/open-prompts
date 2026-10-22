@@ -12,6 +12,7 @@ import (
 	pb "open-prompts/backend/api/proto/v1"
 	"open-prompts/backend/internal/models"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -22,6 +23,7 @@ const (
 	commentEditWindow    = 15 * time.Minute
 	commentRatePerMinDef = 5
 	commentRatePerDayDef = 50
+	commentThreadCap     = 50
 )
 
 // ListComments lists comments for a template. Visibility follows the
@@ -56,10 +58,10 @@ func (s *PromptService) ListComments(ctx context.Context, req *pb.ListCommentsRe
 	}
 
 	resp := &pb.ListCommentsResponse{
-		Comments:  make([]*pb.Comment, 0, len(comments)),
+		Comments:   make([]*pb.Comment, 0, len(comments)),
 		TotalCount: int32(total),
-		Page:      int32(page),
-		PageSize:  int32(size),
+		Page:       int32(page),
+		PageSize:   int32(size),
 	}
 	for _, c := range comments {
 		resp.Comments = append(resp.Comments, s.commentModelToProto(c, tpl, userID))
@@ -96,6 +98,28 @@ func (s *PromptService) CreateComment(ctx context.Context, req *pb.CreateComment
 		return nil, status.Error(codes.NotFound, "template not found") // indistinguishable
 	}
 
+	// Resolve the parent (if any). Must be a top-level comment on the same
+	// template; replying to a reply is flattened onto the top-level thread.
+	parentID := strings.TrimSpace(req.ParentCommentId)
+	if parentID != "" {
+		parent, err := s.CommentRepo.Get(ctx, parentID)
+		if err == sql.ErrNoRows {
+			return nil, status.Error(codes.InvalidArgument, "parent comment not found")
+		}
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to load parent comment")
+		}
+		if parent.TemplateID != tpl.ID {
+			return nil, status.Error(codes.InvalidArgument, "parent comment is on a different template")
+		}
+		if parent.ParentCommentID != "" {
+			return nil, status.Error(codes.InvalidArgument, "parent must be a top-level comment")
+		}
+		if parent.ReplyCount >= commentThreadCap {
+			return nil, status.Error(codes.InvalidArgument, "thread is full — post a new comment instead")
+		}
+	}
+
 	if retryAfter, ok := s.checkCommentRate(ctx, userID); !ok {
 		return nil, status.Error(codes.ResourceExhausted,
 			fmt.Sprintf("rate limit exceeded, retry after %d seconds", retryAfter))
@@ -104,6 +128,7 @@ func (s *PromptService) CreateComment(ctx context.Context, req *pb.CreateComment
 	c := &models.Comment{
 		TemplateID: tpl.ID, UserID: userID, Content: content,
 		AuthorDisplayName: user.DisplayName, AuthorAvatar: user.Avatar,
+		ParentCommentID: parentID,
 	}
 	if err := s.CommentRepo.Create(ctx, c); err != nil {
 		return nil, status.Error(codes.Internal, "failed to create comment")
@@ -111,6 +136,12 @@ func (s *PromptService) CreateComment(ctx context.Context, req *pb.CreateComment
 
 	// FR-17: best-effort owner notification, after the write commits.
 	s.createEngagementNotification(ctx, "comment", tpl.ID, tpl.OwnerID, userID)
+
+	// Notify the parent comment's author (not the template owner) when this
+	// is a reply. Self-replies are suppressed inside notifyCommentReply.
+	if parentID != "" {
+		s.notifyCommentReply(ctx, tpl, parentID, userID, content)
+	}
 
 	return s.commentModelToProto(c, tpl, userID), nil
 }
@@ -197,6 +228,86 @@ func (s *PromptService) DeleteComment(ctx context.Context, req *pb.DeleteComment
 	return &pb.DeleteCommentResponse{Success: true}, nil
 }
 
+// ListCommentReplies lists all replies to a top-level comment, oldest-first,
+// unpaginated (bounded by the 50-reply thread cap). Visibility follows the
+// template: public templates are anonymously readable, private ones only by
+// the owner (indistinguishable from missing).
+func (s *PromptService) ListCommentReplies(ctx context.Context, req *pb.ListCommentRepliesRequest) (*pb.ListCommentRepliesResponse, error) {
+	userID, _ := GetUserIDFromContext(ctx) // optional auth
+
+	parent, err := s.CommentRepo.Get(ctx, req.CommentId)
+	if err == sql.ErrNoRows {
+		return nil, status.Error(codes.NotFound, "comment not found")
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to load comment")
+	}
+	if parent.ParentCommentID != "" {
+		return nil, status.Error(codes.InvalidArgument, "replies are only available for top-level comments")
+	}
+
+	tpl, err := s.TemplateRepo.Get(ctx, parent.TemplateID, userID)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "template not found")
+	}
+	if tpl.Visibility == "private" && tpl.OwnerID != userID {
+		return nil, status.Error(codes.NotFound, "template not found") // indistinguishable
+	}
+
+	replies, err := s.CommentRepo.ListReplies(ctx, parent.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to list replies")
+	}
+	resp := &pb.ListCommentRepliesResponse{Replies: make([]*pb.Comment, 0, len(replies))}
+	for _, r := range replies {
+		resp.Replies = append(resp.Replies, s.commentModelToProto(r, tpl, userID))
+	}
+	return resp, nil
+}
+
+// notifyCommentReply emits a comment_reply notification to the parent
+// comment's author (not the template owner). It is strictly best-effort:
+// self-replies are suppressed and any failure is logged and swallowed so the
+// triggering reply is never affected. The snippet is the reply's first 100
+// runes.
+func (s *PromptService) notifyCommentReply(ctx context.Context, tpl *models.Template, parentID, actorID, content string) {
+	if s.NotificationRepo == nil || s.UserRepo == nil {
+		return
+	}
+	parent, err := s.CommentRepo.Get(ctx, parentID)
+	if err != nil || parent == nil {
+		zap.S().Warnf("comment_reply hook: failed to load parent %s: %v", parentID, err)
+		return
+	}
+	if parent.UserID == actorID {
+		return // replying to your own comment sends no notification
+	}
+	actor, err := s.UserRepo.GetByID(ctx, actorID)
+	if err != nil || actor == nil {
+		zap.S().Warnf("comment_reply hook: failed to load actor %s: %v", actorID, err)
+		return
+	}
+	displayName := actor.DisplayName
+	if displayName == "" {
+		displayName = actor.ID
+	}
+	snippet := content
+	if r := []rune(snippet); len(r) > 100 {
+		snippet = string(r[:100])
+	}
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      parent.UserID,
+		ActorID:          actorID,
+		TemplateID:       tpl.ID,
+		Type:             "comment_reply",
+		ActorDisplayName: displayName,
+		Snippet:          snippet,
+	}); err != nil {
+		zap.S().Errorf("comment_reply hook: failed to create notification (template=%s parent=%s actor=%s): %v",
+			tpl.ID, parentID, actorID, err)
+	}
+}
+
 // commentModelToProto maps a comment row to its proto representation,
 // computing is_edited / is_owner / is_own for the caller.
 func (s *PromptService) commentModelToProto(c *models.Comment, tpl *models.Template, viewerID string) *pb.Comment {
@@ -215,8 +326,10 @@ func (s *PromptService) commentModelToProto(c *models.Comment, tpl *models.Templ
 			DisplayName: c.AuthorDisplayName,
 			Avatar:      c.AuthorAvatar,
 		},
-		IsOwner: tpl != nil && c.UserID == tpl.OwnerID,
-		IsOwn:   c.UserID == viewerID,
+		IsOwner:         tpl != nil && c.UserID == tpl.OwnerID,
+		IsOwn:           c.UserID == viewerID,
+		ReplyCount:      c.ReplyCount,
+		HasCreatorReply: c.HasCreatorReply,
 	}
 }
 

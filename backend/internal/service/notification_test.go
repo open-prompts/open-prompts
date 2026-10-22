@@ -412,6 +412,11 @@ func TestNotificationToProto(t *testing.T) {
 	n.ReadAt = &readAt
 	p = notificationToProto(n)
 	assert.Equal(t, readAt.Format(time.RFC3339), p.ReadAt)
+
+	// Snippet mapping (comment_reply events).
+	n.Snippet = "Yes — v2 fixed the JSON output."
+	p = notificationToProto(n)
+	assert.Equal(t, "Yes — v2 fixed the JSON output.", p.Snippet)
 }
 
 // Compile-time interface check.

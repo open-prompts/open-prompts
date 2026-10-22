@@ -105,6 +105,10 @@ service PromptService {
   // DeleteComment deletes a comment (author or template owner).
   rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
 
+  // ListCommentReplies lists all replies to a top-level comment, oldest-first,
+  // unpaginated (bounded by the 50-reply thread cap).
+  rpc ListCommentReplies(ListCommentRepliesRequest) returns (ListCommentRepliesResponse);
+
   // RecordTemplateEvent records a view event for a template (anonymous
   // allowed; rate-limited per IP). Use events are recorded server-side only.
   rpc RecordTemplateEvent(RecordTemplateEventRequest) returns (RecordTemplateEventResponse);
@@ -820,6 +824,10 @@ message Comment {
   bool is_owner = 8;
   // True when the caller is the author (drives Edit/Delete affordances).
   bool is_own = 9;
+  // Number of direct replies (top-level comments only; 0 for replies).
+  int32 reply_count = 10;
+  // True when the template owner has replied in this thread (top-level only).
+  bool has_creator_reply = 11;
 }
 
 message ListCommentsRequest {
@@ -838,6 +846,17 @@ message ListCommentsResponse {
 message CreateCommentRequest {
   string template_id = 1;
   string content = 2; // 1-2000 chars after trim
+  // Optional. When set, must reference an existing top-level comment on the
+  // same template; replying to a reply is flattened onto the top-level thread.
+  string parent_comment_id = 3;
+}
+
+message ListCommentRepliesRequest {
+  string comment_id = 1; // must be a top-level comment
+}
+
+message ListCommentRepliesResponse {
+  repeated Comment replies = 1; // oldest-first
 }
 
 message UpdateCommentRequest {

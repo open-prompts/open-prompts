@@ -34,6 +34,14 @@ func (m *MockCommentRepository) List(ctx context.Context, templateID string, lim
 	return args.Get(0).([]*models.Comment), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockCommentRepository) ListReplies(ctx context.Context, parentID string) ([]*models.Comment, error) {
+	args := m.Called(ctx, parentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Comment), args.Error(1)
+}
+
 func (m *MockCommentRepository) Get(ctx context.Context, id string) (*models.Comment, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
@@ -316,6 +324,224 @@ func TestCreateComment_Success(t *testing.T) {
 	assert.False(t, resp.IsOwner)
 	assert.True(t, resp.IsOwn)
 	commentRepo.AssertExpectations(t)
+}
+
+func TestCreateComment_ParentNotFound(t *testing.T) {
+	svc, commentRepo, templateRepo, userRepo, _ := newCommentTestService(t)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return commentTestTemplate("owner-1"), nil
+	}
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", Status: "active"}, nil)
+	commentRepo.On("Get", mock.Anything, "missing-parent").Return(nil, sql.ErrNoRows)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.CreateComment(ctx, &pb.CreateCommentRequest{TemplateId: "tpl-1", Content: "hi", ParentCommentId: "missing-parent"})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	commentRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestCreateComment_ParentDifferentTemplate(t *testing.T) {
+	svc, commentRepo, templateRepo, userRepo, _ := newCommentTestService(t)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return commentTestTemplate("owner-1"), nil
+	}
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", Status: "active"}, nil)
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "other-tpl", ParentCommentID: "", ReplyCount: 0,
+	}, nil)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.CreateComment(ctx, &pb.CreateCommentRequest{TemplateId: "tpl-1", Content: "hi", ParentCommentId: "parent-1"})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	commentRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestCreateComment_ParentIsReply(t *testing.T) {
+	svc, commentRepo, templateRepo, userRepo, _ := newCommentTestService(t)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return commentTestTemplate("owner-1"), nil
+	}
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", Status: "active"}, nil)
+	commentRepo.On("Get", mock.Anything, "reply-1").Return(&models.Comment{
+		ID: "reply-1", TemplateID: "tpl-1", ParentCommentID: "parent-1", ReplyCount: 0,
+	}, nil)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.CreateComment(ctx, &pb.CreateCommentRequest{TemplateId: "tpl-1", Content: "hi", ParentCommentId: "reply-1"})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	commentRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestCreateComment_ThreadFull(t *testing.T) {
+	svc, commentRepo, templateRepo, userRepo, _ := newCommentTestService(t)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return commentTestTemplate("owner-1"), nil
+	}
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", Status: "active"}, nil)
+	// 50 replies already present → thread full.
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", ParentCommentID: "", ReplyCount: 50,
+	}, nil)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.CreateComment(ctx, &pb.CreateCommentRequest{TemplateId: "tpl-1", Content: "hi", ParentCommentId: "parent-1"})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	commentRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestCreateComment_ReplySuccess(t *testing.T) {
+	svc, commentRepo, templateRepo, userRepo, _ := newCommentTestService(t)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return commentTestTemplate("owner-1"), nil
+	}
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", DisplayName: "User One", Status: "active"}, nil)
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", ParentCommentID: "", ReplyCount: 0, UserID: "owner-1",
+	}, nil)
+	commentRepo.On("Create", mock.Anything, mock.MatchedBy(func(c *models.Comment) bool {
+		return c.ParentCommentID == "parent-1"
+	})).Return(nil).Once()
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	resp, err := svc.CreateComment(ctx, &pb.CreateCommentRequest{TemplateId: "tpl-1", Content: "reply", ParentCommentId: "parent-1"})
+	assert.NoError(t, err)
+	assert.Equal(t, "reply", resp.Content)
+	commentRepo.AssertExpectations(t)
+}
+
+func TestListCommentReplies_Success(t *testing.T) {
+	svc, commentRepo, templateRepo, _, _ := newCommentTestService(t)
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", ParentCommentID: "", ReplyCount: 2,
+	}, nil)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return commentTestTemplate("owner-1"), nil
+	}
+	commentRepo.On("ListReplies", mock.Anything, "parent-1").Return([]*models.Comment{
+		{ID: "r1", TemplateID: "tpl-1", UserID: "user-1", Content: "first", AuthorDisplayName: "User One"},
+		{ID: "r2", TemplateID: "tpl-1", UserID: "owner-1", Content: "second", AuthorDisplayName: "Owner"},
+	}, nil)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	resp, err := svc.ListCommentReplies(ctx, &pb.ListCommentRepliesRequest{CommentId: "parent-1"})
+	assert.NoError(t, err)
+	assert.Len(t, resp.Replies, 2)
+	assert.Equal(t, "first", resp.Replies[0].Content)
+	assert.True(t, resp.Replies[1].IsOwner, "owner reply should be flagged is_owner")
+	assert.True(t, resp.Replies[0].IsOwn, "viewer's own reply should be flagged is_own")
+}
+
+func TestListCommentReplies_NotFound(t *testing.T) {
+	svc, commentRepo, _, _, _ := newCommentTestService(t)
+	commentRepo.On("Get", mock.Anything, "missing").Return(nil, sql.ErrNoRows)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.ListCommentReplies(ctx, &pb.ListCommentRepliesRequest{CommentId: "missing"})
+	assert.Equal(t, codes.NotFound, status.Code(err))
+}
+
+func TestListCommentReplies_OnReplyRejected(t *testing.T) {
+	svc, commentRepo, _, _, _ := newCommentTestService(t)
+	commentRepo.On("Get", mock.Anything, "reply-1").Return(&models.Comment{
+		ID: "reply-1", TemplateID: "tpl-1", ParentCommentID: "parent-1",
+	}, nil)
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.ListCommentReplies(ctx, &pb.ListCommentRepliesRequest{CommentId: "reply-1"})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+}
+
+func TestListCommentReplies_PrivateTemplateIndistinguishable(t *testing.T) {
+	svc, commentRepo, templateRepo, _, _ := newCommentTestService(t)
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", ParentCommentID: "",
+	}, nil)
+	templateRepo.GetFunc = func(ctx context.Context, id string, currentUserID string) (*models.Template, error) {
+		return &models.Template{ID: "tpl-1", OwnerID: "owner-1", Visibility: "private"}, nil
+	}
+
+	ctx := ContextWithUserID(context.Background(), "user-1")
+	_, err := svc.ListCommentReplies(ctx, &pb.ListCommentRepliesRequest{CommentId: "parent-1"})
+	assert.Equal(t, codes.NotFound, status.Code(err))
+}
+
+func TestNotifyCommentReply_SnippetTruncation(t *testing.T) {
+	svc, commentRepo, _, userRepo, _ := newCommentTestService(t)
+	notifRepo := new(MockNotificationRepository)
+	svc.NotificationRepo = notifRepo
+
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", UserID: "owner-1",
+	}, nil)
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", DisplayName: "User One"}, nil)
+
+	long := strings.Repeat("界", 150) // 150 runes
+	notifRepo.On("Create", mock.Anything, mock.MatchedBy(func(n *models.Notification) bool {
+		return n.RecipientID == "owner-1" && n.Type == "comment_reply" &&
+			n.ActorDisplayName == "User One" && len([]rune(n.Snippet)) == 100
+	})).Return(nil).Once()
+
+	svc.notifyCommentReply(context.Background(), commentTestTemplate("owner-1"), "parent-1", "user-1", long)
+	notifRepo.AssertExpectations(t)
+}
+
+func TestNotifyCommentReply_SelfReplySuppressed(t *testing.T) {
+	svc, commentRepo, _, _, _ := newCommentTestService(t)
+	notifRepo := new(MockNotificationRepository)
+	svc.NotificationRepo = notifRepo
+
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", UserID: "user-1",
+	}, nil)
+
+	svc.notifyCommentReply(context.Background(), commentTestTemplate("owner-1"), "parent-1", "user-1", "hi")
+	notifRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestNotifyCommentReply_RepoFailureSwallowed(t *testing.T) {
+	svc, commentRepo, _, userRepo, _ := newCommentTestService(t)
+	notifRepo := new(MockNotificationRepository)
+	svc.NotificationRepo = notifRepo
+
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(&models.Comment{
+		ID: "parent-1", TemplateID: "tpl-1", UserID: "owner-1",
+	}, nil)
+	userRepo.On("GetByID", mock.Anything, "user-1").Return(&models.User{ID: "user-1", DisplayName: "User One"}, nil)
+	notifRepo.On("Create", mock.Anything, mock.Anything).Return(errors.New("db down")).Once()
+
+	// Must not panic; failure is logged and swallowed.
+	svc.notifyCommentReply(context.Background(), commentTestTemplate("owner-1"), "parent-1", "user-1", "hi")
+	notifRepo.AssertExpectations(t)
+}
+
+func TestNotifyCommentReply_ParentLoadFailureSwallowed(t *testing.T) {
+	svc, commentRepo, _, _, _ := newCommentTestService(t)
+	notifRepo := new(MockNotificationRepository)
+	svc.NotificationRepo = notifRepo
+
+	commentRepo.On("Get", mock.Anything, "parent-1").Return(nil, errors.New("db down"))
+
+	// Must not panic; failure is logged and swallowed.
+	svc.notifyCommentReply(context.Background(), commentTestTemplate("owner-1"), "parent-1", "user-1", "hi")
+	notifRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+}
+
+func TestNotifyCommentReply_NoReposNoop(t *testing.T) {
+	svc, _, _, _, _ := newCommentTestService(t)
+	// NotificationRepo and UserRepo are nil in the default test service.
+	svc.notifyCommentReply(context.Background(), commentTestTemplate("owner-1"), "parent-1", "user-1", "hi")
+}
+
+func TestCommentModelToProto_ThreadFields(t *testing.T) {
+	svc, _, _, _, _ := newCommentTestService(t)
+	tpl := commentTestTemplate("owner-1")
+	c := &models.Comment{
+		ID: "c1", TemplateID: "tpl-1", UserID: "user-1", Content: "hi",
+		ReplyCount: 3, HasCreatorReply: true,
+	}
+	p := svc.commentModelToProto(c, tpl, "user-1")
+	assert.Equal(t, int32(3), p.ReplyCount)
+	assert.True(t, p.HasCreatorReply)
 }
 
 func TestCreateComment_RateLimited(t *testing.T) {

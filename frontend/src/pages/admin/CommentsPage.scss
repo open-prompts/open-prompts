@@ -1,0 +1,82 @@
+.admin-comments {
+  &__title {
+    font-size: 1.4rem;
+    margin: 0 0 16px;
+  }
+
+  &__toolbar {
+    margin-bottom: 16px;
+  }
+
+  &__content {
+    display: block;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__template {
+    display: block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__delete {
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid var(--danger, #e5484d);
+    border-radius: var(--radius-6, 6px);
+    color: var(--danger, #e5484d);
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(229, 72, 77, 0.1);
+    }
+  }
+
+  &__delete-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__delete-preview {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--surface-2, #161b22);
+    border: 1px solid var(--border, #30363d);
+    border-radius: var(--radius-6, 6px);
+    font-size: 0.85rem;
+    color: var(--text-2, #c9d1d9);
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  &__reason-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-2, #c9d1d9);
+  }
+
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    background: var(--surface-2, #161b22);
+    border: 1px solid var(--border, #30363d);
+    border-radius: var(--radius-6, 6px);
+    color: var(--text-1, #e6edf3);
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent, #3b82f6);
+    }
+  }
+}

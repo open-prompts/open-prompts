@@ -534,7 +534,8 @@
       "audit_log": "审计日志",
       "back_to_app": "返回应用",
       "brand": "Open Prompts 管理控制台",
-      "appeals": "申诉"
+      "appeals": "申诉",
+      "comments": "评论"
     },
     "login": {
       "title": "Open Prompts 管理控制台",
@@ -680,6 +681,11 @@
       "profile": "个人资料",
       "language": "语言",
       "theme": "主题"
+    },
+    "comments": {
+      "parent": "所属评论",
+      "inReplyTo": "回复 {{author}}",
+      "topLevel": "—"
     }
   },
   "notifications": {
@@ -701,7 +707,8 @@
       "fork": "{{actor}} fork 了你的模板\"{{title}}\"",
       "follow": "{{actor}} 关注了你",
       "template_approved": "你的模板“{{title}}”已上线",
-      "template_rejected": "你的模板“{{title}}”被拒绝：{{reason}}"
+      "template_rejected": "你的模板“{{title}}”被拒绝：{{reason}}",
+      "comment_reply": "{{actor}} 回复了你在\"{{title}}\"下的评论"
     },
     "empty": {
       "all": "还没有通知 —— 当有人点赞、收藏或 fork 你的模板时，会显示在这里。",
@@ -721,6 +728,9 @@
       "mark": "标记已读失败。",
       "delete": "删除通知失败。",
       "retry": "重试"
+    },
+    "snippet": {
+      "comment_reply": "\"{{snippet}}\""
     }
   },
   "time": {
@@ -921,6 +931,45 @@
       "load": "加载合集失败",
       "save": "保存失败"
     }
+  },
+  "comments": {
+    "title": "评论",
+    "count": "{{count}}",
+    "composer_label": "添加评论",
+    "placeholder": "分享你的想法…",
+    "post": "发布",
+    "posting": "发布中…",
+    "char_count": "{{count}} / 2000",
+    "sign_in_to_comment": "登录以评论",
+    "empty": "暂无评论 —— 快来发表第一条评论吧。",
+    "load_more": "加载更多评论",
+    "edit": "编辑",
+    "save": "保存",
+    "saving": "保存中…",
+    "cancel": "取消",
+    "delete": "删除",
+    "edited": "已编辑",
+    "creator_badge": "创作者",
+    "confirm_delete": "删除这条评论？此操作无法撤销。",
+    "confirm_delete_owner": "删除这条评论？其回复也会一并删除。",
+    "error_load": "无法加载评论。",
+    "error_post": "无法发布评论。",
+    "error_edit": "无法更新评论。",
+    "error_delete": "无法删除评论。",
+    "error_banned": "您被禁言，无法评论。",
+    "error_content_length": "评论长度需为 1-2000 个字符。",
+    "error_rate_limited": "评论过于频繁 —— 请在 {{seconds}} 秒后重试。",
+    "error_window_expired": "编辑窗口已过期 —— 请删除后重新发布。",
+    "reply": "回复",
+    "replyTo": "回复 {{name}}…",
+    "loginToReply": "登录以回复",
+    "viewReplies": "查看 {{count}} 条回复",
+    "viewOneReply": "查看 1 条回复",
+    "hideReplies": "收起回复",
+    "answered": "已解答",
+    "threadFull": "此话题已满 —— 请发表新评论。",
+    "repliesError": "无法加载回复。",
+    "replyPosted": "回复已发布"
   },
   "dashboard_v2": {
     "title": "我的工作区",

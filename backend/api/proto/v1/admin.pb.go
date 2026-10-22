@@ -2520,8 +2520,10 @@ type AdminCommentEntry struct {
 	Content                  string                 `protobuf:"bytes,9,opt,name=content,proto3" json:"content,omitempty"`
 	CreatedAt                *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Display name of the parent comment's author; empty for top-level comments.
+	ParentAuthorDisplayName string `protobuf:"bytes,12,opt,name=parent_author_display_name,json=parentAuthorDisplayName,proto3" json:"parent_author_display_name,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *AdminCommentEntry) Reset() {
@@ -2629,6 +2631,13 @@ func (x *AdminCommentEntry) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *AdminCommentEntry) GetParentAuthorDisplayName() string {
+	if x != nil {
+		return x.ParentAuthorDisplayName
+	}
+	return ""
 }
 
 type ListAdminCommentsRequest struct {
@@ -4606,7 +4615,7 @@ const file_admin_proto_rawDesc = "" +
 	"\aentries\x18\x01 \x03(\v2\x16.v1.AdminAuditLogEntryR\aentries\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
-	"\bper_page\x18\x04 \x01(\x05R\aperPage\"\xca\x03\n" +
+	"\bper_page\x18\x04 \x01(\x05R\aperPage\"\x87\x04\n" +
 	"\x11AdminCommentEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -4623,7 +4632,8 @@ const file_admin_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x91\x01\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12;\n" +
+	"\x1aparent_author_display_name\x18\f \x01(\tR\x17parentAuthorDisplayName\"\x91\x01\n" +
 	"\x18ListAdminCommentsRequest\x12\f\n" +
 	"\x01q\x18\x01 \x01(\tR\x01q\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +

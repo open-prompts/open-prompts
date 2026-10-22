@@ -380,6 +380,8 @@ message AdminCommentEntry {
   string content = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  // Display name of the parent comment's author; empty for top-level comments.
+  string parent_author_display_name = 12;
 }
 
 message ListAdminCommentsRequest {

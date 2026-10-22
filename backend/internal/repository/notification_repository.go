@@ -53,8 +53,8 @@ func (r *notificationRepository) Create(ctx context.Context, n *models.Notificat
 		templateID = n.TemplateID
 	}
 	query := `
-		INSERT INTO notifications (recipient_id, actor_id, template_id, type, actor_display_name)
-		SELECT $1, $2, $3, $4, $5
+		INSERT INTO notifications (recipient_id, actor_id, template_id, type, actor_display_name, snippet)
+		SELECT $1, $2, $3, $4, $5, NULLIF($6, '')
 		WHERE NOT EXISTS (
 			SELECT 1 FROM notifications
 			WHERE recipient_id = $1 AND actor_id = $2 AND template_id IS NOT DISTINCT FROM $3
@@ -62,7 +62,7 @@ func (r *notificationRepository) Create(ctx context.Context, n *models.Notificat
 		)
 		RETURNING id, created_at`
 	err := r.db.QueryRowContext(ctx, query,
-		n.RecipientID, n.ActorID, templateID, n.Type, n.ActorDisplayName,
+		n.RecipientID, n.ActorID, templateID, n.Type, n.ActorDisplayName, n.Snippet,
 	).Scan(&n.ID, &n.CreatedAt)
 	if err == sql.ErrNoRows {
 		// Deduped: an identical unread notification already exists.
@@ -76,7 +76,7 @@ func (r *notificationRepository) Create(ctx context.Context, n *models.Notificat
 
 const notificationListQuery = `
 	SELECT n.id, n.type, n.actor_id, n.actor_display_name, u.avatar,
-	       n.template_id, t.title, n.read_at, n.created_at
+	       n.template_id, t.title, n.read_at, n.created_at, COALESCE(n.snippet, '')
 	FROM notifications n
 	LEFT JOIN users u ON u.id = n.actor_id
 	LEFT JOIN templates t ON t.id = n.template_id
@@ -100,7 +100,7 @@ func (r *notificationRepository) List(ctx context.Context, recipientID, filter s
 		var templateTitle sql.NullString
 		if err := rows.Scan(
 			&n.ID, &n.Type, &n.ActorID, &n.ActorDisplayName, &n.ActorAvatar,
-			&templateID, &templateTitle, &n.ReadAt, &n.CreatedAt,
+			&templateID, &templateTitle, &n.ReadAt, &n.CreatedAt, &n.Snippet,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan notification: %w", err)
 		}

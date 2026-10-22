@@ -920,6 +920,7 @@ const (
 	PromptService_CreateComment_FullMethodName          = "/v1.PromptService/CreateComment"
 	PromptService_UpdateComment_FullMethodName          = "/v1.PromptService/UpdateComment"
 	PromptService_DeleteComment_FullMethodName          = "/v1.PromptService/DeleteComment"
+	PromptService_ListCommentReplies_FullMethodName     = "/v1.PromptService/ListCommentReplies"
 	PromptService_RecordTemplateEvent_FullMethodName    = "/v1.PromptService/RecordTemplateEvent"
 	PromptService_GetTemplateStats_FullMethodName       = "/v1.PromptService/GetTemplateStats"
 	PromptService_GetCreatorStats_FullMethodName        = "/v1.PromptService/GetCreatorStats"
@@ -972,6 +973,9 @@ type PromptServiceClient interface {
 	UpdateComment(ctx context.Context, in *UpdateCommentRequest, opts ...grpc.CallOption) (*Comment, error)
 	// DeleteComment deletes a comment (author or template owner).
 	DeleteComment(ctx context.Context, in *DeleteCommentRequest, opts ...grpc.CallOption) (*DeleteCommentResponse, error)
+	// ListCommentReplies lists all replies to a top-level comment, oldest-first,
+	// unpaginated (bounded by the 50-reply thread cap).
+	ListCommentReplies(ctx context.Context, in *ListCommentRepliesRequest, opts ...grpc.CallOption) (*ListCommentRepliesResponse, error)
 	// RecordTemplateEvent records a view event for a template (anonymous
 	// allowed; rate-limited per IP). Use events are recorded server-side only.
 	RecordTemplateEvent(ctx context.Context, in *RecordTemplateEventRequest, opts ...grpc.CallOption) (*RecordTemplateEventResponse, error)
@@ -1176,6 +1180,16 @@ func (c *promptServiceClient) DeleteComment(ctx context.Context, in *DeleteComme
 	return out, nil
 }
 
+func (c *promptServiceClient) ListCommentReplies(ctx context.Context, in *ListCommentRepliesRequest, opts ...grpc.CallOption) (*ListCommentRepliesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCommentRepliesResponse)
+	err := c.cc.Invoke(ctx, PromptService_ListCommentReplies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *promptServiceClient) RecordTemplateEvent(ctx context.Context, in *RecordTemplateEventRequest, opts ...grpc.CallOption) (*RecordTemplateEventResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RecordTemplateEventResponse)
@@ -1316,6 +1330,9 @@ type PromptServiceServer interface {
 	UpdateComment(context.Context, *UpdateCommentRequest) (*Comment, error)
 	// DeleteComment deletes a comment (author or template owner).
 	DeleteComment(context.Context, *DeleteCommentRequest) (*DeleteCommentResponse, error)
+	// ListCommentReplies lists all replies to a top-level comment, oldest-first,
+	// unpaginated (bounded by the 50-reply thread cap).
+	ListCommentReplies(context.Context, *ListCommentRepliesRequest) (*ListCommentRepliesResponse, error)
 	// RecordTemplateEvent records a view event for a template (anonymous
 	// allowed; rate-limited per IP). Use events are recorded server-side only.
 	RecordTemplateEvent(context.Context, *RecordTemplateEventRequest) (*RecordTemplateEventResponse, error)
@@ -1400,6 +1417,9 @@ func (UnimplementedPromptServiceServer) UpdateComment(context.Context, *UpdateCo
 }
 func (UnimplementedPromptServiceServer) DeleteComment(context.Context, *DeleteCommentRequest) (*DeleteCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteComment not implemented")
+}
+func (UnimplementedPromptServiceServer) ListCommentReplies(context.Context, *ListCommentRepliesRequest) (*ListCommentRepliesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCommentReplies not implemented")
 }
 func (UnimplementedPromptServiceServer) RecordTemplateEvent(context.Context, *RecordTemplateEventRequest) (*RecordTemplateEventResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecordTemplateEvent not implemented")
@@ -1758,6 +1778,24 @@ func _PromptService_DeleteComment_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PromptService_ListCommentReplies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCommentRepliesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).ListCommentReplies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_ListCommentReplies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).ListCommentReplies(ctx, req.(*ListCommentRepliesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PromptService_RecordTemplateEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RecordTemplateEventRequest)
 	if err := dec(in); err != nil {
@@ -2012,6 +2050,10 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteComment",
 			Handler:    _PromptService_DeleteComment_Handler,
+		},
+		{
+			MethodName: "ListCommentReplies",
+			Handler:    _PromptService_ListCommentReplies_Handler,
 		},
 		{
 			MethodName: "RecordTemplateEvent",

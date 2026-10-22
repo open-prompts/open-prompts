@@ -10,14 +10,18 @@ import { useNotification } from '../../context/NotificationContext';
 import CommentComposer from './CommentComposer';
 import CommentItem from './CommentItem';
 import CommentEditForm from './CommentEditForm';
+import ReplyComposer from './ReplyComposer';
+import RepliesBucket from './RepliesBucket';
 import './CommentsSection.scss';
 
 const PAGE_SIZE = 20;
 
 /**
- * Template comment thread: paginated list, composer for signed-in users,
- * inline edit (15-min window enforced server-side) and delete for authors
- * or the template owner. Page-scoped local state, no Redux slice.
+ * Template comment thread: paginated top-level list, composer for signed-in
+ * users, inline edit (15-min window enforced server-side) and delete for
+ * authors or the template owner. Thread-aware: one reply composer open at a
+ * time, per-thread reply buckets with lazy fetch + cache. Page-scoped local
+ * state, no Redux slice.
  */
 const CommentsSection = ({ templateId, templateOwnerId, user }) => {
   const { t } = useTranslation();
@@ -29,6 +33,8 @@ const CommentsSection = ({ templateId, templateOwnerId, user }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [openComposerId, setOpenComposerId] = useState(null);
+  const [expandedThreads, setExpandedThreads] = useState({});
   const sectionRef = useRef(null);
 
   const load = useCallback(
@@ -60,6 +66,19 @@ const CommentsSection = ({ templateId, templateOwnerId, user }) => {
   const handlePosted = (comment) => {
     setComments((prev) => [comment, ...prev]);
     setTotalCount((prev) => prev + 1);
+  };
+
+  const handleReplyPosted = (commentId, reply) => {
+    // Auto-expand the bucket and append the reply; bump reply_count locally.
+    setExpandedThreads((prev) => ({
+      ...prev,
+      [commentId]: [...(prev[commentId] || []), reply],
+    }));
+    setComments((prev) =>
+      prev.map((c) => (c.id === commentId ? { ...c, reply_count: (c.reply_count || 0) + 1 } : c))
+    );
+    setOpenComposerId(null);
+    addNotification({ kind: 'success', title: t('comments.replyPosted') });
   };
 
   const handleEdit = async (commentId, content) => {
@@ -96,6 +115,36 @@ const CommentsSection = ({ templateId, templateOwnerId, user }) => {
       addNotification({ kind: 'error', title: t('comments.error_delete') });
     }
   };
+
+  const handleReplyDelete = async (parentId, reply) => {
+    const isTemplateOwner = user && user.id === templateOwnerId;
+    const confirmed = window.confirm(
+      isTemplateOwner ? t('comments.confirm_delete_owner') : t('comments.confirm_delete')
+    );
+    if (!confirmed) return;
+    try {
+      await deleteComment(reply.id);
+      setExpandedThreads((prev) => ({
+        ...prev,
+        [parentId]: (prev[parentId] || []).filter((r) => r.id !== reply.id),
+      }));
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === parentId ? { ...c, reply_count: Math.max(0, (c.reply_count || 0) - 1) } : c
+        )
+      );
+    } catch (err) {
+      addNotification({ kind: 'error', title: t('comments.error_delete') });
+    }
+  };
+
+  const handleCacheReplies = useCallback((commentId, replies) => {
+    setExpandedThreads((prev) => ({ ...prev, [commentId]: replies }));
+  }, []);
+
+  const handleToggleThread = useCallback((commentId) => {
+    setExpandedThreads((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
+  }, []);
 
   const hasMore = comments.length < totalCount;
 
@@ -147,6 +196,37 @@ const CommentsSection = ({ templateId, templateOwnerId, user }) => {
                 canDelete={!!user && (comment.is_own || user.id === templateOwnerId)}
                 onEdit={() => setEditingId(comment.id)}
                 onDelete={() => handleDelete(comment)}
+                onReply={user ? () => setOpenComposerId(comment.id) : null}
+                isTopLevel
+                templateOwnerId={templateOwnerId}
+                user={user}
+                repliesBucket={
+                  <>
+                    {openComposerId === comment.id && (
+                      <ReplyComposer
+                        templateId={templateId}
+                        parentCommentId={comment.id}
+                        parentName={(comment.author && comment.author.display_name) || ''}
+                        onPosted={(reply) => handleReplyPosted(comment.id, reply)}
+                        onCancel={() => setOpenComposerId(null)}
+                      />
+                    )}
+                    {comment.reply_count > 0 && (
+                      <RepliesBucket
+                        commentId={comment.id}
+                        replyCount={comment.reply_count}
+                        templateOwnerId={templateOwnerId}
+                        user={user}
+                        expanded={!!expandedThreads[comment.id]}
+                        cachedReplies={expandedThreads[comment.id]}
+                        onToggle={handleToggleThread}
+                        onCacheReplies={handleCacheReplies}
+                        onEdit={(reply) => setEditingId(reply.id)}
+                        onDelete={(reply) => handleReplyDelete(comment.id, reply)}
+                      />
+                    )}
+                  </>
+                }
               />
             </li>
           )

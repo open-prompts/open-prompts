@@ -195,6 +195,7 @@ func notificationToProto(n *models.Notification) *pb.Notification {
 		TemplateId:       n.TemplateID,
 		TemplateTitle:    n.TemplateTitle,
 		CreatedAt:        n.CreatedAt.Format(time.RFC3339),
+		Snippet:          n.Snippet,
 	}
 	if n.ReadAt != nil {
 		p.ReadAt = n.ReadAt.Format(time.RFC3339)

@@ -56,6 +56,15 @@
     color: var(--text-3, #8b949e);
   }
 
+  &__answered {
+    padding: 1px 8px;
+    border-radius: var(--radius-pill, 999px);
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
   &__content {
     margin: 0;
     font-size: 0.9rem;

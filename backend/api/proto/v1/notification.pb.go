@@ -92,8 +92,10 @@ type Notification struct {
 	TemplateTitle    string                 `protobuf:"bytes,7,opt,name=template_title,json=templateTitle,proto3" json:"template_title,omitempty"` // live join
 	ReadAt           string                 `protobuf:"bytes,8,opt,name=read_at,json=readAt,proto3" json:"read_at,omitempty"`                      // RFC3339, empty when unread
 	CreatedAt        string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`             // RFC3339
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// ≤100-char excerpt; only populated for comment_reply events.
+	Snippet       string `protobuf:"bytes,10,opt,name=snippet,proto3" json:"snippet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Notification) Reset() {
@@ -185,6 +187,13 @@ func (x *Notification) GetReadAt() string {
 func (x *Notification) GetCreatedAt() string {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *Notification) GetSnippet() string {
+	if x != nil {
+		return x.Snippet
 	}
 	return ""
 }
@@ -602,7 +611,7 @@ const file_notification_proto_rawDesc = "" +
 	"\x06filter\x18\x01 \x01(\tR\x06filter\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"\x9e\x02\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"\xb8\x02\n" +
 	"\fNotification\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x19\n" +
@@ -614,7 +623,9 @@ const file_notification_proto_rawDesc = "" +
 	"\x0etemplate_title\x18\a \x01(\tR\rtemplateTitle\x12\x17\n" +
 	"\aread_at\x18\b \x01(\tR\x06readAt\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\t \x01(\tR\tcreatedAt\"\x9e\x01\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x18\n" +
+	"\asnippet\x18\n" +
+	" \x01(\tR\asnippet\"\x9e\x01\n" +
 	"\x19ListNotificationsResponse\x126\n" +
 	"\rnotifications\x18\x01 \x03(\v2\x10.v1.NotificationR\rnotifications\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12!\n" +

@@ -121,3 +121,31 @@ class OpenPromptsClient:
         url = f"{self.base_url}/api/v1/templates/{template_id}"
         resp = self.session.get(url)
         return self._handle_response(resp)
+
+    def list_comment_replies(self, comment_id: str) -> Dict[str, Any]:
+        """
+        List all replies to a top-level comment, oldest-first (≤ 50).
+
+        :param comment_id: The ID of the top-level comment.
+        :return: A dictionary with the replies list.
+        """
+        url = f"{self.base_url}/api/v1/comments/{comment_id}/replies"
+        resp = self.session.get(url)
+        return self._handle_response(resp)
+
+    def create_comment(self, template_id: str, content: str, parent_comment_id: str = None) -> Dict[str, Any]:
+        """
+        Post a comment on a template. When parent_comment_id is set, the
+        comment is posted as a reply to that top-level comment.
+
+        :param template_id: The ID of the template.
+        :param content: The comment text (1-2000 chars after trim).
+        :param parent_comment_id: Optional top-level comment id to reply to.
+        :return: A dictionary with the created comment.
+        """
+        url = f"{self.base_url}/api/v1/templates/{template_id}/comments"
+        payload = {"content": content}
+        if parent_comment_id:
+            payload["parent_comment_id"] = parent_comment_id
+        resp = self.session.post(url, json=payload)
+        return self._handle_response(resp)

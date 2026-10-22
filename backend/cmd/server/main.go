@@ -858,13 +858,14 @@ func main() {
 				ctx := service.ContextWithUserID(context.Background(), userID)
 
 				var body struct {
-					Content string `json:"content"`
+					Content         string `json:"content"`
+					ParentCommentId string `json:"parent_comment_id"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 					http.Error(w, "Invalid request body", http.StatusBadRequest)
 					return
 				}
-				req := &pb.CreateCommentRequest{TemplateId: templateID, Content: body.Content}
+				req := &pb.CreateCommentRequest{TemplateId: templateID, Content: body.Content, ParentCommentId: body.ParentCommentId}
 				resp, err := svc.CreateComment(ctx, req)
 				if err != nil {
 					writeError(w, err)
@@ -2324,17 +2325,39 @@ func main() {
 	})
 
 	// Comment Handlers — /api/v1/comments/{id} (PUT edit, DELETE author-or-owner)
+	// and /api/v1/comments/{id}/replies (GET list replies, optional auth).
 	http.HandleFunc("/api/v1/comments/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		if r.Method == http.MethodOptions {
 			return
 		}
 
-		commentID := strings.TrimPrefix(r.URL.Path, "/api/v1/comments/")
-		if commentID == "" || strings.Contains(commentID, "/") {
+		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/comments/"), "/")
+		if len(parts) == 2 && parts[1] == "replies" && r.Method == http.MethodGet {
+			// Optional auth — visibility follows the template.
+			ctx := context.Background()
+			if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+				tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+				if userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr); err == nil {
+					ctx = service.ContextWithUserID(ctx, userID)
+				}
+			}
+			resp, err := svc.ListCommentReplies(ctx, &pb.ListCommentRepliesRequest{CommentId: parts[0]})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		commentID := parts[0]
+		if commentID == "" || len(parts) != 1 {
 			http.Error(w, "ID required", http.StatusBadRequest)
 			return
 		}

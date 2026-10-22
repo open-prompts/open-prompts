@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { HeartIcon, StarIcon, ForkIcon, CheckIcon, AlertIcon } from '../ui/Icons';
+import { HeartIcon, StarIcon, ForkIcon, CheckIcon, AlertIcon, ReplyIcon } from '../ui/Icons';
 import { formatRelativeTime } from '../../utils/time';
 
 const EVENT_ICONS = {
@@ -11,6 +11,7 @@ const EVENT_ICONS = {
   template_rejected: { Icon: AlertIcon, className: 'event-icon-rejected' },
   template_warning_changed: { Icon: AlertIcon, className: 'event-icon-warning' },
   appeal_resolved: { Icon: CheckIcon, className: 'event-icon-approved' },
+  comment_reply: { Icon: ReplyIcon, className: 'event-icon-reply' },
 };
 
 /**
@@ -85,6 +86,10 @@ const NotificationItem = ({ notification, onOpen, onMarkRead, onDelete, compact 
       defaultValue: `${n.actor_display_name} ${n.type} "${n.template_title}"`,
     });
   }
+  const isCommentReply = n.type === 'comment_reply';
+  const snippet = isCommentReply && n.snippet
+    ? t('notifications.snippet.comment_reply', { snippet: n.snippet })
+    : '';
   const relativeTime = formatRelativeTime(n.created_at, t);
   const absoluteTime = n.created_at ? new Date(n.created_at).toLocaleString() : '';
 
@@ -104,6 +109,7 @@ const NotificationItem = ({ notification, onOpen, onMarkRead, onDelete, compact 
         </span>
         <span className="notification-body">
           <span className="notification-sentence">{sentence}</span>
+          {snippet && <span className="notification-snippet">{snippet}</span>}
           <time className="notification-time" dateTime={n.created_at} title={absoluteTime}>
             {relativeTime}
           </time>

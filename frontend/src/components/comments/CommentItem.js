@@ -6,9 +6,22 @@ import './CommentItem.scss';
 /**
  * A single comment row: author identity, [CREATOR] chip for the template
  * owner, relative time, edited marker, plain-text content (pre-wrap), and
- * hover/focus-revealed Edit/Delete actions.
+ * hover/focus-revealed Edit/Delete actions. Top-level comments additionally
+ * render a Reply action, an "Answered" chip when the creator has replied, and
+ * a RepliesBucket when reply_count > 0.
  */
-const CommentItem = ({ comment, canEdit, canDelete, onEdit, onDelete }) => {
+const CommentItem = ({
+  comment,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  onReply,
+  isTopLevel = false,
+  templateOwnerId,
+  user,
+  repliesBucket,
+}) => {
   const { t } = useTranslation();
   const author = comment.author || {};
   const time = useRelativeTime(comment.created_at);
@@ -30,22 +43,29 @@ const CommentItem = ({ comment, canEdit, canDelete, onEdit, onDelete }) => {
             {time}
           </time>
           {comment.is_edited && <span className="comment-item__edited">({t('comments.edited')})</span>}
+          {isTopLevel && comment.has_creator_reply && (
+            <span className="comment-item__answered">{t('comments.answered')}</span>
+          )}
         </div>
         <p className="comment-item__content">{comment.content}</p>
-        {(canEdit || canDelete) && (
-          <div className="comment-item__actions">
-            {canEdit && (
-              <button type="button" className="comment-item__action" onClick={onEdit}>
-                {t('comments.edit')}
-              </button>
-            )}
-            {canDelete && (
-              <button type="button" className="comment-item__action comment-item__action--danger" onClick={onDelete}>
-                {t('comments.delete')}
-              </button>
-            )}
-          </div>
-        )}
+        <div className="comment-item__actions">
+          {isTopLevel && onReply && (
+            <button type="button" className="comment-item__action" onClick={onReply}>
+              {t('comments.reply')}
+            </button>
+          )}
+          {canEdit && (
+            <button type="button" className="comment-item__action" onClick={onEdit}>
+              {t('comments.edit')}
+            </button>
+          )}
+          {canDelete && (
+            <button type="button" className="comment-item__action comment-item__action--danger" onClick={onDelete}>
+              {t('comments.delete')}
+            </button>
+          )}
+        </div>
+        {isTopLevel && repliesBucket}
       </div>
     </article>
   );

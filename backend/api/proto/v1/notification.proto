@@ -38,6 +38,8 @@ message Notification {
   string template_title = 7;     // live join
   string read_at = 8;            // RFC3339, empty when unread
   string created_at = 9;         // RFC3339
+  // ≤100-char excerpt; only populated for comment_reply events.
+  string snippet = 10;
 }
 
 message ListNotificationsResponse {

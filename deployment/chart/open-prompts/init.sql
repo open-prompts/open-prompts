@@ -936,3 +936,62 @@ BEGIN
                             'appeal_resolved'));
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: comment-replies-threads
+-- Description: Single-level threading on template_comments. reply_count is
+--              maintained transactionally on reply insert/delete; comment_count
+--              counts top-level comments only (unchanged semantics).
+-- -----------------------------------------------------------------------------
+
+-- parent_comment_id: null for top-level comments; references a top-level
+-- comment. No FK (cascade handled in the service layer, matching the shipped
+-- delete flow). reply_count = number of direct replies.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='template_comments' AND column_name='parent_comment_id') THEN
+        ALTER TABLE template_comments ADD COLUMN parent_comment_id UUID;
+        COMMENT ON COLUMN template_comments.parent_comment_id IS
+            'Null for top-level comments; references a top-level comment (no FK, service-enforced)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='template_comments' AND column_name='reply_count') THEN
+        ALTER TABLE template_comments ADD COLUMN reply_count INT NOT NULL DEFAULT 0;
+        COMMENT ON COLUMN template_comments.reply_count IS
+            'Number of direct replies (maintained transactionally)';
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_template_comments_parent_created
+    ON template_comments (parent_comment_id, created_at ASC);
+
+-- Widen notifications.type CHECK for the comment_reply event type (guarded,
+-- idempotent; converges on the next run if a partially-migrated DB lacks it).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%comment_reply%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment',
+                            'template_approved', 'template_rejected',
+                            'template_warning_changed', 'follow',
+                            'appeal_resolved', 'comment_reply'));
+    END IF;
+END $$;
+
+-- Add the snippet column to notifications (≤100-char reply excerpt).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notifications' AND column_name='snippet') THEN
+        ALTER TABLE notifications ADD COLUMN snippet TEXT;
+        COMMENT ON COLUMN notifications.snippet IS
+            '≤100-char excerpt; only populated for comment_reply events';
+    END IF;
+END $$;

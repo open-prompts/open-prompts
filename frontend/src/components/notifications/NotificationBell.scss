@@ -251,6 +251,15 @@
     color: var(--text-2, #c9d1d9);
   }
 
+  .notification-snippet {
+    font-size: 12px;
+    color: var(--text-3, #8b949e);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .notification-time {
     font-size: 12px;
     color: var(--text-3, #8b949e);

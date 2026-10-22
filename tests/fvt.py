@@ -1770,6 +1770,295 @@ def test_template_comments():
         return False
     print("Private visibility OK")
 
+    # 12. Reply threads: owner replies to a fresh user's comment; reply_count
+    # +1, comment_count unchanged; replies list oldest-first.
+    print("Reply threads...")
+    # Use a fresh user so the 5/min comment rate limit is not exhausted.
+    reply_user_id = f"cmt_reply_{int(time.time())}"
+    token_reply_user = get_auth_token(reply_user_id)
+    headers_reply_user = {"Authorization": f"Bearer {token_reply_user}"}
+    # Capture the top-level comment_count before creating the root.
+    resp = requests.get(f"{BASE_URL}/{t_id}")
+    baseline_count = resp.json()["template"].get("comment_count", 0)
+    # Re-create a top-level comment on the public template (t_id) by the fresh user.
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "Thread root comment"})
+    if resp.status_code != 200:
+        print(f"Create thread root failed: {resp.status_code} {resp.text}")
+        return False
+    root = resp.json()
+    root_id = root["id"]
+    if root.get("reply_count") != 0 or root.get("has_creator_reply") is not False:
+        print(f"New top-level comment should have reply_count=0, has_creator_reply=false: {root}")
+        return False
+
+    # comment_count increments by exactly 1 for the top-level root; replies
+    # do not touch it.
+    resp = requests.get(f"{BASE_URL}/{t_id}")
+    if resp.json()["template"].get("comment_count") != baseline_count + 1:
+        print(f"comment_count should be {baseline_count + 1} (top-level only), got {resp.json()['template'].get('comment_count')}")
+        return False
+
+    # Owner replies to the root.
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_owner,
+                         json={"content": "Owner reply one", "parent_comment_id": root_id})
+    if resp.status_code != 200:
+        print(f"Owner reply failed: {resp.status_code} {resp.text}")
+        return False
+    reply1 = resp.json()
+    if reply1.get("is_owner") is not True:
+        print("Owner reply should be flagged is_owner")
+        return False
+
+    # Fresh user replies to the root (second reply, oldest-first order check).
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "Reply user reply two", "parent_comment_id": root_id})
+    if resp.status_code != 200:
+        print(f"Reply user reply failed: {resp.status_code} {resp.text}")
+        return False
+    reply2 = resp.json()
+
+
+    # List replies oldest-first.
+    resp = requests.get(f"{COMMENTS}/{root_id}/replies")
+    if resp.status_code != 200:
+        print(f"List replies failed: {resp.status_code} {resp.text}")
+        return False
+    replies = resp.json().get("replies", [])
+    if len(replies) != 2 or replies[0]["id"] != reply1["id"] or replies[1]["id"] != reply2["id"]:
+        print(f"Replies should be 2 oldest-first, got {[r['id'] for r in replies]}")
+        return False
+
+    # Top-level list shows reply_count + has_creator_reply.
+    resp = requests.get(f"{BASE_URL}/{t_id}/comments")
+    top = [c for c in resp.json().get("comments", []) if c["id"] == root_id]
+    if not top:
+        print("Root comment missing from top-level list")
+        return False
+    if top[0].get("reply_count") != 2:
+        print(f"Root reply_count should be 2, got {top[0].get('reply_count')}")
+        return False
+    if top[0].get("has_creator_reply") is not True:
+        print("Root has_creator_reply should be true (owner replied)")
+        return False
+    print("Reply threads OK")
+
+    # 13. Replying to a reply → 400 (parent must be top-level).
+    print("Reply-to-reply rejection...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "nested", "parent_comment_id": reply1["id"]})
+    if resp.status_code != 400:
+        print(f"Reply-to-reply should be 400, got {resp.status_code} {resp.text}")
+        return False
+    # parent on a different template → 400. Create a root on the private
+    # template (owner) to use as the cross-template parent.
+    resp = requests.post(f"{BASE_URL}/{p_id}/comments", headers=headers_owner,
+                         json={"content": "private cross root"})
+    if resp.status_code != 200:
+        print(f"Create private cross root failed: {resp.status_code} {resp.text}")
+        return False
+    p_root_id = resp.json()["id"]
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "cross", "parent_comment_id": p_root_id})
+    if resp.status_code != 400:
+        print(f"Cross-template parent should be 400, got {resp.status_code} {resp.text}")
+        return False
+    # unknown parent → 400.
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "ghost", "parent_comment_id": "00000000-0000-0000-0000-000000000000"})
+    if resp.status_code != 400:
+        print(f"Unknown parent should be 400, got {resp.status_code} {resp.text}")
+        return False
+    print("Reply-to-reply rejection OK")
+
+    # 14. comment_reply notification: parent author (fresh reply user)
+    # receives it with replier name + snippet; self-reply suppressed.
+    print("comment_reply notification...")
+    resp = requests.get(f"{APP}/notifications", headers=headers_reply_user,
+                        params={"filter": "all"})
+    notifs = resp.json().get("notifications", [])
+    reply_notifs = [n for n in notifs if n.get("type") == "comment_reply"]
+    if not any(n.get("actor_id") == owner_id and n.get("snippet") for n in reply_notifs):
+        print("Reply user should have a comment_reply notification with snippet")
+        return False
+    # Self-reply: reply user replies to own comment → no notification to self.
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "self reply", "parent_comment_id": root_id})
+    if resp.status_code != 200:
+        print(f"Self reply failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{APP}/notifications", headers=headers_reply_user,
+                        params={"filter": "all"})
+    notifs = resp.json().get("notifications", [])
+    self_reply_notifs = [n for n in notifs if n.get("type") == "comment_reply" and n.get("actor_id") == reply_user_id]
+    if self_reply_notifs:
+        print("Self-reply should not generate a comment_reply notification")
+        return False
+    print("comment_reply notification OK")
+
+    # 15. Delete a reply → reply_count -1, siblings intact, comment_count
+    # unchanged.
+    print("Delete reply...")
+    resp = requests.delete(f"{COMMENTS}/{reply2['id']}", headers=headers_reply_user)
+    if resp.status_code != 200:
+        print(f"Reply user delete reply failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{t_id}/comments")
+    top = [c for c in resp.json().get("comments", []) if c["id"] == root_id]
+    if top[0].get("reply_count") != 2:  # reply1 + self reply remain
+        print(f"reply_count should be 2 after deleting one reply, got {top[0].get('reply_count')}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{t_id}")
+    if resp.json()["template"].get("comment_count") != baseline_count + 1:
+        print(f"comment_count should stay {baseline_count + 1} after reply delete, got {resp.json()['template'].get('comment_count')}")
+        return False
+    print("Delete reply OK")
+
+    # 16. Delete a top-level comment → its replies cascade, comment_count -1.
+    print("Delete top-level cascade...")
+    resp = requests.delete(f"{COMMENTS}/{root_id}", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Owner delete top-level failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{t_id}")
+    if resp.json()["template"].get("comment_count") != baseline_count:
+        print(f"comment_count should be {baseline_count} after top-level delete, got {resp.json()['template'].get('comment_count')}")
+        return False
+    resp = requests.get(f"{COMMENTS}/{root_id}/replies")
+    if resp.status_code != 404:
+        print(f"Replies of deleted top-level should 404, got {resp.status_code}")
+        return False
+    print("Delete top-level cascade OK")
+
+    # 17. Admin list shows parent column; admin delete of a reply follows
+    # cascade + audit.
+    print("Admin parent column...")
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_reply_user,
+                         json={"content": "Admin thread root"})
+    if resp.status_code != 200:
+        print(f"Create admin thread root failed: {resp.status_code} {resp.text}")
+        return False
+    admin_root = resp.json()["id"]
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_owner,
+                         json={"content": "Admin thread reply", "parent_comment_id": admin_root})
+    if resp.status_code != 200:
+        print(f"Create admin thread reply failed: {resp.status_code} {resp.text}")
+        return False
+    admin_reply = resp.json()["id"]
+    resp = requests.get(f"{ADMIN}/comments", headers=admin_headers,
+                        params={"template_id": t_id})
+    entries = resp.json().get("entries", [])
+    reply_entry = [e for e in entries if e["id"] == admin_reply]
+    if not reply_entry or not reply_entry[0].get("parent_author_display_name"):
+        print("Admin reply entry should carry parent_author_display_name")
+        return False
+    root_entry = [e for e in entries if e["id"] == admin_root]
+    if not root_entry or root_entry[0].get("parent_author_display_name"):
+        print("Admin top-level entry should have empty parent_author_display_name")
+        return False
+    # Admin delete the reply with reason → audit row.
+    resp = requests.delete(f"{ADMIN}/comments/{admin_reply}", headers=admin_headers,
+                           json={"reason": "fvt reply moderation"})
+    if resp.status_code != 200:
+        print(f"Admin delete reply failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "delete_comment"})
+    if not any(e.get("target_id") == admin_reply for e in resp.json().get("entries", [])):
+        print("Audit log missing delete_comment entry for the admin-deleted reply")
+        return False
+    print("Admin parent column OK")
+
+    # 18. Thread cap: 50 replies, the 51st → 400. Use a pool of fresh users so
+    # the 5/min per-user rate limit does not interfere.
+    print("Thread cap...")
+    cap_root_user = f"cmt_caproot_{int(time.time())}"
+    token_cap_root = get_auth_token(cap_root_user)
+    headers_cap_root = {"Authorization": f"Bearer {token_cap_root}"}
+    cap_reply_users = []
+    for u in range(10):
+        uid = f"cmt_capreply_{int(time.time())}_{u}"
+        cap_reply_users.append({"Authorization": f"Bearer {get_auth_token(uid)}"})
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_cap_root,
+                         json={"content": "Cap root"})
+    if resp.status_code != 200:
+        print(f"Create cap root failed: {resp.status_code} {resp.text}")
+        return False
+    cap_root = resp.json()["id"]
+    for i in range(50):
+        headers_cap_reply = cap_reply_users[i % len(cap_reply_users)]
+        resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_cap_reply,
+                             json={"content": f"cap reply {i}", "parent_comment_id": cap_root})
+        if resp.status_code != 200:
+            print(f"Cap reply {i} failed: {resp.status_code} {resp.text}")
+            return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=cap_reply_users[0],
+                         json={"content": "51st reply", "parent_comment_id": cap_root})
+    if resp.status_code != 400:
+        print(f"51st reply should be 400 (thread full), got {resp.status_code} {resp.text}")
+        return False
+    print("Thread cap OK")
+
+    # 19. Anonymous reads threads on public template; private template threads
+    # owner-only (404 for others).
+    print("Thread visibility...")
+    resp = requests.get(f"{COMMENTS}/{cap_root}/replies")
+    if resp.status_code != 200 or len(resp.json().get("replies", [])) != 50:
+        print(f"Anonymous thread read should return 50 replies, got {resp.status_code}")
+        return False
+    # Private template: author posts a comment, owner replies; author (non-owner)
+    # cannot read the thread (404).
+    resp = requests.post(f"{BASE_URL}/{p_id}/comments", headers=headers_owner,
+                         json={"content": "private root"})
+    if resp.status_code != 200:
+        print(f"Owner private comment failed: {resp.status_code} {resp.text}")
+        return False
+    p_root = resp.json()["id"]
+    resp = requests.post(f"{BASE_URL}/{p_id}/comments", headers=headers_owner,
+                         json={"content": "private reply", "parent_comment_id": p_root})
+    if resp.status_code != 200:
+        print(f"Owner private reply failed: {resp.status_code} {resp.text}")
+        return False
+    resp = requests.get(f"{COMMENTS}/{p_root}/replies", headers=headers_author)
+    if resp.status_code != 404:
+        print(f"Non-owner private thread read should be 404, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{COMMENTS}/{p_root}/replies", headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Owner private thread read should be 200, got {resp.status_code}")
+        return False
+    print("Thread visibility OK")
+
+    # 20. Rate limit on replies: 6th reply within a minute → 429 + Retry-After.
+    print("Reply rate limit...")
+    # owner has already posted 50 cap replies + 1 private reply + admin reply
+    # within the minute → already over the 5/min limit. A fresh user avoids
+    # cross-contamination.
+    rl_id = f"cmt_rl_{int(time.time())}"
+    token_rl = get_auth_token(rl_id)
+    headers_rl = {"Authorization": f"Bearer {token_rl}"}
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_rl,
+                         json={"content": "rl root"})
+    if resp.status_code != 200:
+        print(f"Create rl root failed: {resp.status_code} {resp.text}")
+        return False
+    rl_root = resp.json()["id"]
+    for i in range(4):
+        resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_rl,
+                             json={"content": f"rl reply {i}", "parent_comment_id": rl_root})
+        if resp.status_code != 200:
+            print(f"RL reply {i} failed: {resp.status_code} {resp.text}")
+            return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_rl,
+                         json={"content": "rl 6th", "parent_comment_id": rl_root})
+    if resp.status_code != 429:
+        print(f"6th reply should be 429, got {resp.status_code} {resp.text}")
+        return False
+    if not resp.headers.get("Retry-After"):
+        print("429 reply response missing Retry-After header")
+        return False
+    print("Reply rate limit OK")
+
     # 12. Template deletion cascades comments (verified via admin list)
     print("Cascade check...")
     resp = requests.delete(f"{BASE_URL}/{t_id}?owner_id={owner_id}", headers=headers_owner)

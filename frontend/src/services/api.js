@@ -213,8 +213,11 @@ export const listTemplateComments = (templateId, params) => {
   return api.get(`/templates/${templateId}/comments`, { params });
 };
 
-export const createTemplateComment = (templateId, content) => {
-  return api.post(`/templates/${templateId}/comments`, { content });
+export const createTemplateComment = (templateId, content, parentCommentId) => {
+  return api.post(`/templates/${templateId}/comments`, {
+    content,
+    ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+  });
 };
 
 export const updateComment = (commentId, content) => {
@@ -223,6 +226,10 @@ export const updateComment = (commentId, content) => {
 
 export const deleteComment = (commentId) => {
   return api.delete(`/comments/${commentId}`);
+};
+
+export const listCommentReplies = (commentId) => {
+  return api.get(`/comments/${commentId}/replies`);
 };
 
 // API methods for Follow Creators

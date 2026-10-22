@@ -697,11 +697,14 @@ func (r *adminRepository) ListComments(ctx context.Context, f CommentFilters) ([
 	query := `
 SELECT c.id, c.template_id, t.title, t.owner_id, COALESCE(o.display_name, ''),
        c.user_id, COALESCE(u.display_name, ''), COALESCE(u.email, ''),
-       c.content, c.created_at, c.updated_at
+       c.content, c.created_at, c.updated_at,
+       COALESCE(pu.display_name, '')
 FROM template_comments c
 JOIN templates t ON t.id = c.template_id
 LEFT JOIN users o ON o.id = t.owner_id
-LEFT JOIN users u ON u.id = c.user_id` + where + `
+LEFT JOIN users u ON u.id = c.user_id
+LEFT JOIN template_comments p ON p.id = c.parent_comment_id
+LEFT JOIN users pu ON pu.id = p.user_id` + where + `
 ORDER BY c.created_at DESC` + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argID, argID+1)
 	args = append(args, f.Limit, f.Offset)
 
@@ -720,6 +723,7 @@ ORDER BY c.created_at DESC` + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argID, argID+
 			&c.ID, &c.TemplateID, &c.TemplateTitle, &c.TemplateOwnerID, &c.OwnerDisplayName,
 			&c.UserID, &c.UserDisplayName, &c.UserEmail,
 			&c.Content, &c.CreatedAt, &c.UpdatedAt,
+			&c.ParentAuthorDisplayName,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan comment: %w", err)
 		}
@@ -732,9 +736,10 @@ ORDER BY c.created_at DESC` + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argID, argID+
 	return comments, total, nil
 }
 
-// DeleteComment removes any comment (admin moderation) and recomputes the
-// template's comment_count in one transaction. Returns deleted=false when the
-// comment does not exist.
+// DeleteComment removes any comment (admin moderation). If it is a top-level
+// comment, its replies are deleted in the same transaction and comment_count
+// is recomputed; if it is a reply, its parent's reply_count is decremented.
+// Returns deleted=false when the comment does not exist.
 func (r *adminRepository) DeleteComment(ctx context.Context, id string) (bool, int64, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -742,10 +747,11 @@ func (r *adminRepository) DeleteComment(ctx context.Context, id string) (bool, i
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	var templateID string
+	var templateID, parentID string
 	err = tx.QueryRowContext(ctx,
-		`DELETE FROM template_comments WHERE id = $1 RETURNING template_id`, id,
-	).Scan(&templateID)
+		`DELETE FROM template_comments WHERE id = $1 RETURNING template_id, COALESCE(parent_comment_id::text, '')`,
+		id,
+	).Scan(&templateID, &parentID)
 	if err == sql.ErrNoRows {
 		return false, 0, nil
 	}
@@ -753,15 +759,29 @@ func (r *adminRepository) DeleteComment(ctx context.Context, id string) (bool, i
 		return false, 0, fmt.Errorf("failed to delete comment: %w", err)
 	}
 
-	var count int64
-	if err = tx.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM template_comments WHERE template_id = $1`, templateID,
-	).Scan(&count); err != nil {
-		return false, 0, fmt.Errorf("failed to recount comments: %w", err)
+	if parentID == "" {
+		// Top-level: delete its replies, then recount comment_count.
+		if _, err = tx.ExecContext(ctx,
+			`DELETE FROM template_comments WHERE parent_comment_id = $1`, id); err != nil {
+			return false, 0, fmt.Errorf("failed to cascade delete replies: %w", err)
+		}
+		var count int64
+		if err = tx.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM template_comments WHERE template_id = $1 AND parent_comment_id IS NULL`,
+			templateID).Scan(&count); err != nil {
+			return false, 0, fmt.Errorf("failed to recount comments: %w", err)
+		}
+		if _, err = tx.ExecContext(ctx,
+			`UPDATE templates SET comment_count = $1 WHERE id = $2`, count, templateID); err != nil {
+			return false, 0, fmt.Errorf("failed to update comment_count: %w", err)
+		}
+	} else {
+		// Reply: decrement the parent's reply_count (floor at 0).
+		if _, err = tx.ExecContext(ctx,
+			`UPDATE template_comments SET reply_count = GREATEST(reply_count - 1, 0) WHERE id = $1`,
+			parentID); err != nil {
+			return false, 0, fmt.Errorf("failed to decrement reply_count: %w", err)
+		}
 	}
-	if _, err = tx.ExecContext(ctx,
-		`UPDATE templates SET comment_count = $1 WHERE id = $2`, count, templateID); err != nil {
-		return false, 0, fmt.Errorf("failed to update comment_count: %w", err)
-	}
-	return true, count, tx.Commit()
+	return true, 0, tx.Commit()
 }
