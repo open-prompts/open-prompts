@@ -153,6 +153,23 @@ async function createComment(token, templateId, content) {
   return resp.data;
 }
 
+// Post a reply to a top-level comment (comment-replies-threads, 6205022).
+async function createReply(token, templateId, content, parentCommentId) {
+  const resp = await request(
+    'POST',
+    `/api/v1/templates/${templateId}/comments`,
+    { content, parent_comment_id: parentCommentId },
+    { token }
+  );
+  return resp.data;
+}
+
+// List replies to a top-level comment, oldest-first (≤50).
+async function listCommentReplies(token, commentId) {
+  const resp = await request('GET', `/api/v1/comments/${commentId}/replies`, null, { token });
+  return resp.data;
+}
+
 // page_size defaults to 20 server-side (max 50); newest comments first.
 async function listComments(token, templateId, page = 1, pageSize) {
   let path = `/api/v1/templates/${templateId}/comments?page=${page}`;
@@ -534,6 +551,8 @@ module.exports = {
   favoriteTemplate,
   unfavoriteTemplate,
   createComment,
+  createReply,
+  listCommentReplies,
   listComments,
   updateComment,
   deleteComment,
