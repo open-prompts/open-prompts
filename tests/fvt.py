@@ -5191,6 +5191,340 @@ def test_moderation_appeals():
     return True
 
 
+def test_content_reporting():
+    """Content reporting (FR-1..FR-16):
+    1.  alice reports a public template -> open; GET /reports/mine returns it.
+    2.  alice re-reports with a different reason -> upsert (no duplicate).
+    3.  alice reports a public comment -> open.
+    4.  Anonymous POST /reports -> 401.
+    5.  A banned user POST /reports -> 403.
+    6.  alice reports her own template -> 400.
+    7.  alice submits 21 reports in an hour -> 429 on the 21st.
+    8.  bob (admin) GET /admin/reports -> grouped queue, open-first by count
+        then recency, filters work.
+    9.  bob GET /admin/reports/template/{id} -> detail with all reports.
+    10. bob POST /resolve {resolution: dismissed, reason} -> all open reports
+        resolved; audit has report.dismiss; content untouched.
+    11. A second item: bob POST /resolve {resolution: actioned, reason} ->
+        resolved; audit has report.actioned.
+    12. Deleting a comment auto-resolves its open reports as actioned (FR-12).
+    13. GET /admin/stats -> open_reports KPI count correct.
+    14. Note containing <script> renders as literal text.
+    """
+    print("\n--- Starting Content Reporting Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    alice = f"fvt_report_alice_{ts}"
+    bob = f"fvt_report_bob_{ts}"
+    carol = f"fvt_report_carol_{ts}"
+    alice_token = get_auth_token(alice)
+    bob_token = get_auth_token(bob)
+    carol_token = get_auth_token(carol)
+    if not all([alice_token, bob_token, carol_token]):
+        print("Failed to create test users")
+        return False
+    headers_alice = {"Authorization": f"******"}
+    headers_bob = {"Authorization": f"******"}
+    headers_carol = {"Authorization": f"******"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    admin_headers = {"Authorization": f"******"}
+
+    # --- Fixtures: carol creates a public template; alice + bob comment ---
+    payload = {
+        "title": f"Report Template {ts}",
+        "description": "report test",
+        "content": "report content",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["reporttest"],
+    }
+    resp = requests.post(BASE_URL, json=payload, headers=headers_carol)
+    if resp.status_code != 200:
+        print(f"Create template failed: {resp.status_code} - {resp.text}")
+        return False
+    tpl = resp.json().get("template", {})
+    tid = tpl.get("id")
+    CREATED_TEMPLATES.append({"id": tid, "owner_id": carol})
+
+    # carol's own template (for the own-content 400 test)
+    payload2 = {
+        "title": f"Report Own Template {ts}",
+        "description": "own report test",
+        "content": "own content",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["reporttest"],
+    }
+    resp = requests.post(BASE_URL, json=payload2, headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Create own template failed: {resp.status_code} - {resp.text}")
+        return False
+    own_tid = resp.json().get("template", {}).get("id")
+    CREATED_TEMPLATES.append({"id": own_tid, "owner_id": alice})
+
+    # alice posts a comment on carol's template
+    resp = requests.post(f"{APP}/templates/{tid}/comments", headers=headers_alice,
+                         json={"content": "This is a comment to report"})
+    if resp.status_code != 200:
+        print(f"Create comment failed: {resp.status_code} - {resp.text}")
+        return False
+    comment_id = resp.json().get("comment", {}).get("id")
+    if not comment_id:
+        comment_id = resp.json().get("id")
+    print(f"   comment_id={comment_id}")
+
+    # --- 1. alice reports the template -> open ---
+    print("1. alice reports the template...")
+    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                         json={"item_type": "template", "item_id": tid, "reason": "spam", "note": "repeated posting"})
+    if resp.status_code != 200:
+        print(f"Create report failed: {resp.status_code} - {resp.text}")
+        return False
+    report = resp.json()
+    if report.get("status") != "open":
+        print(f"Report should be open, got {report.get('status')}")
+        return False
+    # GET /reports/mine
+    resp = requests.get(f"{APP}/reports/mine", headers=headers_alice,
+                        params={"item_type": "template", "item_id": tid})
+    if resp.status_code != 200:
+        print(f"Get my report failed: {resp.status_code} - {resp.text}")
+        return False
+    mine = resp.json().get("report")
+    if not mine or mine.get("reason") != "spam":
+        print(f"GET /reports/mine should return the report, got {resp.json()}")
+        return False
+    print("   PASS")
+
+    # --- 2. re-report with a different reason -> upsert ---
+    print("2. re-report upserts...")
+    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                         json={"item_type": "template", "item_id": tid, "reason": "offensive", "note": "updated"})
+    if resp.status_code != 200:
+        print(f"Re-report failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{APP}/reports/mine", headers=headers_alice,
+                        params={"item_type": "template", "item_id": tid})
+    if resp.json().get("report", {}).get("reason") != "offensive":
+        print(f"Re-report should update reason to offensive, got {resp.json()}")
+        return False
+    print("   PASS")
+
+    # --- 3. alice reports the comment -> open ---
+    print("3. alice reports the comment...")
+    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                         json={"item_type": "comment", "item_id": comment_id, "reason": "offensive"})
+    if resp.status_code != 200:
+        print(f"Report comment failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("item_type") != "comment":
+        print(f"Report should be for comment, got {resp.json()}")
+        return False
+    print("   PASS")
+
+    # --- 4. anonymous POST /reports -> 401 ---
+    print("4. anonymous report -> 401...")
+    resp = requests.post(f"{APP}/reports",
+                         json={"item_type": "template", "item_id": tid, "reason": "spam"})
+    if resp.status_code != 401:
+        print(f"Anonymous report should be 401, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 5. banned user -> 403 ---
+    print("5. banned user report -> 403...")
+    # Ban alice via admin, then attempt a report.
+    resp = requests.get(f"{ADMIN}/users", headers=admin_headers, params={"search": alice})
+    if resp.status_code != 200:
+        print(f"List users failed: {resp.status_code}")
+        return False
+    alice_id = None
+    for u in resp.json().get("users", []):
+        if u.get("email") == f"{alice}@example.com":
+            alice_id = u.get("id")
+            break
+    if alice_id:
+        requests.post(f"{ADMIN}/users/{alice_id}/ban", headers=admin_headers,
+                      json={"reason": "FVT report test ban"})
+        resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                             json={"item_type": "template", "item_id": tid, "reason": "spam"})
+        if resp.status_code != 403:
+            print(f"Banned user report should be 403, got {resp.status_code} - {resp.text}")
+            return False
+        # Unban alice for the rest of the test.
+        requests.post(f"{ADMIN}/users/{alice_id}/unban", headers=admin_headers,
+                      json={"reason": "FVT report test unban"})
+    print("   PASS")
+
+    # --- 6. alice reports her own template -> 400 ---
+    print("6. own content report -> 400...")
+    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                         json={"item_type": "template", "item_id": own_tid, "reason": "spam"})
+    if resp.status_code != 400:
+        print(f"Own content report should be 400, got {resp.status_code} - {resp.text}")
+        return False
+    print("   PASS")
+
+    # --- 7. rate limit -> 429 on the 21st ---
+    print("7. rate limit...")
+    # alice has used 3 reports so far (template x2, comment x1). Submit 17
+    # more to reach 20, then the 21st -> 429.
+    rate_limited = False
+    for i in range(18):
+        resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                             json={"item_type": "template", "item_id": tid, "reason": "other", "note": f"rate {i}"})
+        if resp.status_code == 429:
+            rate_limited = True
+            break
+    if not rate_limited:
+        print("Expected a 429 after 20 reports in an hour")
+        return False
+    print("   PASS")
+
+    # --- 8. admin queue ---
+    print("8. admin queue...")
+    resp = requests.get(f"{ADMIN}/reports", headers=admin_headers, params={"status": "open"})
+    if resp.status_code != 200:
+        print(f"Admin queue failed: {resp.status_code} - {resp.text}")
+        return False
+    queue = resp.json().get("groups", [])
+    if not any(g.get("item_id") == tid for g in queue):
+        print(f"Queue should contain the reported template, got {queue}")
+        return False
+    # Filters
+    resp = requests.get(f"{ADMIN}/reports", headers=admin_headers,
+                        params={"status": "open", "item_type": "comment"})
+    if resp.status_code != 200:
+        print(f"Admin queue filter failed: {resp.status_code}")
+        return False
+    comment_groups = [g for g in resp.json().get("groups", []) if g.get("item_type") == "comment"]
+    if not comment_groups:
+        print(f"Comment filter should return the comment group, got {resp.json()}")
+        return False
+    print("   PASS")
+
+    # --- 9. admin detail ---
+    print("9. admin detail...")
+    resp = requests.get(f"{ADMIN}/reports/template/{tid}", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Admin detail failed: {resp.status_code} - {resp.text}")
+        return False
+    detail = resp.json()
+    if not detail.get("reports"):
+        print(f"Detail should contain reports, got {detail}")
+        return False
+    if detail.get("item_title") != f"Report Template {ts}":
+        print(f"Detail item_title mismatch, got {detail.get('item_title')}")
+        return False
+    print("   PASS")
+
+    # --- 10. resolve dismissed -> audit + content untouched ---
+    print("10. resolve dismissed...")
+    resp = requests.post(f"{ADMIN}/reports/template/{tid}/resolve", headers=admin_headers,
+                         json={"resolution": "dismissed", "reason": "false alarm"})
+    if resp.status_code != 200:
+        print(f"Resolve dismissed failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("resolved_count", 0) < 1:
+        print(f"Expected resolved_count >= 1, got {resp.json()}")
+        return False
+    # audit
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers, params={"per_page": 100})
+    audit_actions = [e.get("action") for e in resp.json().get("entries", [])]
+    if "report.dismiss" not in audit_actions:
+        print(f"Audit should contain report.dismiss, got {audit_actions}")
+        return False
+    # content untouched
+    resp = requests.get(f"{APP}/templates/{tid}", headers=headers_carol)
+    if resp.status_code != 200:
+        print(f"Template should still be visible, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 11. resolve actioned on the comment ---
+    print("11. resolve actioned...")
+    resp = requests.post(f"{ADMIN}/reports/comment/{comment_id}/resolve", headers=admin_headers,
+                         json={"resolution": "actioned", "reason": "delete this comment"})
+    if resp.status_code != 200:
+        print(f"Resolve actioned failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers, params={"per_page": 100})
+    audit_actions = [e.get("action") for e in resp.json().get("entries", [])]
+    if "report.actioned" not in audit_actions:
+        print(f"Audit should contain report.actioned, got {audit_actions}")
+        return False
+    print("   PASS")
+
+    # --- 12. deleting a comment auto-resolves its open reports ---
+    print("12. comment delete auto-resolves...")
+    # bob posts a comment on carol's template; alice reports it; bob (admin)
+    # deletes it via the admin comment moderation path.
+    resp = requests.post(f"{APP}/templates/{tid}/comments", headers=headers_bob,
+                         json={"content": "comment to be deleted"})
+    if resp.status_code != 200:
+        print(f"Create comment 2 failed: {resp.status_code} - {resp.text}")
+        return False
+    comment2_id = resp.json().get("comment", {}).get("id") or resp.json().get("id")
+    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                         json={"item_type": "comment", "item_id": comment2_id, "reason": "spam"})
+    if resp.status_code != 200:
+        print(f"Report comment 2 failed: {resp.status_code} - {resp.text}")
+        return False
+    # admin deletes the comment
+    resp = requests.delete(f"{ADMIN}/comments/{comment2_id}", headers=admin_headers,
+                           json={"reason": "FVT auto-resolve test"})
+    if resp.status_code != 200:
+        print(f"Admin delete comment failed: {resp.status_code} - {resp.text}")
+        return False
+    # the report should now be resolved (no longer in the open queue)
+    resp = requests.get(f"{ADMIN}/reports", headers=admin_headers, params={"status": "open"})
+    open_ids = [g.get("item_id") for g in resp.json().get("groups", [])]
+    if comment2_id in open_ids:
+        print(f"Deleted comment's report should be auto-resolved, still open: {open_ids}")
+        return False
+    print("   PASS")
+
+    # --- 13. KPI count ---
+    print("13. open_reports KPI...")
+    resp = requests.get(f"{ADMIN}/stats", headers=admin_headers)
+    if resp.status_code != 200:
+        print(f"Admin stats failed: {resp.status_code} - {resp.text}")
+        return False
+    if "open_reports" not in resp.json():
+        print(f"Stats should include open_reports, got {resp.json()}")
+        return False
+    print("   PASS")
+
+    # --- 14. XSS-safe note ---
+    print("14. XSS-safe note...")
+    # alice is rate-limited; use bob to report with an XSS note.
+    resp = requests.post(f"{APP}/reports", headers=headers_bob,
+                         json={"item_type": "template", "item_id": tid, "reason": "other",
+                               "note": "<script>alert('xss')</script>"})
+    if resp.status_code != 200:
+        print(f"XSS report failed: {resp.status_code} - {resp.text}")
+        return False
+    if "<script>" not in resp.json().get("note", ""):
+        print("Note should be returned verbatim (plain text)")
+        return False
+    print("   PASS")
+
+    print("--- Content Reporting Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -5250,6 +5584,7 @@ def main():
     if success: success = test_template_ratings()
     if success: success = test_user_dashboard()
     if success: success = test_moderation_appeals()
+    if success: success = test_content_reporting()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

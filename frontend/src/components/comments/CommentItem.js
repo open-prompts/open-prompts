@@ -21,6 +21,7 @@ const CommentItem = ({
   templateOwnerId,
   user,
   repliesBucket,
+  reportMenu,
 }) => {
   const { t } = useTranslation();
   const author = comment.author || {};
@@ -64,6 +65,7 @@ const CommentItem = ({
               {t('comments.delete')}
             </button>
           )}
+          {reportMenu}
         </div>
         {isTopLevel && repliesBucket}
       </div>

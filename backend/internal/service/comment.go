@@ -225,6 +225,13 @@ func (s *PromptService) DeleteComment(ctx context.Context, req *pb.DeleteComment
 	if !deleted {
 		return nil, status.Error(codes.NotFound, "comment not found")
 	}
+
+	// Auto-resolve the comment's open reports as actioned (FR-12).
+	if s.ReportRepo != nil {
+		if aerr := s.ReportRepo.AutoResolveItem(ctx, "comment", req.CommentId, userID); aerr != nil {
+			zap.S().Errorf("auto-resolve reports on comment delete: failed (comment=%s): %v", req.CommentId, aerr)
+		}
+	}
 	return &pb.DeleteCommentResponse{Success: true}, nil
 }
 

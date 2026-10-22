@@ -37,6 +37,7 @@ const AppealDetailPage = lazy(() => import('./pages/AppealDetailPage'));
 const AdminAppealsPage = lazy(() => import('./pages/admin/AppealsPage'));
 const AdminAppealDetailPage = lazy(() => import('./pages/admin/AppealDetailPage'));
 const AdminCommentsPage = lazy(() => import('./pages/admin/CommentsPage'));
+const AdminReportsPage = lazy(() => import('./pages/admin/ReportsPage'));
 
 const PageSpinner = () => (
   <div className="admin-page-loading" role="status">
@@ -264,6 +265,14 @@ function App() {
                 element={
                   <Suspense fallback={<PageSpinner />}>
                     <AdminCommentsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <Suspense fallback={<PageSpinner />}>
+                    <AdminReportsPage />
                   </Suspense>
                 }
               />

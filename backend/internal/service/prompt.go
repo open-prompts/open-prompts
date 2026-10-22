@@ -38,6 +38,7 @@ type PromptService struct {
 	FollowRepo          repository.FollowRepository
 	AnalyticsRepo       AnalyticsRepo
 	AppealRepo          repository.AppealRepository
+	ReportRepo          repository.ReportRepository
 	AdminRepo           repository.AdminRepository
 	Redis               RedisStore
 
@@ -120,6 +121,12 @@ func (s *PromptService) SetAnalyticsRepo(repo AnalyticsRepo) {
 // appeal methods return errors when absent).
 func (s *PromptService) SetAppealRepo(repo repository.AppealRepository) {
 	s.AppealRepo = repo
+}
+
+// SetReportRepo wires the report repository after construction (nil-safe;
+// report methods return errors when absent).
+func (s *PromptService) SetReportRepo(repo repository.ReportRepository) {
+	s.ReportRepo = repo
 }
 
 // SetAdminRepo wires the admin repository after construction (nil-safe;
@@ -1484,6 +1491,197 @@ func (s *PromptService) GetAppeal(ctx context.Context, req *pb.GetAppealRequest)
 		}
 	}
 	return appealToProto(appeal), nil
+}
+
+// reportReasonTaxonomy is the fixed set of report reason codes (FR-5).
+var reportReasonTaxonomy = map[string]bool{
+	"spam": true, "offensive": true, "misleading": true, "privacy": true, "other": true,
+}
+
+// reportRatePerHourDef is the default report submissions per user per hour
+// (REPORT_RATE_PER_HOUR).
+const reportRatePerHourDef = 20
+
+// reportRatePerHour returns the configurable report rate limit
+// (REPORT_RATE_PER_HOUR, default 20). Mirrors the RATING_RATE_PER_MINUTE
+// config pattern.
+func reportRatePerHour() int {
+	n, _ := strconv.Atoi(os.Getenv("REPORT_RATE_PER_HOUR"))
+	if n <= 0 {
+		return reportRatePerHourDef
+	}
+	return n
+}
+
+// checkReportRate enforces REPORT_RATE_PER_HOUR using a sliding-window
+// counter in Redis (report_rate:{user_id}). Returns (retryAfterSeconds,
+// false) when over limit. Fail-open when Redis is unavailable.
+func (s *PromptService) checkReportRate(ctx context.Context, userID string) (int, bool) {
+	if s.Redis == nil {
+		return 0, true
+	}
+	key := "report_rate:" + userID
+	max := reportRatePerHour()
+	window := time.Hour
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if time.Now().Unix() >= expires { // window elapsed: reset
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if count >= max {
+		return int(expires - time.Now().Unix()), false
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count+1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+	return 0, true
+}
+
+// reportToProto maps a models.ContentReport to the proto Report message.
+func reportToProto(r *models.ContentReport) *pb.Report {
+	resp := &pb.Report{
+		Id:       r.ID,
+		ItemType: r.ItemType,
+		ItemId:   r.ItemID,
+		Reason:   r.Reason,
+		Note:     r.Note,
+		Status:   r.Status,
+	}
+	if !r.CreatedAt.IsZero() {
+		resp.CreatedAt = timestamppb.New(r.CreatedAt)
+	}
+	return resp
+}
+
+// CreateReport creates or updates the caller's report on a public template or
+// comment (FR-1..FR-6, FR-14, FR-16).
+func (s *PromptService) CreateReport(ctx context.Context, req *pb.CreateReportRequest) (*pb.Report, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReportRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "report repository not configured")
+	}
+	zap.S().Infof("PromptService.CreateReport: user_id=%s item_type=%s item_id=%s", userID, req.ItemType, req.ItemId)
+
+	// Validate item_type and reason (FR-5) before any DB round-trip.
+	if req.ItemType != "template" && req.ItemType != "comment" {
+		return nil, status.Error(codes.InvalidArgument, "item_type must be one of: template, comment")
+	}
+	if !reportReasonTaxonomy[req.Reason] {
+		return nil, status.Error(codes.InvalidArgument, "reason must be one of: spam, offensive, misleading, privacy, other")
+	}
+	note := strings.TrimSpace(req.Note)
+	if len([]rune(note)) > 500 {
+		return nil, status.Error(codes.InvalidArgument, "note must be at most 500 characters")
+	}
+
+	// Banned users cannot report (FR-3).
+	if s.UserRepo != nil {
+		if u, uerr := s.UserRepo.GetByID(ctx, userID); uerr == nil && u != nil && u.Status == "banned" {
+			return nil, status.Error(codes.PermissionDenied, "banned users cannot report content")
+		}
+	}
+
+	// Load the item; not found or not public -> 404 (indistinguishable).
+	// Reporting own content -> 400 (FR-4 backstop).
+	switch req.ItemType {
+	case "template":
+		tpl, terr := s.TemplateRepo.Get(ctx, req.ItemId, userID)
+		if terr != nil || tpl == nil {
+			return nil, status.Error(codes.NotFound, "item not found")
+		}
+		if tpl.Visibility != "public" {
+			return nil, status.Error(codes.NotFound, "item not found")
+		}
+		if tpl.OwnerID == userID {
+			return nil, status.Error(codes.InvalidArgument, "you cannot report your own content")
+		}
+	case "comment":
+		c, cerr := s.CommentRepo.Get(ctx, req.ItemId)
+		if cerr != nil || c == nil {
+			return nil, status.Error(codes.NotFound, "item not found")
+		}
+		// The comment must be on a public template (reporting private or
+		// non-existent content is indistinguishable).
+		tpl, terr := s.TemplateRepo.Get(ctx, c.TemplateID, userID)
+		if terr != nil || tpl == nil || tpl.Visibility != "public" {
+			return nil, status.Error(codes.NotFound, "item not found")
+		}
+		if c.UserID == userID {
+			return nil, status.Error(codes.InvalidArgument, "you cannot report your own content")
+		}
+	}
+
+	// Rate limit (FR-16).
+	if retryAfter, ok := s.checkReportRate(ctx, userID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+
+	report := &models.ContentReport{
+		ItemType:   req.ItemType,
+		ItemID:     req.ItemId,
+		ReporterID: userID,
+		Reason:     req.Reason,
+		Note:       note,
+		Status:     "open",
+	}
+	if err := s.ReportRepo.Upsert(ctx, report); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create report: %v", err)
+	}
+	return reportToProto(report), nil
+}
+
+// GetMyReport returns the caller's open report on an item (drives the
+// checkmark state), or an empty MyReport when none (FR-7).
+func (s *PromptService) GetMyReport(ctx context.Context, req *pb.GetMyReportRequest) (*pb.MyReport, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReportRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "report repository not configured")
+	}
+	if req.ItemType != "template" && req.ItemType != "comment" {
+		return nil, status.Error(codes.InvalidArgument, "item_type must be one of: template, comment")
+	}
+	rep, err := s.ReportRepo.GetMine(ctx, userID, req.ItemType, req.ItemId)
+	if err != nil {
+		if err == repository.ErrReportNotFound {
+			return &pb.MyReport{}, nil
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get report: %v", err)
+	}
+	return &pb.MyReport{Report: reportToProto(rep)}, nil
+}
+
+// WithdrawReport hard-deletes the caller's report on an item (FR-7).
+func (s *PromptService) WithdrawReport(ctx context.Context, req *pb.WithdrawReportRequest) (*pb.WithdrawReportResponse, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReportRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "report repository not configured")
+	}
+	if req.ItemType != "template" && req.ItemType != "comment" {
+		return nil, status.Error(codes.InvalidArgument, "item_type must be one of: template, comment")
+	}
+	if err := s.ReportRepo.DeleteMine(ctx, userID, req.ItemType, req.ItemId); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to withdraw report: %v", err)
+	}
+	return &pb.WithdrawReportResponse{Success: true}, nil
 }
 
 func (s *PromptService) ListCategories(ctx context.Context, req *pb.ListCategoriesRequest) (*pb.ListCategoriesResponse, error) {

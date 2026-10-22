@@ -169,6 +169,13 @@ func main() {
 	svc.SetAdminRepo(adminRepo)
 	adminSvc.SetAppealRepo(appealRepo)
 
+	// Content reporting: the report repository backs the user + admin report
+	// RPCs and the auto-resolve hooks.
+	reportRepo := repository.NewReportRepository(pgConn.DB)
+	svc.SetReportRepo(reportRepo)
+	adminSvc.SetReportRepo(reportRepo)
+	adminSvc.SetCommentRepo(commentRepo)
+
 	// Notification Service (engagement notifications)
 	notificationReadRetentionDays := 90
 	if v := os.Getenv("NOTIFICATION_READ_RETENTION_DAYS"); v != "" {
@@ -2000,6 +2007,112 @@ func main() {
 		_, _ = w.Write(b)
 	})
 
+	// Content Reporting (user) — /api/v1/reports (POST create/update) and
+	// /api/v1/reports/mine (GET checkmark state, DELETE withdraw).
+	http.HandleFunc("/api/v1/reports", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		body, berr := io.ReadAll(r.Body)
+		if berr != nil {
+			http.Error(w, "Failed to read body", http.StatusBadRequest)
+			return
+		}
+		var req pb.CreateReportRequest
+		if err := unmarshaler.Unmarshal(body, &req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		resp, err := svc.CreateReport(ctx, &req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/reports/mine", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		switch r.Method {
+		case http.MethodGet:
+			q := r.URL.Query()
+			req := &pb.GetMyReportRequest{ItemType: q.Get("item_type"), ItemId: q.Get("item_id")}
+			resp, err := svc.GetMyReport(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case http.MethodDelete:
+			body, berr := io.ReadAll(r.Body)
+			if berr != nil {
+				http.Error(w, "Failed to read body", http.StatusBadRequest)
+				return
+			}
+			var req pb.WithdrawReportRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			resp, err := svc.WithdrawReport(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Collection Handlers — /api/v1/collections (list/create) and
 	// /api/v1/collections/... (mine, {id}, {id}/templates, ...).
 	http.HandleFunc("/api/v1/dashboard/overview", func(w http.ResponseWriter, r *http.Request) {
@@ -3414,6 +3527,116 @@ func main() {
 			_, _ = w.Write(b)
 		default:
 			http.Error(w, "Unknown action", http.StatusNotFound)
+		}
+	})
+
+	// Content Reporting (admin) — /api/v1/admin/reports (GET queue) and
+	// /api/v1/admin/reports/{item_type}/{item_id} (GET detail, POST resolve).
+	http.HandleFunc("/api/v1/admin/reports", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		q := r.URL.Query()
+		req := &pb.ListReportQueueRequest{
+			Status:   q.Get("status"),
+			ItemType: q.Get("item_type"),
+			Reason:   q.Get("reason"),
+		}
+		if v := q.Get("page"); v != "" {
+			if i, cerr := strconv.Atoi(v); cerr == nil {
+				req.Page = int32(i)
+			}
+		}
+		if v := q.Get("per_page"); v != "" {
+			if i, cerr := strconv.Atoi(v); cerr == nil {
+				req.PerPage = int32(i)
+			}
+		}
+		resp, err := adminSvc.ListReportQueue(ctx, req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, _ := marshaler.Marshal(resp)
+		_, _ = w.Write(b)
+	})
+
+	http.HandleFunc("/api/v1/admin/reports/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+		ctx, ok := requireAdmin(w, r)
+		if !ok {
+			return
+		}
+
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/reports/")
+		parts := strings.Split(rest, "/")
+		if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		itemType, itemID := parts[0], parts[1]
+
+		switch r.Method {
+		case http.MethodGet:
+			if len(parts) != 2 {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			resp, err := adminSvc.GetReportDetail(ctx, &pb.GetReportDetailRequest{ItemType: itemType, ItemId: itemID})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case http.MethodPost:
+			// POST /api/v1/admin/reports/{item_type}/{item_id}/resolve
+			if len(parts) != 3 || parts[2] != "resolve" {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			body, berr := io.ReadAll(r.Body)
+			if berr != nil {
+				http.Error(w, "Failed to read body", http.StatusBadRequest)
+				return
+			}
+			var req pb.ResolveReportGroupRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.ItemType = itemType
+			req.ItemId = itemID
+			resp, err := adminSvc.ResolveReportGroup(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 

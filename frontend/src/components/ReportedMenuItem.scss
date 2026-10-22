@@ -1,0 +1,36 @@
+.reported-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--success, #24a148);
+  }
+
+  &__submenu {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__action {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--surface-hover, rgba(0, 0, 0, 0.05));
+    }
+  }
+}

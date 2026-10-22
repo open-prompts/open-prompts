@@ -1,0 +1,58 @@
+.report-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__question {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__reason {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+
+    input[type='radio'] {
+      accent-color: var(--accent, #0f62fe);
+    }
+  }
+
+  &__reason-label {
+    font-size: 14px;
+  }
+
+  &__note-label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &__note {
+    width: 100%;
+    min-height: 56px;
+    padding: 8px;
+    border: 1px solid var(--border, #d0d0d0);
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  &__counter {
+    font-size: 12px;
+    color: var(--text-muted, #6f6f6f);
+    text-align: right;
+  }
+
+  &__error {
+    color: var(--danger, #da1e28);
+    font-size: 13px;
+  }
+}

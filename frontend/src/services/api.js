@@ -310,3 +310,9 @@ export const listMyCollections = () => {
 export const createAppeal = (data) => api.post('/appeals', data);
 export const listAppeals = (params) => api.get('/appeals', { params });
 export const getAppeal = (id) => api.get(`/appeals/${id}`);
+// Content reporting (user surface)
+export const createReport = (data) => api.post('/reports', data);
+export const getMyReport = (item_type, item_id) =>
+  api.get('/reports/mine', { params: { item_type, item_id } });
+export const withdrawReport = (item_type, item_id) =>
+  api.delete('/reports/mine', { data: { item_type, item_id } });

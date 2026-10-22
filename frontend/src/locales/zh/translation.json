@@ -535,6 +535,7 @@
       "back_to_app": "返回应用",
       "brand": "Open Prompts 管理控制台",
       "appeals": "申诉",
+      "reports": "举报",
       "comments": "评论"
     },
     "login": {
@@ -559,11 +560,40 @@
       "total_templates": "模板总数",
       "public_templates": "公开模板",
       "prompts_created": "已创建提示",
+      "open_reports": "未解决举报",
       "recent_signups": "最近注册",
       "recent_templates": "最近公开模板",
       "no_signups": "暂无注册用户。",
       "no_templates": "暂无公开模板。",
       "view": "查看"
+    },
+    "reports": {
+      "title": "举报",
+      "open": "未解决",
+      "resolved": "已解决",
+      "all": "全部",
+      "openCount": "未解决举报",
+      "review": "审查",
+      "view": "查看",
+      "dismiss": "驳回举报",
+      "act": "处理",
+      "unpublish": "下架模板",
+      "deleteComment": "删除评论",
+      "banAuthor": "打开用户详情",
+      "reasonRequired": "必须填写原因（3–500 个字符）",
+      "empty": "没有未解决举报 —— 一切正常",
+      "type": "类型",
+      "typeTemplate": "模板",
+      "typeComment": "评论",
+      "allTypes": "全部类型",
+      "allReasons": "全部原因",
+      "item": "内容",
+      "author": "作者",
+      "reasons": "原因",
+      "latest": "最新",
+      "status": "状态",
+      "actions": "操作",
+      "reports": "举报（{{count}}）"
     },
     "users": {
       "title": "用户",
@@ -1103,5 +1133,34 @@
       "resolved": "你的申诉已{{outcome}}：{{note}}"
     },
     "rateLimit": "你最多可有 5 个处理中的申诉"
+  },
+  "reports": {
+    "action": "举报",
+    "modal": {
+      "title": {
+        "template": "举报此模板",
+        "comment": "举报此评论"
+      },
+      "question": "您为什么要举报？",
+      "noteLabel": "补充说明（可选）",
+      "submit": "提交举报",
+      "cancel": "取消"
+    },
+    "reason": {
+      "spam": "垃圾信息或诈骗",
+      "offensive": "冒犯或仇恨",
+      "misleading": "误导或有害",
+      "privacy": "隐私侵犯",
+      "other": "其他"
+    },
+    "toast": {
+      "submitted": "举报已提交 —— 感谢。我们的审核员将进行审查。",
+      "updated": "您的举报已更新。"
+    },
+    "reported": "您已举报此内容",
+    "update": "更新举报…",
+    "withdraw": "撤回举报",
+    "withdrawConfirm": "撤回您的举报？",
+    "rateLimited": "您最近已提交多次举报 —— 请稍后再试。"
   }
 }

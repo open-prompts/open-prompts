@@ -67,6 +67,7 @@ const DashboardPage = () => {
     { label: t('admin.dashboard.total_templates'), value: formatNumber(stats.total_templates, lang), to: '/admin/templates' },
     { label: t('admin.dashboard.public_templates'), value: formatNumber(stats.public_templates, lang), to: '/admin/templates?visibility=public' },
     { label: t('admin.dashboard.prompts_created'), value: formatNumber(stats.prompts_created, lang) },
+    { label: t('admin.dashboard.open_reports'), value: formatNumber(stats.open_reports, lang), to: '/admin/reports' },
   ];
 
   return (

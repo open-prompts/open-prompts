@@ -45,6 +45,8 @@ type AdminService struct {
 	ReviewRepo       repository.ReviewRepository
 	NotificationRepo repository.NotificationRepository
 	AppealRepo       repository.AppealRepository
+	ReportRepo       repository.ReportRepository
+	CommentRepo      repository.CommentRepository
 	Redis            RedisStore
 	JWTSecret        []byte
 	SessionTTL       time.Duration
@@ -97,6 +99,17 @@ func (s *AdminService) SetNotificationRepo(repo repository.NotificationRepositor
 // SetAppealRepo wires the appeal repository (post-construction; nil-safe).
 func (s *AdminService) SetAppealRepo(repo repository.AppealRepository) {
 	s.AppealRepo = repo
+}
+
+// SetReportRepo wires the report repository (post-construction; nil-safe).
+func (s *AdminService) SetReportRepo(repo repository.ReportRepository) {
+	s.ReportRepo = repo
+}
+
+// SetCommentRepo wires the comment repository (post-construction; nil-safe)
+// used by the report-detail item context.
+func (s *AdminService) SetCommentRepo(repo repository.CommentRepository) {
+	s.CommentRepo = repo
 }
 
 // ---- helpers ----
@@ -346,6 +359,14 @@ func (s *AdminService) GetAdminStats(ctx context.Context, _ *pb.GetAdminStatsReq
 		TotalTemplates:  stats.TotalTemplates,
 		PublicTemplates: stats.PublicTemplates,
 		PromptsCreated:  stats.PromptsCreated,
+	}
+
+	// Open-reports KPI (FR-13). Best-effort: a report-repo failure must not
+	// break the dashboard.
+	if s.ReportRepo != nil {
+		if openReports, cerr := s.ReportRepo.CountOpen(ctx); cerr == nil {
+			resp.OpenReports = openReports
+		}
 	}
 	for _, u := range recentSignups {
 		resp.RecentSignups = append(resp.RecentSignups, userToSummary(u, 0))
@@ -896,6 +917,9 @@ func (s *AdminService) DeleteAdminComment(ctx context.Context, req *pb.DeleteAdm
 	if !deleted {
 		return nil, status.Error(codes.NotFound, "comment not found")
 	}
+
+	// Auto-resolve the comment's open reports as actioned (FR-12).
+	s.autoResolveItem(ctx, "comment", req.CommentId, actor.ID)
 
 	s.writeAudit(ctx, actor, "delete_comment", "comment", req.CommentId, req.Reason)
 	return &pb.DeleteAdminCommentResponse{Success: true}, nil
@@ -1745,5 +1769,176 @@ func (s *AdminService) notifyAppealResolved(ctx context.Context, actor *models.U
 		ActorDisplayName: string(payload),
 	}); err != nil {
 		zap.S().Errorf("appeal resolved notification: failed (template=%s appellant=%s): %v", templateID, appellantID, err)
+	}
+}
+
+// ---- content reporting (admin) ----
+
+// ListReportQueue returns the grouped report queue, open-first by count then
+// recency, with status/type/reason filters (FR-8/FR-9).
+func (s *AdminService) ListReportQueue(ctx context.Context, req *pb.ListReportQueueRequest) (*pb.ListReportQueueResponse, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.ReportRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "report repository not configured")
+	}
+	if req.Status != "" && req.Status != "open" && req.Status != "resolved" {
+		return nil, status.Error(codes.InvalidArgument, "status must be one of: open, resolved")
+	}
+	if req.ItemType != "" && req.ItemType != "template" && req.ItemType != "comment" {
+		return nil, status.Error(codes.InvalidArgument, "item_type must be one of: template, comment")
+	}
+	if req.Reason != "" && !reportReasonTaxonomy[req.Reason] {
+		return nil, status.Error(codes.InvalidArgument, "reason must be one of: spam, offensive, misleading, privacy, other")
+	}
+	page := int(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	perPage := int(req.PerPage)
+	if perPage < 1 {
+		perPage = 50
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	groups, total, err := s.ReportRepo.ListQueue(ctx, req.Status, req.ItemType, req.Reason, perPage, (page-1)*perPage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list report queue: %v", err)
+	}
+	resp := &pb.ListReportQueueResponse{
+		Total:   total,
+		Page:    int32(page),
+		PerPage: int32(perPage),
+		Groups:  make([]*pb.AdminReportGroup, 0, len(groups)),
+	}
+	for _, g := range groups {
+		grp := &pb.AdminReportGroup{
+			ItemType:          g.ItemType,
+			ItemId:            g.ItemID,
+			ItemTitle:         g.ItemTitle,
+			AuthorDisplayName: g.AuthorDisplayName,
+			OpenCount:         int32(g.OpenCount),
+			Reasons:           g.Reasons,
+			Status:            g.Status,
+		}
+		if !g.LatestAt.IsZero() {
+			grp.LatestAt = timestamppb.New(g.LatestAt)
+		}
+		resp.Groups = append(resp.Groups, grp)
+	}
+	return resp, nil
+}
+
+// GetReportDetail returns full context for a reported item plus every report
+// (reporter, reason, note, time) — admin-only (NFR-2).
+func (s *AdminService) GetReportDetail(ctx context.Context, req *pb.GetReportDetailRequest) (*pb.AdminReportDetail, error) {
+	if _, err := s.requireAdminContext(ctx); err != nil {
+		return nil, err
+	}
+	if s.ReportRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "report repository not configured")
+	}
+	if req.ItemType != "template" && req.ItemType != "comment" {
+		return nil, status.Error(codes.InvalidArgument, "item_type must be one of: template, comment")
+	}
+	reports, err := s.ReportRepo.ListForItem(ctx, req.ItemType, req.ItemId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get report detail: %v", err)
+	}
+	if len(reports) == 0 {
+		return nil, status.Error(codes.NotFound, "no reports for this item")
+	}
+
+	detail := &pb.AdminReportDetail{
+		ItemType: req.ItemType,
+		ItemId:   req.ItemId,
+		Reports:  make([]*pb.AdminReportEntry, 0, len(reports)),
+	}
+	for _, rep := range reports {
+		entry := &pb.AdminReportEntry{
+			Id:                  rep.ID,
+			ReporterId:          rep.ReporterID,
+			ReporterDisplayName: rep.ReporterDisplayName,
+			Reason:              rep.Reason,
+			Note:                rep.Note,
+		}
+		if !rep.CreatedAt.IsZero() {
+			entry.CreatedAt = timestamppb.New(rep.CreatedAt)
+		}
+		detail.Reports = append(detail.Reports, entry)
+	}
+
+	// Item context (template title/content or comment text + author).
+	switch req.ItemType {
+	case "template":
+		tpl, _, terr := s.AdminRepo.GetTemplateWithVersions(ctx, req.ItemId)
+		if terr == nil && tpl != nil {
+			detail.ItemTitle = tpl.Title
+			detail.AuthorId = tpl.OwnerID
+			if u, uerr := s.UserRepo.GetByID(ctx, tpl.OwnerID); uerr == nil && u != nil {
+				detail.AuthorDisplayName = u.DisplayName
+			}
+		}
+	case "comment":
+		c, cerr := s.CommentRepo.Get(ctx, req.ItemId)
+		if cerr == nil && c != nil {
+			detail.ItemContent = c.Content
+			detail.AuthorId = c.UserID
+			if u, uerr := s.UserRepo.GetByID(ctx, c.UserID); uerr == nil && u != nil {
+				detail.AuthorDisplayName = u.DisplayName
+			}
+		}
+	}
+	return detail, nil
+}
+
+// ResolveReportGroup resolves all open reports of an item atomically as
+// dismissed or actioned (FR-10/FR-11). Returns 409 when none are open.
+func (s *AdminService) ResolveReportGroup(ctx context.Context, req *pb.ResolveReportGroupRequest) (*pb.ResolveReportGroupResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.ReportRepo == nil {
+		return nil, status.Error(codes.Unimplemented, "report repository not configured")
+	}
+	if req.ItemType != "template" && req.ItemType != "comment" {
+		return nil, status.Error(codes.InvalidArgument, "item_type must be one of: template, comment")
+	}
+	if req.Resolution != "dismissed" && req.Resolution != "actioned" {
+		return nil, status.Error(codes.InvalidArgument, "resolution must be one of: dismissed, actioned")
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+
+	count, err := s.ReportRepo.ResolveItem(ctx, req.ItemType, req.ItemId, req.Resolution, actor.ID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to resolve reports: %v", err)
+	}
+	if count == 0 {
+		return nil, status.Error(codes.AlreadyExists, "no open reports to resolve")
+	}
+
+	// Audit (FR-11).
+	action := "report.dismiss"
+	if req.Resolution == "actioned" {
+		action = "report.actioned"
+	}
+	s.writeAudit(ctx, actor, action, req.ItemType, req.ItemId, req.Reason)
+
+	return &pb.ResolveReportGroupResponse{Success: true, ResolvedCount: int32(count)}, nil
+}
+
+// autoResolveItem resolves an item's open reports as actioned (FR-12 hook on
+// unpublish/comment-delete). Best-effort; failures are logged, never fatal.
+func (s *AdminService) autoResolveItem(ctx context.Context, itemType, itemID, actorID string) {
+	if s.ReportRepo == nil {
+		return
+	}
+	if err := s.ReportRepo.AutoResolveItem(ctx, itemType, itemID, actorID); err != nil {
+		zap.S().Errorf("auto-resolve reports: failed (type=%s item=%s): %v", itemType, itemID, err)
 	}
 }

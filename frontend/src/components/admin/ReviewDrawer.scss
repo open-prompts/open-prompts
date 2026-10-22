@@ -1,0 +1,144 @@
+.review-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.review-drawer {
+  width: 480px;
+  max-width: 100%;
+  height: 100%;
+  background: var(--surface, #fff);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border, #d0d0d0);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  &__close {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-muted, #6f6f6f);
+  }
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__loading,
+  &__error {
+    font-size: 14px;
+  }
+
+  &__error {
+    color: var(--danger, #da1e28);
+  }
+
+  &__item {
+    border: 1px solid var(--border, #d0d0d0);
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  &__item-title {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  &__item-author {
+    font-size: 13px;
+    color: var(--text-muted, #6f6f6f);
+    margin-top: 4px;
+  }
+
+  &__item-content {
+    margin: 8px 0 0;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__reports {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__reports-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__report {
+    border: 1px solid var(--border, #d0d0d0);
+    border-radius: 6px;
+    padding: 10px;
+  }
+
+  &__report-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  &__reporter {
+    font-weight: 600;
+  }
+
+  &__reason {
+    color: var(--text-muted, #6f6f6f);
+  }
+
+  &__time {
+    color: var(--text-muted, #6f6f6f);
+    margin-left: auto;
+  }
+
+  &__note {
+    margin: 6px 0 0;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__footer {
+    padding: 16px;
+    border-top: 1px solid var(--border, #d0d0d0);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__author-link {
+    font-size: 13px;
+    color: var(--accent, #0f62fe);
+    text-decoration: none;
+  }
+}

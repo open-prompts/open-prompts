@@ -1,0 +1,33 @@
+.reports-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__item {
+    font-weight: 500;
+  }
+
+  &__count {
+    font-weight: 600;
+  }
+
+  &__reasons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__chip {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--surface-hover, rgba(0, 0, 0, 0.05));
+    color: var(--text-muted, #6f6f6f);
+  }
+}

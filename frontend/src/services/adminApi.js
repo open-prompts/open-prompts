@@ -125,5 +125,11 @@ export const listAdminAppeals = (params) => adminApi.get('/admin/appeals', { par
 export const getAdminAppeal = (id) => adminApi.get(`/admin/appeals/${id}`);
 export const reviewAppeal = (id) => adminApi.post(`/admin/appeals/${id}/review`);
 export const resolveAppeal = (id, data) => adminApi.post(`/admin/appeals/${id}/resolve`, data);
+// Content reporting (admin surface)
+export const listAdminReports = (params) => adminApi.get('/admin/reports', { params });
+export const getAdminReportDetail = (item_type, item_id) =>
+  adminApi.get(`/admin/reports/${item_type}/${item_id}`);
+export const resolveReportGroup = (item_type, item_id, data) =>
+  adminApi.post(`/admin/reports/${item_type}/${item_id}/resolve`, data);
 
 export default adminApi;

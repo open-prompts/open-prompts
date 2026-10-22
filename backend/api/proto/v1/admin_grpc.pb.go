@@ -45,6 +45,9 @@ const (
 	AdminService_GetAppeal_FullMethodName               = "/v1.AdminService/GetAppeal"
 	AdminService_ReviewAppeal_FullMethodName            = "/v1.AdminService/ReviewAppeal"
 	AdminService_ResolveAppeal_FullMethodName           = "/v1.AdminService/ResolveAppeal"
+	AdminService_ListReportQueue_FullMethodName         = "/v1.AdminService/ListReportQueue"
+	AdminService_GetReportDetail_FullMethodName         = "/v1.AdminService/GetReportDetail"
+	AdminService_ResolveReportGroup_FullMethodName      = "/v1.AdminService/ResolveReportGroup"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -114,6 +117,15 @@ type AdminServiceClient interface {
 	// ResolveAppeal resolves an appeal as upheld or reversed; reversed
 	// restores the template atomically.
 	ResolveAppeal(ctx context.Context, in *ResolveAppealRequest, opts ...grpc.CallOption) (*AdminAppealDetail, error)
+	// ListReportQueue returns the grouped report queue, open-first by count
+	// then recency, with filters.
+	ListReportQueue(ctx context.Context, in *ListReportQueueRequest, opts ...grpc.CallOption) (*ListReportQueueResponse, error)
+	// GetReportDetail returns full context for a reported item plus every
+	// report (reporter, reason, note, time).
+	GetReportDetail(ctx context.Context, in *GetReportDetailRequest, opts ...grpc.CallOption) (*AdminReportDetail, error)
+	// ResolveReportGroup resolves all open reports of an item atomically as
+	// dismissed or actioned (409 when none are open).
+	ResolveReportGroup(ctx context.Context, in *ResolveReportGroupRequest, opts ...grpc.CallOption) (*ResolveReportGroupResponse, error)
 }
 
 type adminServiceClient struct {
@@ -384,6 +396,36 @@ func (c *adminServiceClient) ResolveAppeal(ctx context.Context, in *ResolveAppea
 	return out, nil
 }
 
+func (c *adminServiceClient) ListReportQueue(ctx context.Context, in *ListReportQueueRequest, opts ...grpc.CallOption) (*ListReportQueueResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListReportQueueResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListReportQueue_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) GetReportDetail(ctx context.Context, in *GetReportDetailRequest, opts ...grpc.CallOption) (*AdminReportDetail, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminReportDetail)
+	err := c.cc.Invoke(ctx, AdminService_GetReportDetail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ResolveReportGroup(ctx context.Context, in *ResolveReportGroupRequest, opts ...grpc.CallOption) (*ResolveReportGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveReportGroupResponse)
+	err := c.cc.Invoke(ctx, AdminService_ResolveReportGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -451,6 +493,15 @@ type AdminServiceServer interface {
 	// ResolveAppeal resolves an appeal as upheld or reversed; reversed
 	// restores the template atomically.
 	ResolveAppeal(context.Context, *ResolveAppealRequest) (*AdminAppealDetail, error)
+	// ListReportQueue returns the grouped report queue, open-first by count
+	// then recency, with filters.
+	ListReportQueue(context.Context, *ListReportQueueRequest) (*ListReportQueueResponse, error)
+	// GetReportDetail returns full context for a reported item plus every
+	// report (reporter, reason, note, time).
+	GetReportDetail(context.Context, *GetReportDetailRequest) (*AdminReportDetail, error)
+	// ResolveReportGroup resolves all open reports of an item atomically as
+	// dismissed or actioned (409 when none are open).
+	ResolveReportGroup(context.Context, *ResolveReportGroupRequest) (*ResolveReportGroupResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -538,6 +589,15 @@ func (UnimplementedAdminServiceServer) ReviewAppeal(context.Context, *ReviewAppe
 }
 func (UnimplementedAdminServiceServer) ResolveAppeal(context.Context, *ResolveAppealRequest) (*AdminAppealDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveAppeal not implemented")
+}
+func (UnimplementedAdminServiceServer) ListReportQueue(context.Context, *ListReportQueueRequest) (*ListReportQueueResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListReportQueue not implemented")
+}
+func (UnimplementedAdminServiceServer) GetReportDetail(context.Context, *GetReportDetailRequest) (*AdminReportDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReportDetail not implemented")
+}
+func (UnimplementedAdminServiceServer) ResolveReportGroup(context.Context, *ResolveReportGroupRequest) (*ResolveReportGroupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveReportGroup not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -1028,6 +1088,60 @@ func _AdminService_ResolveAppeal_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_ListReportQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListReportQueueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListReportQueue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListReportQueue_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListReportQueue(ctx, req.(*ListReportQueueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_GetReportDetail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReportDetailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).GetReportDetail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_GetReportDetail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).GetReportDetail(ctx, req.(*GetReportDetailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ResolveReportGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveReportGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ResolveReportGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ResolveReportGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ResolveReportGroup(ctx, req.(*ResolveReportGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1138,6 +1252,18 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveAppeal",
 			Handler:    _AdminService_ResolveAppeal_Handler,
+		},
+		{
+			MethodName: "ListReportQueue",
+			Handler:    _AdminService_ListReportQueue_Handler,
+		},
+		{
+			MethodName: "GetReportDetail",
+			Handler:    _AdminService_GetReportDetail_Handler,
+		},
+		{
+			MethodName: "ResolveReportGroup",
+			Handler:    _AdminService_ResolveReportGroup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

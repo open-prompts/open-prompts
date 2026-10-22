@@ -94,6 +94,80 @@ service AdminService {
   // ResolveAppeal resolves an appeal as upheld or reversed; reversed
   // restores the template atomically.
   rpc ResolveAppeal(ResolveAppealRequest) returns (AdminAppealDetail);
+
+  // ListReportQueue returns the grouped report queue, open-first by count
+  // then recency, with filters.
+  rpc ListReportQueue(ListReportQueueRequest) returns (ListReportQueueResponse);
+
+  // GetReportDetail returns full context for a reported item plus every
+  // report (reporter, reason, note, time).
+  rpc GetReportDetail(GetReportDetailRequest) returns (AdminReportDetail);
+
+  // ResolveReportGroup resolves all open reports of an item atomically as
+  // dismissed or actioned (409 when none are open).
+  rpc ResolveReportGroup(ResolveReportGroupRequest) returns (ResolveReportGroupResponse);
+}
+
+message ListReportQueueRequest {
+  string status = 1;    // "" | "open" | "resolved"
+  string item_type = 2; // "" | "template" | "comment"
+  string reason = 3;    // "" | spam | offensive | misleading | privacy | other
+  int32 page = 4;       // 1-based, default 1
+  int32 per_page = 5;   // default 50, max 100
+}
+
+message ListReportQueueResponse {
+  repeated AdminReportGroup groups = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 per_page = 4;
+}
+
+message AdminReportGroup {
+  string item_type = 1;
+  string item_id = 2;
+  string item_title = 3;        // template title or comment snippet
+  string author_display_name = 4;
+  int32 open_count = 5;
+  repeated string reasons = 6;  // distinct reason codes
+  google.protobuf.Timestamp latest_at = 7;
+  string status = 8;            // open | resolved
+}
+
+message GetReportDetailRequest {
+  string item_type = 1;
+  string item_id = 2;
+}
+
+message AdminReportDetail {
+  string item_type = 1;
+  string item_id = 2;
+  string item_title = 3;
+  string item_content = 4;      // template preview or comment text
+  string author_id = 5;
+  string author_display_name = 6;
+  repeated AdminReportEntry reports = 7;
+}
+
+message AdminReportEntry {
+  string id = 1;
+  string reporter_id = 2;
+  string reporter_display_name = 3;
+  string reason = 4;
+  string note = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ResolveReportGroupRequest {
+  string item_type = 1;
+  string item_id = 2;
+  string resolution = 3; // "dismissed" | "actioned"
+  string reason = 4;     // 3-500 chars, required
+}
+
+message ResolveReportGroupResponse {
+  bool success = 1;
+  int32 resolved_count = 2;
 }
 
 message ListAppealQueueRequest {
@@ -190,6 +264,7 @@ message GetAdminStatsResponse {
   int64 prompts_created = 6;
   repeated AdminUserSummary recent_signups = 7; // latest 10
   repeated AdminTemplateSummary recent_templates = 8; // latest 10 public, by updated_at
+  int64 open_reports = 9; // open report count for the dashboard KPI (FR-13)
 }
 
 // ---- Users ----

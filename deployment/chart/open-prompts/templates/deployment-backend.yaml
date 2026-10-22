@@ -67,3 +67,5 @@ spec:
               value: {{ .Values.backend.env.topRatedMinRatings | quote }}
             - name: APPEAL_MAX_OPEN
               value: {{ .Values.backend.env.appealMaxOpen | quote }}
+            - name: REPORT_RATE_PER_HOUR
+              value: {{ .Values.backend.env.reportRatePerHour | quote }}

@@ -535,6 +535,7 @@
       "back_to_app": "Back to App",
       "brand": "Open Prompts Admin",
       "appeals": "Appeals",
+      "reports": "Reports",
       "comments": "Comments"
     },
     "login": {
@@ -559,11 +560,40 @@
       "total_templates": "Total Templates",
       "public_templates": "Public Templates",
       "prompts_created": "Prompts Created",
+      "open_reports": "Open reports",
       "recent_signups": "Recent Signups",
       "recent_templates": "Recent Public Templates",
       "no_signups": "No signups yet.",
       "no_templates": "No public templates yet.",
       "view": "View"
+    },
+    "reports": {
+      "title": "Reports",
+      "open": "Open",
+      "resolved": "Resolved",
+      "all": "All",
+      "openCount": "Open reports",
+      "review": "Review",
+      "view": "View",
+      "dismiss": "Dismiss reports",
+      "act": "Act",
+      "unpublish": "Unpublish template",
+      "deleteComment": "Delete comment",
+      "banAuthor": "Open user detail",
+      "reasonRequired": "A reason is required (3–500 characters)",
+      "empty": "No open reports — all clear",
+      "type": "Type",
+      "typeTemplate": "Template",
+      "typeComment": "Comment",
+      "allTypes": "All types",
+      "allReasons": "All reasons",
+      "item": "Item",
+      "author": "Author",
+      "reasons": "Reasons",
+      "latest": "Latest",
+      "status": "Status",
+      "actions": "Actions",
+      "reports": "Reports ({{count}})"
     },
     "users": {
       "title": "Users",
@@ -1103,5 +1133,34 @@
       "resolved": "Your appeal was {{outcome}}: {{note}}"
     },
     "rateLimit": "You can have at most 5 open appeals"
+  },
+  "reports": {
+    "action": "Report",
+    "modal": {
+      "title": {
+        "template": "Report this template",
+        "comment": "Report this comment"
+      },
+      "question": "Why are you reporting this?",
+      "noteLabel": "Additional details (optional)",
+      "submit": "Submit report",
+      "cancel": "Cancel"
+    },
+    "reason": {
+      "spam": "Spam or scam",
+      "offensive": "Offensive or hateful",
+      "misleading": "Misleading or harmful",
+      "privacy": "Privacy violation",
+      "other": "Something else"
+    },
+    "toast": {
+      "submitted": "Report submitted — thank you. Our moderators will review it.",
+      "updated": "Your report was updated."
+    },
+    "reported": "You reported this",
+    "update": "Update report…",
+    "withdraw": "Withdraw report",
+    "withdrawConfirm": "Withdraw your report?",
+    "rateLimited": "You've submitted several reports recently — please try again later."
   }
 }

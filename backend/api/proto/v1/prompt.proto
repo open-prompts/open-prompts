@@ -142,6 +142,53 @@ service PromptService {
 
   // GetAppeal returns a single appeal (owner-only).
   rpc GetAppeal(GetAppealRequest) returns (Appeal);
+
+  // CreateReport creates or updates the caller's report on a public template
+  // or comment (one report per user per item; re-report replaces, FR-2).
+  rpc CreateReport(CreateReportRequest) returns (Report);
+
+  // GetMyReport returns the caller's open report on an item (drives the
+  // checkmark state), or an empty MyReport when none.
+  rpc GetMyReport(GetMyReportRequest) returns (MyReport);
+
+  // WithdrawReport hard-deletes the caller's report on an item.
+  rpc WithdrawReport(WithdrawReportRequest) returns (WithdrawReportResponse);
+}
+
+// Report is a user's report on a public template or comment.
+message Report {
+  string id = 1;
+  string item_type = 2; // "template" | "comment"
+  string item_id = 3;
+  string reason = 4;    // spam | offensive | misleading | privacy | other
+  string note = 5;      // optional, <= 500 chars
+  string status = 6;    // open | resolved
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message CreateReportRequest {
+  string item_type = 1; // "template" | "comment"
+  string item_id = 2;
+  string reason = 3;    // spam | offensive | misleading | privacy | other
+  string note = 4;      // optional, <= 500 chars
+}
+
+message GetMyReportRequest {
+  string item_type = 1;
+  string item_id = 2;
+}
+
+message MyReport {
+  Report report = 1; // null when the caller has no open report on the item
+}
+
+message WithdrawReportRequest {
+  string item_type = 1;
+  string item_id = 2;
+}
+
+message WithdrawReportResponse {
+  bool success = 1;
 }
 
 // Appeal is a creator's contest of a moderation action on their template.

@@ -40,6 +40,8 @@ backend:
     topRatedMinRatings: "5"
     # Moderation appeals: max simultaneous open appeals per user
     appealMaxOpen: "5"
+    # Content reporting: max report submissions per user per hour
+    reportRatePerHour: "20"
 
 frontend:
   replicaCount: 1

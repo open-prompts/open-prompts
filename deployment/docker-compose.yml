@@ -50,6 +50,8 @@ services:
       TOP_RATED_MIN_RATINGS: ${TOP_RATED_MIN_RATINGS:-5}
       # Moderation appeals: max simultaneous open appeals per user
       APPEAL_MAX_OPEN: ${APPEAL_MAX_OPEN:-5}
+      # Content reporting: max report submissions per user per hour
+      REPORT_RATE_PER_HOUR: ${REPORT_RATE_PER_HOUR:-20}
     depends_on:
       - postgres
       - redis

@@ -12,6 +12,7 @@ import CommentItem from './CommentItem';
 import CommentEditForm from './CommentEditForm';
 import ReplyComposer from './ReplyComposer';
 import RepliesBucket from './RepliesBucket';
+import ReportMenu from '../ReportMenu';
 import './CommentsSection.scss';
 
 const PAGE_SIZE = 20;
@@ -200,6 +201,15 @@ const CommentsSection = ({ templateId, templateOwnerId, user }) => {
                 isTopLevel
                 templateOwnerId={templateOwnerId}
                 user={user}
+                reportMenu={
+                  user && (
+                    <ReportMenu
+                      itemType="comment"
+                      itemId={comment.id}
+                      isOwner={!!user && comment.is_own}
+                    />
+                  )
+                }
                 repliesBucket={
                   <>
                     {openComposerId === comment.id && (

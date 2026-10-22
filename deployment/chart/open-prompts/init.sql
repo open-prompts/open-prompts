@@ -995,3 +995,55 @@ BEGIN
             '≤100-char excerpt; only populated for comment_reply events';
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: content-reporting
+-- Description: logged-in users flag a public template or comment with a fixed
+-- reason and optional note; admins work a prioritized queue grouped by item
+-- and resolve (dismiss or act) atomically. One report per user per item
+-- (UNIQUE); re-reporting upserts (FR-2). No auto-takedown (NFR-4).
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    item_type TEXT NOT NULL CHECK (item_type IN ('template', 'comment')),
+    item_id UUID NOT NULL,
+    reporter_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL CHECK (reason IN ('spam', 'offensive', 'misleading', 'privacy', 'other')),
+    note TEXT CHECK (note IS NULL OR char_length(note) <= 500),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+    resolution TEXT CHECK (resolution IS NULL OR resolution IN ('dismissed', 'actioned')),
+    resolved_by TEXT REFERENCES users(id),
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (item_type, item_id, reporter_id)
+);
+
+COMMENT ON TABLE content_reports IS 'User reports on public templates/comments; one per user per item';
+COMMENT ON COLUMN content_reports.item_type IS 'template | comment';
+COMMENT ON COLUMN content_reports.reason IS 'spam | offensive | misleading | privacy | other';
+COMMENT ON COLUMN content_reports.status IS 'open | resolved';
+COMMENT ON COLUMN content_reports.resolution IS 'dismissed | actioned (NULL while open)';
+
+CREATE INDEX IF NOT EXISTS idx_content_reports_status_item
+    ON content_reports (status, item_type, item_id);
+CREATE INDEX IF NOT EXISTS idx_content_reports_reporter
+    ON content_reports (reporter_id);
+
+-- Widen admin_audit_logs.action CHECK for report actions (guarded, idempotent).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_action_check';
+    IF def IS NOT NULL AND def NOT LIKE '%report.dismiss%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_action_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_action_check
+            CHECK (action IN ('ban', 'unban', 'role_change', 'delete_comment',
+                              'review_approve', 'review_reject', 'settings_change',
+                              'template.warning_add', 'template.warning_remove',
+                              'appeal.create', 'appeal.review', 'appeal.resolve',
+                              'report.dismiss', 'report.actioned'));
+    END IF;
+END $$;

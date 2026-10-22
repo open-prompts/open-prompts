@@ -931,6 +931,9 @@ const (
 	PromptService_CreateAppeal_FullMethodName           = "/v1.PromptService/CreateAppeal"
 	PromptService_ListAppeals_FullMethodName            = "/v1.PromptService/ListAppeals"
 	PromptService_GetAppeal_FullMethodName              = "/v1.PromptService/GetAppeal"
+	PromptService_CreateReport_FullMethodName           = "/v1.PromptService/CreateReport"
+	PromptService_GetMyReport_FullMethodName            = "/v1.PromptService/GetMyReport"
+	PromptService_WithdrawReport_FullMethodName         = "/v1.PromptService/WithdrawReport"
 )
 
 // PromptServiceClient is the client API for PromptService service.
@@ -1000,6 +1003,14 @@ type PromptServiceClient interface {
 	ListAppeals(ctx context.Context, in *ListAppealsRequest, opts ...grpc.CallOption) (*ListAppealsResponse, error)
 	// GetAppeal returns a single appeal (owner-only).
 	GetAppeal(ctx context.Context, in *GetAppealRequest, opts ...grpc.CallOption) (*Appeal, error)
+	// CreateReport creates or updates the caller's report on a public template
+	// or comment (one report per user per item; re-report replaces, FR-2).
+	CreateReport(ctx context.Context, in *CreateReportRequest, opts ...grpc.CallOption) (*Report, error)
+	// GetMyReport returns the caller's open report on an item (drives the
+	// checkmark state), or an empty MyReport when none.
+	GetMyReport(ctx context.Context, in *GetMyReportRequest, opts ...grpc.CallOption) (*MyReport, error)
+	// WithdrawReport hard-deletes the caller's report on an item.
+	WithdrawReport(ctx context.Context, in *WithdrawReportRequest, opts ...grpc.CallOption) (*WithdrawReportResponse, error)
 }
 
 type promptServiceClient struct {
@@ -1290,6 +1301,36 @@ func (c *promptServiceClient) GetAppeal(ctx context.Context, in *GetAppealReques
 	return out, nil
 }
 
+func (c *promptServiceClient) CreateReport(ctx context.Context, in *CreateReportRequest, opts ...grpc.CallOption) (*Report, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Report)
+	err := c.cc.Invoke(ctx, PromptService_CreateReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) GetMyReport(ctx context.Context, in *GetMyReportRequest, opts ...grpc.CallOption) (*MyReport, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MyReport)
+	err := c.cc.Invoke(ctx, PromptService_GetMyReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *promptServiceClient) WithdrawReport(ctx context.Context, in *WithdrawReportRequest, opts ...grpc.CallOption) (*WithdrawReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WithdrawReportResponse)
+	err := c.cc.Invoke(ctx, PromptService_WithdrawReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PromptServiceServer is the server API for PromptService service.
 // All implementations must embed UnimplementedPromptServiceServer
 // for forward compatibility.
@@ -1357,6 +1398,14 @@ type PromptServiceServer interface {
 	ListAppeals(context.Context, *ListAppealsRequest) (*ListAppealsResponse, error)
 	// GetAppeal returns a single appeal (owner-only).
 	GetAppeal(context.Context, *GetAppealRequest) (*Appeal, error)
+	// CreateReport creates or updates the caller's report on a public template
+	// or comment (one report per user per item; re-report replaces, FR-2).
+	CreateReport(context.Context, *CreateReportRequest) (*Report, error)
+	// GetMyReport returns the caller's open report on an item (drives the
+	// checkmark state), or an empty MyReport when none.
+	GetMyReport(context.Context, *GetMyReportRequest) (*MyReport, error)
+	// WithdrawReport hard-deletes the caller's report on an item.
+	WithdrawReport(context.Context, *WithdrawReportRequest) (*WithdrawReportResponse, error)
 	mustEmbedUnimplementedPromptServiceServer()
 }
 
@@ -1450,6 +1499,15 @@ func (UnimplementedPromptServiceServer) ListAppeals(context.Context, *ListAppeal
 }
 func (UnimplementedPromptServiceServer) GetAppeal(context.Context, *GetAppealRequest) (*Appeal, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAppeal not implemented")
+}
+func (UnimplementedPromptServiceServer) CreateReport(context.Context, *CreateReportRequest) (*Report, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateReport not implemented")
+}
+func (UnimplementedPromptServiceServer) GetMyReport(context.Context, *GetMyReportRequest) (*MyReport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMyReport not implemented")
+}
+func (UnimplementedPromptServiceServer) WithdrawReport(context.Context, *WithdrawReportRequest) (*WithdrawReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WithdrawReport not implemented")
 }
 func (UnimplementedPromptServiceServer) mustEmbedUnimplementedPromptServiceServer() {}
 func (UnimplementedPromptServiceServer) testEmbeddedByValue()                       {}
@@ -1976,6 +2034,60 @@ func _PromptService_GetAppeal_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PromptService_CreateReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).CreateReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_CreateReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).CreateReport(ctx, req.(*CreateReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_GetMyReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMyReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).GetMyReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_GetMyReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).GetMyReport(ctx, req.(*GetMyReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PromptService_WithdrawReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WithdrawReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PromptServiceServer).WithdrawReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PromptService_WithdrawReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PromptServiceServer).WithdrawReport(ctx, req.(*WithdrawReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PromptService_ServiceDesc is the grpc.ServiceDesc for PromptService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2094,6 +2206,18 @@ var PromptService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAppeal",
 			Handler:    _PromptService_GetAppeal_Handler,
+		},
+		{
+			MethodName: "CreateReport",
+			Handler:    _PromptService_CreateReport_Handler,
+		},
+		{
+			MethodName: "GetMyReport",
+			Handler:    _PromptService_GetMyReport_Handler,
+		},
+		{
+			MethodName: "WithdrawReport",
+			Handler:    _PromptService_WithdrawReport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

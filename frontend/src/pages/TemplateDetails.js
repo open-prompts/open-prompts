@@ -30,6 +30,7 @@ import ContentInterstitial, { isWarnedRevealed } from '../components/warnings/Co
 import WarningCheckboxGroup from '../components/warnings/WarningCheckboxGroup';
 import OwnerChip from '../components/OwnerChip';
 import ExportButton from '../components/ExportButton';
+import ReportMenu from '../components/ReportMenu';
 import PublicCounters from '../components/analytics/PublicCounters';
 import OwnerStatsSection from '../components/analytics/OwnerStatsSection';
 import RelatedRail from '../components/related/RelatedRail';
@@ -785,6 +786,9 @@ const TemplateDetails = () => {
                   <StarIcon size={17} filled={isFavorited} />
                   <span className="count">{favoritesCount}</span>
                 </button>
+                {user && (
+                  <ReportMenu itemType="template" itemId={template.id} isOwner={isOwner} />
+                )}
               </div>
               <PublicCounters views={template.view_count} uses={template.use_count} />
             </div>
