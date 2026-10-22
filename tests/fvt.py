@@ -5226,9 +5226,9 @@ def test_content_reporting():
     if not all([alice_token, bob_token, carol_token]):
         print("Failed to create test users")
         return False
-    headers_alice = {"Authorization": f"******"}
-    headers_bob = {"Authorization": f"******"}
-    headers_carol = {"Authorization": f"******"}
+    headers_alice = {"Authorization": f"Bearer {alice_token}"}
+    headers_bob = {"Authorization": f"Bearer {bob_token}"}
+    headers_carol = {"Authorization": f"Bearer {carol_token}"}
 
     # Admin login
     resp = requests.post(f"{ADMIN}/login", json={
@@ -5239,7 +5239,7 @@ def test_content_reporting():
         print(f"Admin login failed: {resp.status_code} - {resp.text}")
         return False
     admin_token = resp.json().get("token")
-    admin_headers = {"Authorization": f"******"}
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
     # --- Fixtures: carol creates a public template; alice + bob comment ---
     payload = {
@@ -5274,8 +5274,8 @@ def test_content_reporting():
     own_tid = resp.json().get("template", {}).get("id")
     CREATED_TEMPLATES.append({"id": own_tid, "owner_id": alice})
 
-    # alice posts a comment on carol's template
-    resp = requests.post(f"{APP}/templates/{tid}/comments", headers=headers_alice,
+    # carol posts a comment on her own template; alice reports it
+    resp = requests.post(f"{APP}/templates/{tid}/comments", headers=headers_carol,
                          json={"content": "This is a comment to report"})
     if resp.status_code != 200:
         print(f"Create comment failed: {resp.status_code} - {resp.text}")
@@ -5469,7 +5469,7 @@ def test_content_reporting():
 
     # --- 12. deleting a comment auto-resolves its open reports ---
     print("12. comment delete auto-resolves...")
-    # bob posts a comment on carol's template; alice reports it; bob (admin)
+    # bob posts a comment on carol's template; bob (admin) reports it; bob
     # deletes it via the admin comment moderation path.
     resp = requests.post(f"{APP}/templates/{tid}/comments", headers=headers_bob,
                          json={"content": "comment to be deleted"})
@@ -5477,7 +5477,8 @@ def test_content_reporting():
         print(f"Create comment 2 failed: {resp.status_code} - {resp.text}")
         return False
     comment2_id = resp.json().get("comment", {}).get("id") or resp.json().get("id")
-    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+    # alice's report quota is exhausted by step 7; carol reports instead.
+    resp = requests.post(f"{APP}/reports", headers=headers_carol,
                          json={"item_type": "comment", "item_id": comment2_id, "reason": "spam"})
     if resp.status_code != 200:
         print(f"Report comment 2 failed: {resp.status_code} - {resp.text}")

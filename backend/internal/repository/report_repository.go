@@ -145,8 +145,8 @@ func (r *reportRepository) ListQueue(ctx context.Context, status, itemType, reas
 	          AND ($3 = '' OR cr.reason = $3)`
 	query := `
 		SELECT cr.item_type, cr.item_id,
-		       COALESCE(t.title, c.content) AS item_title,
-		       COALESCE(tu.display_name, cu.display_name) AS author_display_name,
+		       COALESCE(t.title, c.content, '') AS item_title,
+		       COALESCE(tu.display_name, cu.display_name, '') AS author_display_name,
 		       COUNT(*) FILTER (WHERE cr.status = 'open') AS open_count,
 		       array_agg(DISTINCT cr.reason) AS reasons,
 		       MAX(cr.created_at) AS latest_at,

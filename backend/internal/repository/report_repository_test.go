@@ -50,8 +50,8 @@ func TestListQueueGroupsAndOrders(t *testing.T) {
 	// open-first by count then recency (FR-8/FR-9).
 	query := `
 		SELECT cr.item_type, cr.item_id,
-		       COALESCE(t.title, c.content) AS item_title,
-		       COALESCE(tu.display_name, cu.display_name) AS author_display_name,
+		       COALESCE(t.title, c.content, '') AS item_title,
+		       COALESCE(tu.display_name, cu.display_name, '') AS author_display_name,
 		       COUNT(*) FILTER (WHERE cr.status = 'open') AS open_count,
 		       array_agg(DISTINCT cr.reason) AS reasons,
 		       MAX(cr.created_at) AS latest_at,
@@ -75,6 +75,8 @@ func TestListQueueGroupsAndOrders(t *testing.T) {
 		"ORDER BY open_count DESC, latest_at DESC",
 		"LEFT JOIN templates t",
 		"LEFT JOIN template_comments c",
+		"COALESCE(t.title, c.content, '') AS item_title",
+		"COALESCE(tu.display_name, cu.display_name, '') AS author_display_name",
 	} {
 		if !strings.Contains(query, want) {
 			t.Errorf("ListQueue query must contain %q", want)

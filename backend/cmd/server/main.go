@@ -2030,7 +2030,7 @@ func main() {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			writeError(w, err)
 			return
 		}
 		ctx := service.ContextWithUserID(context.Background(), userID)
@@ -2072,7 +2072,7 @@ func main() {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
 		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			writeError(w, err)
 			return
 		}
 		ctx := service.ContextWithUserID(context.Background(), userID)
