@@ -1,3 +1,10 @@
+## [1.35.1](https://github.com/open-prompts/open-prompts/compare/v1.35.0...v1.35.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **moderation:** expose moderation_reason to template owner ([37a65ee](https://github.com/open-prompts/open-prompts/commit/37a65eee3c52e928dead0ab2c735083555c39322))
+
 # [1.35.0](https://github.com/open-prompts/open-prompts/compare/v1.34.1...v1.35.0) (2026-10-23)
 
 
