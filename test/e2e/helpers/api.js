@@ -320,10 +320,11 @@ async function getWarningHistory(adminToken, templateId, { page = 1, perPage = 2
 }
 
 // Admin: list templates with an optional warning-state filter ("" | "none" | a key).
-async function adminListTemplates(adminToken, { warning = '', q = '', page = 1, perPage = 20 } = {}) {
+async function adminListTemplates(adminToken, { warning = '', q = '', page = 1, perPage = 20, moderationStatus = '' } = {}) {
   const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
   if (warning) params.set('warning', warning);
   if (q) params.set('q', q);
+  if (moderationStatus) params.set('moderation_status', moderationStatus);
   const resp = await request('GET', `/api/v1/admin/templates?${params.toString()}`, null, { token: adminToken });
   return resp.data;
 }
