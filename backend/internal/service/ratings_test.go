@@ -309,6 +309,72 @@ func TestTemplateModelToProto_RatingMapping(t *testing.T) {
 	assert.Equal(t, int32(3), rated.MyRating)
 }
 
+func TestTemplateModelToProto_ModerationReasonMapped(t *testing.T) {
+	svc, _, _, _ := newRatingsTestService(t)
+
+	tpl := svc.templateModelToProto(&models.Template{
+		ID: "t1", OwnerID: "owner-1", ModerationStatus: "unpublished_by_admin",
+		ModerationReason: "spam — off-platform links",
+	})
+	assert.Equal(t, "unpublished_by_admin", tpl.ModerationStatus)
+	assert.Equal(t, "spam — off-platform links", tpl.ModerationReason)
+}
+
+func TestClearModerationReasonForNonOwner(t *testing.T) {
+	// Owner keeps the reason.
+	owner := &pb.Template{Id: "t1", OwnerId: "owner-1", ModerationReason: "policy violation"}
+	clearModerationReasonForNonOwner(owner, "owner-1")
+	assert.Equal(t, "policy violation", owner.ModerationReason)
+
+	// Anonymous viewer gets it blanked.
+	anon := &pb.Template{Id: "t1", OwnerId: "owner-1", ModerationReason: "policy violation"}
+	clearModerationReasonForNonOwner(anon, "")
+	assert.Equal(t, "", anon.ModerationReason)
+
+	// Non-owner viewer gets it blanked.
+	other := &pb.Template{Id: "t1", OwnerId: "owner-1", ModerationReason: "policy violation"}
+	clearModerationReasonForNonOwner(other, "viewer-9")
+	assert.Equal(t, "", other.ModerationReason)
+
+	// Nil is a no-op.
+	clearModerationReasonForNonOwner(nil, "owner-1")
+}
+
+func TestGetTemplate_ModerationReasonOwnerOnly(t *testing.T) {
+	svc, templateRepo, userRepo, _ := newRatingsTestService(t)
+	templateRepo.GetFunc = func(ctx context.Context, id, uid string) (*models.Template, error) {
+		return &models.Template{
+			ID: "tpl-1", OwnerID: "owner-1", Visibility: "public",
+			ModerationStatus: "unpublished_by_admin", ModerationReason: "policy violation",
+		}, nil
+	}
+	templateRepo.GetRatingDistributionFunc = func(ctx context.Context, templateID string) ([5]int32, error) {
+		return [5]int32{}, nil
+	}
+	userRepo.On("GetByID", mock.Anything, "owner-1").Return(&models.User{ID: "owner-1", DisplayName: "Owner"}, nil)
+
+	// Owner sees the reason.
+	resp, err := svc.GetTemplate(
+		ContextWithUserID(context.Background(), "owner-1"),
+		&pb.GetTemplateRequest{Id: "tpl-1"},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "policy violation", resp.Template.ModerationReason)
+
+	// Non-owner does not.
+	resp2, err := svc.GetTemplate(
+		ContextWithUserID(context.Background(), "viewer-9"),
+		&pb.GetTemplateRequest{Id: "tpl-1"},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "", resp2.Template.ModerationReason)
+
+	// Anonymous does not.
+	resp3, err := svc.GetTemplate(context.Background(), &pb.GetTemplateRequest{Id: "tpl-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "", resp3.Template.ModerationReason)
+}
+
 func TestCheckRatingRate_WindowElapsedResets(t *testing.T) {
 	svc, _, _, redis := newRatingsTestService(t)
 	// Seed an expired window (expires in the past).

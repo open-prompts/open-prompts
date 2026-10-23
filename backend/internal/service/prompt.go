@@ -704,6 +704,10 @@ func (s *PromptService) GetTemplate(ctx context.Context, req *pb.GetTemplateRequ
 		LatestVersion: s.versionModelToProto(latest),
 	}
 
+	// moderation_reason is owner-only: blank it for anonymous/non-owner
+	// viewers so it never leaks (e.g. a restored template's restore reason).
+	clearModerationReasonForNonOwner(resp.Template, userID)
+
 	// Rating distribution (index 0 -> 1★ ... index 4 -> 5★). Best-effort:
 	// a distribution failure must not fail the whole detail read.
 	if dist, err := s.TemplateRepo.GetRatingDistribution(ctx, template.ID); err == nil {
@@ -778,6 +782,7 @@ func (s *PromptService) ListTemplates(ctx context.Context, req *pb.ListTemplates
 		var pbTemplates []*pb.Template
 		for _, t := range templates {
 			pbT := s.templateModelToProto(t)
+			clearModerationReasonForNonOwner(pbT, userID)
 			latest, err := s.TemplateVersionRepo.GetLatest(ctx, t.ID)
 			if err == nil {
 				pbT.LatestVersion = s.versionModelToProto(latest)
@@ -2040,7 +2045,21 @@ func (s *PromptService) templateModelToProto(m *models.Template) *pb.Template {
 	tpl.LockedWarnings = m.LockedWarnings
 	tpl.OwnerDisplayName = m.OwnerDisplayName
 	tpl.OwnerAvatar = m.OwnerAvatar
+	tpl.ModerationReason = m.ModerationReason
 	return tpl
+}
+
+// clearModerationReasonForNonOwner blanks moderation_reason unless the viewer
+// is the template owner. The reason is owner-only (like moderation_status) and
+// must not leak to anonymous/non-owner viewers (e.g. a restored template keeps
+// its restore reason while public).
+func clearModerationReasonForNonOwner(tpl *pb.Template, viewerID string) {
+	if tpl == nil {
+		return
+	}
+	if viewerID == "" || viewerID != tpl.OwnerId {
+		tpl.ModerationReason = ""
+	}
 }
 
 func (s *PromptService) versionModelToProto(m *models.TemplateVersion) *pb.TemplateVersion {

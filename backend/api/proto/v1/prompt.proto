@@ -306,6 +306,10 @@ message Template {
   string owner_display_name = 29;
   // Owner avatar (joined from users at read time).
   string owner_avatar = 30;
+  // Reason of the last moderation action. Owner-only (like
+  // moderation_status): the service blanks it for anonymous/non-owner
+  // viewers so it never leaks.
+  string moderation_reason = 31;
 }
 
 // TemplateVersion represents a specific version of a template's content.

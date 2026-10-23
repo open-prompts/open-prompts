@@ -78,7 +78,9 @@ func (s *PromptService) GetRelatedTemplates(ctx context.Context, req *pb.GetRela
 		Basis: "generic",
 	}
 	for _, it := range items {
-		resp.Items = append(resp.Items, s.templateModelToProto(it))
+		pbT := s.templateModelToProto(it)
+		clearModerationReasonForNonOwner(pbT, userID)
+		resp.Items = append(resp.Items, pbT)
 	}
 	resp.Basis = deriveBasis(tpl, items)
 
@@ -126,7 +128,9 @@ func (s *PromptService) ListMoreFromAuthor(ctx context.Context, req *pb.ListMore
 		Items: make([]*pb.Template, 0, len(items)),
 	}
 	for _, it := range items {
-		resp.Items = append(resp.Items, s.templateModelToProto(it))
+		pbT := s.templateModelToProto(it)
+		clearModerationReasonForNonOwner(pbT, userID)
+		resp.Items = append(resp.Items, pbT)
 	}
 	return resp, nil
 }

@@ -5630,6 +5630,10 @@ def test_admin_template_moderation():
     if resp.json().get("template", {}).get("moderation_status") != "unpublished_by_admin":
         print(f"Owner should see unpublished_by_admin, got {resp.json()}")
         return False
+    # Owner's public detail carries the moderation_reason (Issue #5).
+    if resp.json().get("template", {}).get("moderation_reason") != "policy violation":
+        print(f"Owner should see moderation_reason, got {resp.json()}")
+        return False
     # Audit has template.unpublish
     resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
                         params={"action": "template.unpublish", "per_page": 50})

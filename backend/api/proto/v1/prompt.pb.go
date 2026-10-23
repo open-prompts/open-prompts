@@ -902,9 +902,13 @@ type Template struct {
 	// Owner display name (joined from users at read time).
 	OwnerDisplayName string `protobuf:"bytes,29,opt,name=owner_display_name,json=ownerDisplayName,proto3" json:"owner_display_name,omitempty"`
 	// Owner avatar (joined from users at read time).
-	OwnerAvatar   string `protobuf:"bytes,30,opt,name=owner_avatar,json=ownerAvatar,proto3" json:"owner_avatar,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	OwnerAvatar string `protobuf:"bytes,30,opt,name=owner_avatar,json=ownerAvatar,proto3" json:"owner_avatar,omitempty"`
+	// Reason of the last moderation action. Owner-only (like
+	// moderation_status): the service blanks it for anonymous/non-owner
+	// viewers so it never leaks.
+	ModerationReason string `protobuf:"bytes,31,opt,name=moderation_reason,json=moderationReason,proto3" json:"moderation_reason,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Template) Reset() {
@@ -1129,6 +1133,13 @@ func (x *Template) GetOwnerDisplayName() string {
 func (x *Template) GetOwnerAvatar() string {
 	if x != nil {
 		return x.OwnerAvatar
+	}
+	return ""
+}
+
+func (x *Template) GetModerationReason() string {
+	if x != nil {
+		return x.ModerationReason
 	}
 	return ""
 }
@@ -7132,7 +7143,7 @@ const file_prompt_proto_rawDesc = "" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x19\n" +
 	"\bper_page\x18\x04 \x01(\x05R\aperPage\"/\n" +
 	"\x10GetAppealRequest\x12\x1b\n" +
-	"\tappeal_id\x18\x01 \x01(\tR\bappealId\"\x96\b\n" +
+	"\tappeal_id\x18\x01 \x01(\tR\bappealId\"\xc3\b\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
@@ -7169,7 +7180,8 @@ const file_prompt_proto_rawDesc = "" +
 	"\x10content_warnings\x18\x1b \x03(\tR\x0fcontentWarnings\x12'\n" +
 	"\x0flocked_warnings\x18\x1c \x03(\tR\x0elockedWarnings\x12,\n" +
 	"\x12owner_display_name\x18\x1d \x01(\tR\x10ownerDisplayName\x12!\n" +
-	"\fowner_avatar\x18\x1e \x01(\tR\vownerAvatar\"\xf5\x01\n" +
+	"\fowner_avatar\x18\x1e \x01(\tR\vownerAvatar\x12+\n" +
+	"\x11moderation_reason\x18\x1f \x01(\tR\x10moderationReason\"\xf5\x01\n" +
 	"\x0fTemplateVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
