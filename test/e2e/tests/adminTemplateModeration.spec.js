@@ -113,12 +113,22 @@ describe('Admin template moderation', function () {
         const v = await expectError(getTemplate(fx.viewer.token, fx.template.id));
         browser.assert.strictEqual(v.status, 404, 'non-owner sees 404 for unpublished');
 
+        // Anonymous also gets 404 (no leak).
+        const anon = await expectError(getTemplate(null, fx.template.id));
+        browser.assert.strictEqual(anon.status, 404, 'anonymous sees 404 for unpublished');
+
         // Owner still sees it.
         const ownerView = await getTemplate(fx.owner.token, fx.template.id);
         browser.assert.strictEqual(ownerView.moderation_status, 'unpublished_by_admin', 'owner sees unpublished status');
 
-        // The admin detail carries the moderation reason (owner banner reason
-        // is covered by Issue #5 — the public Template proto omits it).
+        // Issue #5: the owner's public template detail now carries the
+        // moderation_reason (owner-only), so the owner banner shows the reason.
+        browser.assert.strictEqual(
+          ownerView.moderation_reason, 'spam — off-platform links',
+          'owner public template detail carries moderation_reason'
+        );
+
+        // The admin detail carries the moderation reason too.
         const adminDetail = await getAdminTemplateDetail(fx.admin.token, fx.template.id);
         browser.assert.strictEqual(adminDetail.template.moderation_reason, 'spam — off-platform links', 'admin detail carries the reason');
 
