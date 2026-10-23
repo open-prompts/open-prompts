@@ -1,3 +1,10 @@
+# [1.35.0](https://github.com/open-prompts/open-prompts/compare/v1.34.1...v1.35.0) (2026-10-23)
+
+
+### Features
+
+* **moderation:** add admin template moderation ([e08429c](https://github.com/open-prompts/open-prompts/commit/e08429c403e9d03c48990b5a020cc13ba3245890))
+
 ## [1.34.1](https://github.com/open-prompts/open-prompts/compare/v1.34.0...v1.34.1) (2026-10-22)
 
 
