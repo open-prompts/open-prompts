@@ -154,6 +154,32 @@ func (s *PromptService) writeAppealAudit(ctx context.Context, actorID string, ac
 	}
 }
 
+// writeRepublishAudit records the owner re-publishing an admin-unpublished
+// template (OQ-5). Best-effort; failures are logged, never fatal.
+func (s *PromptService) writeRepublishAudit(ctx context.Context, actorID, templateID string) {
+	if s.AdminRepo == nil {
+		return
+	}
+	entry := &models.AdminAuditLog{
+		ActorID:    actorID,
+		ActorEmail: actorID,
+		Action:     "template.republished_after_moderation",
+		TargetType: "template",
+		TargetID:   templateID,
+		Reason:     "owner re-published after admin unpublish",
+	}
+	if err := s.AdminRepo.InsertAuditLog(ctx, entry); err != nil {
+		zap.S().Errorf("PromptService: failed to write republished_after_moderation audit (template=%s): %v", templateID, err)
+	}
+}
+
+// isLocked reports whether a template is locked by moderators (FR-3). Locked
+// templates block all mutations (edit, comment, fork, like/favorite/rating,
+// watch, preset save) while staying publicly visible.
+func isLocked(t *models.Template) bool {
+	return t != nil && t.ModerationStatus == "locked"
+}
+
 // getSettingInt returns a platform setting as an int, through the 60s
 // cache. Falls back to the built-in default when the store is unavailable.
 func (s *PromptService) getSettingInt(ctx context.Context, key string) int {
@@ -421,6 +447,10 @@ func (s *PromptService) ForkTemplate(ctx context.Context, templateID string) (*p
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "source template not found")
 	}
+	// Locked templates block forks (FR-3).
+	if isLocked(sourceTpl) {
+		return nil, status.Error(codes.PermissionDenied, "this template is locked by moderators")
+	}
 
 	// 2. Get Source Latest Version
 	sourceVer, err := s.TemplateVersionRepo.GetLatest(ctx, templateID)
@@ -497,10 +527,17 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 		return nil, err
 	}
 
+	// Locked templates block edits (FR-3): the owner may view but not modify
+	// while under review.
+	if isLocked(template) {
+		return nil, status.Error(codes.PermissionDenied, "this template is locked by moderators")
+	}
+
 	// Capture the pre-update visibility BEFORE the field updates below
 	// overwrite it, so a private→public transition is detectable.
 	wasPublic := template.Visibility == "public"
 	wasRejected := template.ModerationStatus == "rejected"
+	wasUnpublishedByAdmin := template.ModerationStatus == "unpublished_by_admin"
 
 	// Update fields
 	if req.Title != "" {
@@ -567,7 +604,14 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 	template.UpdatedAt = time.Now()
 	transitioningToPublic := !wasPublic && template.Visibility == "public"
 	resubmittingRejected := wasPublic && wasRejected && template.Visibility == "public"
-	if transitioningToPublic || resubmittingRejected {
+	// Re-publish after admin unpublish (OQ-5): the owner re-shares an
+	// admin-unpublished template via the normal share flow. The template's
+	// visibility is already public (unpublish only flips moderation_status),
+	// so the re-share is detected by the moderation_status + public
+	// visibility combination. Moderation is corrective — the owner can
+	// re-publish immediately.
+	republishingAfterUnpublish := wasUnpublishedByAdmin && template.Visibility == "public"
+	if transitioningToPublic || resubmittingRejected || republishingAfterUnpublish {
 		if s.isGated(ctx, userID) {
 			template.ModerationStatus = "in_review"
 			template.PublishedAt = sql.NullTime{}
@@ -581,6 +625,17 @@ func (s *PromptService) UpdateTemplate(ctx context.Context, req *pb.UpdateTempla
 
 	if err := s.TemplateRepo.Update(ctx, template); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update template: %v", err)
+	}
+
+	// Re-publish marker (OQ-5): when the owner re-publishes an
+	// admin-unpublished template via the normal share flow, write an audit
+	// event so the pattern is visible in the audit trail. The owner can
+	// re-publish immediately (moderation is corrective); repeated violations
+	// escalate to a ban.
+	if wasUnpublishedByAdmin && template.Visibility == "public" && template.ModerationStatus == "normal" {
+		if s.AdminRepo != nil {
+			s.writeRepublishAudit(ctx, userID, template.ID)
+		}
 	}
 
 	// A gated publish transition must be atomic with its submission row
@@ -1033,6 +1088,10 @@ func (s *PromptService) ToggleLikeTemplate(ctx context.Context, req *pb.ToggleLi
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "template not found")
 	}
+	// Locked templates block new likes (FR-3).
+	if isLocked(tpl) {
+		return nil, status.Error(codes.PermissionDenied, "this template is locked by moderators")
+	}
 
 	isLiked, count, err := s.TemplateRepo.ToggleLike(ctx, userID, req.TemplateId)
 	if err != nil {
@@ -1063,6 +1122,10 @@ func (s *PromptService) ToggleFavoriteTemplate(ctx context.Context, req *pb.Togg
 	tpl, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+	// Locked templates block new favorites (FR-3).
+	if isLocked(tpl) {
+		return nil, status.Error(codes.PermissionDenied, "this template is locked by moderators")
 	}
 
 	isFavorited, count, err := s.TemplateRepo.ToggleFavorite(ctx, userID, req.TemplateId)
@@ -1155,6 +1218,10 @@ func (s *PromptService) RateTemplate(ctx context.Context, req *pb.RateTemplateRe
 	tpl, err := s.TemplateRepo.Get(ctx, req.TemplateId, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "template not found")
+	}
+	// Locked templates block new ratings (FR-3).
+	if isLocked(tpl) {
+		return nil, status.Error(codes.PermissionDenied, "this template is locked by moderators")
 	}
 
 	// Private templates are invisible to non-owners — 404 (no existence leak).

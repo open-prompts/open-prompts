@@ -1162,5 +1162,79 @@
     "withdraw": "Withdraw report",
     "withdrawConfirm": "Withdraw your report?",
     "rateLimited": "You've submitted several reports recently — please try again later."
+  },
+  "mod": {
+    "panel": {
+      "title": "Moderation",
+      "status": "Current status"
+    },
+    "status": {
+      "normal": "Normal",
+      "locked": "Locked",
+      "unpublished_by_admin": "Unpublished by admin",
+      "soft_deleted": "Removed",
+      "in_review": "In review",
+      "rejected": "Rejected"
+    },
+    "action": {
+      "unpublish": "Unpublish",
+      "lock": "Lock",
+      "delete": "Delete",
+      "restore": "Restore"
+    },
+    "modal": {
+      "unpublish": {
+        "title": "Unpublish this template?"
+      },
+      "lock": {
+        "title": "Lock this template?"
+      },
+      "delete": {
+        "title": "Delete this template?"
+      },
+      "restore": {
+        "title": "Restore this template?"
+      },
+      "consequence": {
+        "public": "Removed from public surfaces (home, search, embeds, API)",
+        "ownerKeeps": "The owner keeps access and can edit",
+        "frozen": "Editing and new interactions are frozen",
+        "notified": "The owner is notified with your reason",
+        "reversible": "Reversible: restore any time",
+        "window": "Hidden everywhere; 30-day restore window"
+      },
+      "reason": "Reason (required, visible to the owner)",
+      "typeTitle": "Type the template title to confirm",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left"
+    },
+    "history": {
+      "title": "Moderation history",
+      "empty": "No moderation actions yet"
+    },
+    "selfGuard": "You cannot moderate your own template",
+    "banner": {
+      "unpublished": "An administrator unpublished this template: {{reason}}. You can edit it and share it again.",
+      "locked": "This template is locked by moderators. Editing and new interactions are disabled while under review.",
+      "removed": "This template was removed by moderators: {{reason}}. If you believe this is a mistake, reply via your notification or contact support.",
+      "editCta": "Edit template"
+    },
+    "lock": {
+      "public": "This template is locked by moderators",
+      "blocked": "This template is locked by moderators"
+    },
+    "notif": {
+      "unpublish": "Your template \"{{title}}\" was unpublished: {{reason}}",
+      "lock": "Your template \"{{title}}\" was locked: {{reason}}",
+      "soft_delete": "Your template \"{{title}}\" was removed: {{reason}}",
+      "restore": "Your template \"{{title}}\" was restored"
+    },
+    "filter": {
+      "status": "Status",
+      "empty": "No templates match"
+    },
+    "toast": {
+      "actioned": "Template unpublished; report resolved"
+    }
   }
 }

@@ -130,10 +130,11 @@ func TestBuildTemplateConditionsNoKeyword(t *testing.T) {
 
 func TestBuildTemplateConditionsModerationFilter(t *testing.T) {
 	// Public streams hide gated templates except from their owner; the
-	// bypass reuses the already-bound $1 (current_user_id).
+	// bypass reuses the already-bound $1 (current_user_id). The locked
+	// state stays public (FR-3), so it is included in the visible set.
 	filters := map[string]interface{}{"visibility": "public"}
 	cond, _, _ := buildTemplateConditions(filters, nil, 2)
-	want := "AND (t.moderation_status = 'normal' OR t.owner_id = $1)"
+	want := "AND (t.moderation_status IN ('normal', 'locked') OR t.owner_id = $1)"
 	if !strings.Contains(cond, want) {
 		t.Errorf("moderation filter missing for public listing: %s", cond)
 	}

@@ -78,3 +78,10 @@
     text-decoration: underline;
   }
 }
+
+.admin-templates__mod-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}

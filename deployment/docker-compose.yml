@@ -52,6 +52,9 @@ services:
       APPEAL_MAX_OPEN: ${APPEAL_MAX_OPEN:-5}
       # Content reporting: max report submissions per user per hour
       REPORT_RATE_PER_HOUR: ${REPORT_RATE_PER_HOUR:-20}
+      # Template moderation: per-admin write rate limit + soft-delete window
+      MOD_ACTION_RATE_PER_MINUTE: ${MOD_ACTION_RATE_PER_MINUTE:-10}
+      MOD_SOFT_DELETE_WINDOW_DAYS: ${MOD_SOFT_DELETE_WINDOW_DAYS:-30}
     depends_on:
       - postgres
       - redis

@@ -96,6 +96,15 @@ export const changeAdminUserRole = (id, role, reason) =>
 // Templates
 export const getAdminTemplates = (params) => adminApi.get('/admin/templates', { params });
 export const getAdminTemplate = (id) => adminApi.get(`/admin/templates/${id}`);
+// Template moderation (admin)
+export const unpublishTemplate = (id, { reason }) =>
+  adminApi.post(`/admin/templates/${id}/unpublish`, { reason });
+export const lockTemplate = (id, { reason }) =>
+  adminApi.post(`/admin/templates/${id}/lock`, { reason });
+export const softDeleteTemplate = (id, { reason }) =>
+  adminApi.post(`/admin/templates/${id}/delete`, { reason });
+export const restoreTemplate = (id, { reason }) =>
+  adminApi.post(`/admin/templates/${id}/restore`, { reason });
 // Content warnings (admin)
 export const updateTemplateWarnings = (id, { add, remove, reason }) =>
   adminApi.post(`/admin/templates/${id}/warnings`, { add, remove, reason });

@@ -106,6 +106,33 @@ service AdminService {
   // ResolveReportGroup resolves all open reports of an item atomically as
   // dismissed or actioned (409 when none are open).
   rpc ResolveReportGroup(ResolveReportGroupRequest) returns (ResolveReportGroupResponse);
+
+  // UnpublishTemplate sets a template's moderation_status to
+  // 'unpublished_by_admin' (public -> private, reversible, reason-required).
+  rpc UnpublishTemplate(ModerationActionRequest) returns (ModerationActionResponse);
+
+  // LockTemplate sets a template's moderation_status to 'locked' (freezes
+  // edits + new interactions while content stays public).
+  rpc LockTemplate(ModerationActionRequest) returns (ModerationActionResponse);
+
+  // SoftDeleteTemplate sets a template's moderation_status to 'soft_deleted'
+  // (hidden everywhere, 30-day restore window).
+  rpc SoftDeleteTemplate(ModerationActionRequest) returns (ModerationActionResponse);
+
+  // RestoreTemplate returns a moderated template to 'normal' (visibility
+  // preserved); the prior moderation action is marked superseded.
+  rpc RestoreTemplate(ModerationActionRequest) returns (ModerationActionResponse);
+}
+
+message ModerationActionRequest {
+  string template_id = 1;
+  string reason = 2; // 3-500 chars, required
+}
+
+message ModerationActionResponse {
+  string template_id = 1;
+  string moderation_status = 2; // the new status
+  google.protobuf.Timestamp moderated_at = 3;
 }
 
 message ListReportQueueRequest {
@@ -377,6 +404,15 @@ message AdminTemplateSummary {
   repeated string locked_warnings = 16;
   // Number of ratings.
   int32 rating_count = 17;
+  // Moderation state: "normal" | "locked" | "unpublished_by_admin" |
+  // "soft_deleted" | "in_review" | "rejected".
+  string moderation_status = 18;
+  // Timestamp of the last moderation action (NULL until first action).
+  google.protobuf.Timestamp moderated_at = 19;
+  // Admin id of the last moderation action (NULL until first action).
+  string moderated_by = 20;
+  // Reason of the last moderation action (admin-only, shown to owner too).
+  string moderation_reason = 21;
 }
 
 message ListAdminTemplatesRequest {
@@ -387,6 +423,7 @@ message ListAdminTemplatesRequest {
   int32 page = 5;
   int32 per_page = 6;
   string warning = 7; // "" = any | "none" | a taxonomy key (mature|violence|profanity|sensitive)
+  string moderation_status = 8; // "" | normal | locked | unpublished_by_admin | soft_deleted
 }
 
 message ListAdminTemplatesResponse {

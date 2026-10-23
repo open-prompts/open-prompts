@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -213,7 +214,7 @@ func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
 	if t.RatingCount > 0 {
 		ratingAvg = float64(t.RatingSum) / float64(t.RatingCount)
 	}
-	return &pb.AdminTemplateSummary{
+	summary := &pb.AdminTemplateSummary{
 		Id:               t.ID,
 		Title:            t.Title,
 		Visibility:       t.Visibility,
@@ -231,7 +232,14 @@ func templateToSummary(t *models.AdminTemplate) *pb.AdminTemplateSummary {
 		Category:         t.Category,
 		ContentWarnings:  t.ContentWarnings,
 		LockedWarnings:   t.LockedWarnings,
+		ModerationStatus: t.ModerationStatus,
+		ModeratedBy:      t.ModeratedBy,
+		ModerationReason: t.ModerationReason,
 	}
+	if t.ModeratedAt.Valid {
+		summary.ModeratedAt = timestamppb.New(t.ModeratedAt.Time)
+	}
+	return summary
 }
 
 // clientIPFromContext extracts the client IP from the x-client-ip metadata
@@ -679,6 +687,15 @@ func (s *AdminService) ListTemplates(ctx context.Context, req *pb.ListAdminTempl
 		}
 	}
 
+	// Validate the moderation_status filter against the allowed set.
+	if req.ModerationStatus != "" {
+		switch req.ModerationStatus {
+		case "normal", "locked", "unpublished_by_admin", "soft_deleted":
+		default:
+			return nil, status.Error(codes.InvalidArgument, "invalid moderation_status filter")
+		}
+	}
+
 	page := int(req.Page)
 	if page < 1 {
 		page = 1
@@ -692,13 +709,14 @@ func (s *AdminService) ListTemplates(ctx context.Context, req *pb.ListAdminTempl
 	}
 
 	templates, total, err := s.AdminRepo.ListTemplates(ctx, repository.TemplateFilters{
-		Search:     strings.TrimSpace(req.Search),
-		Visibility: req.Visibility,
-		OwnerID:    req.OwnerId,
-		Sort:       req.Sort,
-		Warning:    req.Warning,
-		Limit:      perPage,
-		Offset:     (page - 1) * perPage,
+		Search:           strings.TrimSpace(req.Search),
+		Visibility:       req.Visibility,
+		OwnerID:          req.OwnerId,
+		Sort:             req.Sort,
+		Warning:          req.Warning,
+		ModerationStatus: req.ModerationStatus,
+		Limit:            perPage,
+		Offset:           (page - 1) * perPage,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list templates: %v", err)
@@ -753,7 +771,7 @@ func (s *AdminService) ListAuditLogs(ctx context.Context, req *pb.ListAuditLogsR
 		return nil, err
 	}
 
-	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" && req.Action != "review_approve" && req.Action != "review_reject" && req.Action != "template.warning_add" && req.Action != "template.warning_remove" {
+	if req.Action != "" && req.Action != "ban" && req.Action != "unban" && req.Action != "role_change" && req.Action != "delete_comment" && req.Action != "review_approve" && req.Action != "review_reject" && req.Action != "template.warning_add" && req.Action != "template.warning_remove" && req.Action != "appeal.create" && req.Action != "appeal.review" && req.Action != "appeal.resolve" && req.Action != "report.dismiss" && req.Action != "report.actioned" && req.Action != "template.unpublish" && req.Action != "template.lock" && req.Action != "template.soft_delete" && req.Action != "template.restore" && req.Action != "template.republished_after_moderation" {
 		return nil, status.Error(codes.InvalidArgument, "invalid action filter")
 	}
 
@@ -1231,6 +1249,323 @@ func (s *AdminService) GetReviewMetrics(ctx context.Context, _ *pb.GetReviewMetr
 		MedianTimeInReviewHours: m.MedianHours,
 		DecisionsToday:          int64(m.ApprovedToday + m.RejectedToday),
 		RejectionRateByReason:   rates,
+	}, nil
+}
+
+// ---- template moderation ----
+
+// modActionRatePerMinute returns the per-admin moderation write rate limit
+// (MOD_ACTION_RATE_PER_MINUTE, default 10). Server-side env, mirroring
+// APPEAL_MAX_OPEN.
+func modActionRatePerMinute() int {
+	max, _ := strconv.Atoi(os.Getenv("MOD_ACTION_RATE_PER_MINUTE"))
+	if max <= 0 {
+		return 10
+	}
+	return max
+}
+
+// modSoftDeleteWindowDays returns the restore window before hard-delete
+// (MOD_SOFT_DELETE_WINDOW_DAYS, default 30). Server-side env.
+func modSoftDeleteWindowDays() int {
+	days, _ := strconv.Atoi(os.Getenv("MOD_SOFT_DELETE_WINDOW_DAYS"))
+	if days <= 0 {
+		return 30
+	}
+	return days
+}
+
+// moderationRateLimit enforces the per-admin write tier (FR-15). It mirrors
+// the rating rate-limit counter: a sliding window keyed by admin id, fail-open
+// when Redis is unavailable.
+func (s *AdminService) moderationRateLimit(ctx context.Context, adminID string) (int, bool) {
+	if s.Redis == nil {
+		return 0, true
+	}
+	key := "mod_action_rate:" + adminID
+	max := modActionRatePerMinute()
+	window := time.Minute
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if time.Now().Unix() >= expires { // window elapsed: reset
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if count >= max {
+		return int(expires - time.Now().Unix()), false
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count+1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+	return 0, true
+}
+
+// notifyModeration notifies the template owner of a moderation action
+// (best-effort, self-suppressed). The ActorDisplayName slot carries the
+// action type so the frontend can render the localized sentence; the Snippet
+// carries a ≤140-char reason excerpt.
+func (s *AdminService) notifyModeration(ctx context.Context, actor *models.User, ownerID, templateID, actionType, reason string) {
+	if s.NotificationRepo == nil {
+		return
+	}
+	if actor == nil || actor.ID == ownerID {
+		return
+	}
+	excerpt := reason
+	if len([]rune(excerpt)) > 140 {
+		excerpt = string([]rune(excerpt)[:140]) + "…"
+	}
+	if err := s.NotificationRepo.Create(ctx, &models.Notification{
+		RecipientID:      ownerID,
+		ActorID:          actor.ID,
+		TemplateID:       templateID,
+		Type:             "moderation",
+		ActorDisplayName: actionType,
+		Snippet:          excerpt,
+	}); err != nil {
+		zap.S().Errorf("moderation notification: failed to create %s notification (template=%s owner=%s): %v",
+			actionType, templateID, ownerID, err)
+	}
+}
+
+// applyModerationAction performs the shared state change for unpublish/lock/
+// soft-delete: self-guard, transition guard, rate limit, state update,
+// moderation_actions insert, audit, report auto-resolve, notification.
+func (s *AdminService) applyModerationAction(ctx context.Context, actor *models.User,
+	req *pb.ModerationActionRequest, actionType, newStatus string) (*pb.ModerationActionResponse, error) {
+	if req.TemplateId == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+
+	// 1) Load the template; missing -> NotFound.
+	template, _, err := s.AdminRepo.GetTemplateWithVersions(ctx, req.TemplateId)
+	if err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get template: %v", err)
+	}
+
+	// 2) Self-guard (FR-14): an admin cannot moderate their own template.
+	if template.OwnerID == actor.ID {
+		return nil, status.Error(codes.PermissionDenied, "you cannot moderate your own template")
+	}
+
+	// 3) Transition guard: reject invalid transitions (409).
+	if !validModerationTransition(template.ModerationStatus, actionType) {
+		return nil, status.Error(codes.AlreadyExists, "invalid moderation state transition")
+	}
+
+	// 4) Rate limit (FR-15).
+	if retryAfter, ok := s.moderationRateLimit(ctx, actor.ID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+
+	// 5) State update.
+	if err := s.AdminRepo.SetModerationState(ctx, req.TemplateId, newStatus, actor.ID, strings.TrimSpace(req.Reason)); err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to update moderation state: %v", err)
+	}
+
+	// 6) moderation_actions row (appeals lifecycle).
+	if _, err := s.AdminRepo.InsertModerationAction(ctx, &models.ModerationAction{
+		TemplateID: req.TemplateId,
+		ActionType: actionType,
+		ActorID:    actor.ID,
+		ActorEmail: actor.Email,
+		Reason:     strings.TrimSpace(req.Reason),
+	}); err != nil {
+		zap.S().Errorf("moderation: failed to insert moderation action (template=%s): %v", req.TemplateId, err)
+	}
+
+	// 7) Audit.
+	s.writeAudit(ctx, actor, "template."+actionType, "template", req.TemplateId, req.Reason)
+
+	// 8) Report auto-resolve hook (FR-10): unpublish/soft-delete close the
+	// report loop; lock does not.
+	if actionType == "unpublish" || actionType == "soft_delete" {
+		if s.ReportRepo != nil {
+			if err := s.ReportRepo.AutoResolveItem(ctx, "template", req.TemplateId, actor.ID); err != nil {
+				zap.S().Errorf("moderation: report auto-resolve failed (template=%s): %v", req.TemplateId, err)
+			}
+		}
+	}
+
+	// 9) Notify the owner.
+	s.notifyModeration(ctx, actor, template.OwnerID, req.TemplateId, actionType, req.Reason)
+
+	return &pb.ModerationActionResponse{
+		TemplateId:       req.TemplateId,
+		ModerationStatus: newStatus,
+		ModeratedAt:      timestamppb.Now(),
+	}, nil
+}
+
+// validModerationTransition reports whether a moderation action is allowed
+// from the current moderation_status (409 on invalid transitions).
+func validModerationTransition(currentStatus, actionType string) bool {
+	switch actionType {
+	case "unpublish":
+		return currentStatus == "normal" || currentStatus == "locked" || currentStatus == "unpublished_by_admin"
+	case "lock":
+		return currentStatus == "normal" || currentStatus == "unpublished_by_admin"
+	case "soft_delete":
+		return currentStatus == "normal" || currentStatus == "locked" || currentStatus == "unpublished_by_admin"
+	case "restore":
+		return currentStatus != "normal" && currentStatus != "in_review" && currentStatus != "rejected"
+	default:
+		return false
+	}
+}
+
+// UnpublishTemplate sets a template's moderation_status to
+// 'unpublished_by_admin' (public -> private, reversible, reason-required).
+func (s *AdminService) UnpublishTemplate(ctx context.Context, req *pb.ModerationActionRequest) (*pb.ModerationActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.applyModerationAction(ctx, actor, req, "unpublish", "unpublished_by_admin")
+}
+
+// LockTemplate sets a template's moderation_status to 'locked' (freezes
+// edits + new interactions while content stays public).
+func (s *AdminService) LockTemplate(ctx context.Context, req *pb.ModerationActionRequest) (*pb.ModerationActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.applyModerationAction(ctx, actor, req, "lock", "locked")
+}
+
+// SoftDeleteTemplate sets a template's moderation_status to 'soft_deleted'
+// (hidden everywhere, 30-day restore window). deleted_at marks the window
+// start.
+func (s *AdminService) SoftDeleteTemplate(ctx context.Context, req *pb.ModerationActionRequest) (*pb.ModerationActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.TemplateId == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	template, _, err := s.AdminRepo.GetTemplateWithVersions(ctx, req.TemplateId)
+	if err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get template: %v", err)
+	}
+	if template.OwnerID == actor.ID {
+		return nil, status.Error(codes.PermissionDenied, "you cannot moderate your own template")
+	}
+	if !validModerationTransition(template.ModerationStatus, "soft_delete") {
+		return nil, status.Error(codes.AlreadyExists, "invalid moderation state transition")
+	}
+	if retryAfter, ok := s.moderationRateLimit(ctx, actor.ID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+	if err := s.AdminRepo.SetModerationState(ctx, req.TemplateId, "soft_deleted", actor.ID, strings.TrimSpace(req.Reason)); err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to update moderation state: %v", err)
+	}
+	// Set deleted_at = now() (restore-window start).
+	if err := s.AdminRepo.SetSoftDeleteTimestamp(ctx, req.TemplateId); err != nil {
+		zap.S().Errorf("moderation: failed to set deleted_at (template=%s): %v", req.TemplateId, err)
+	}
+	if _, err := s.AdminRepo.InsertModerationAction(ctx, &models.ModerationAction{
+		TemplateID: req.TemplateId,
+		ActionType: "soft_delete",
+		ActorID:    actor.ID,
+		ActorEmail: actor.Email,
+		Reason:     strings.TrimSpace(req.Reason),
+	}); err != nil {
+		zap.S().Errorf("moderation: failed to insert moderation action (template=%s): %v", req.TemplateId, err)
+	}
+	s.writeAudit(ctx, actor, "template.soft_delete", "template", req.TemplateId, req.Reason)
+	if s.ReportRepo != nil {
+		if err := s.ReportRepo.AutoResolveItem(ctx, "template", req.TemplateId, actor.ID); err != nil {
+			zap.S().Errorf("moderation: report auto-resolve failed (template=%s): %v", req.TemplateId, err)
+		}
+	}
+	s.notifyModeration(ctx, actor, template.OwnerID, req.TemplateId, "soft_delete", req.Reason)
+	return &pb.ModerationActionResponse{
+		TemplateId:       req.TemplateId,
+		ModerationStatus: "soft_deleted",
+		ModeratedAt:      timestamppb.Now(),
+	}, nil
+}
+
+// RestoreTemplate returns a moderated template to 'normal' (visibility
+// preserved). The prior moderation action is marked superseded (no new
+// moderation_actions row — the action_type CHECK only allows
+// unpublish/lock/soft_delete).
+func (s *AdminService) RestoreTemplate(ctx context.Context, req *pb.ModerationActionRequest) (*pb.ModerationActionResponse, error) {
+	actor, err := s.requireAdminContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.TemplateId == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+	if err := validateReason(req.Reason); err != nil {
+		return nil, err
+	}
+	template, _, err := s.AdminRepo.GetTemplateWithVersions(ctx, req.TemplateId)
+	if err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get template: %v", err)
+	}
+	if template.OwnerID == actor.ID {
+		return nil, status.Error(codes.PermissionDenied, "you cannot moderate your own template")
+	}
+	if !validModerationTransition(template.ModerationStatus, "restore") {
+		return nil, status.Error(codes.AlreadyExists, "nothing to restore")
+	}
+	if retryAfter, ok := s.moderationRateLimit(ctx, actor.ID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+	if err := s.AdminRepo.SetModerationState(ctx, req.TemplateId, "normal", actor.ID, strings.TrimSpace(req.Reason)); err != nil {
+		if err == repository.ErrTemplateNotFound {
+			return nil, status.Error(codes.NotFound, "template not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to update moderation state: %v", err)
+	}
+	// Clear the soft-delete window start on restore.
+	if err := s.AdminRepo.ClearSoftDeleteTimestamp(ctx, req.TemplateId); err != nil {
+		zap.S().Errorf("moderation: failed to clear deleted_at (template=%s): %v", req.TemplateId, err)
+	}
+	// Mark the prior action superseded (non-appealable). No new row.
+	if err := s.AdminRepo.MarkModerationActionSuperseded(ctx, req.TemplateId); err != nil {
+		zap.S().Errorf("moderation: failed to supersede prior action (template=%s): %v", req.TemplateId, err)
+	}
+	s.writeAudit(ctx, actor, "template.restore", "template", req.TemplateId, req.Reason)
+	s.notifyModeration(ctx, actor, template.OwnerID, req.TemplateId, "restore", req.Reason)
+	return &pb.ModerationActionResponse{
+		TemplateId:       req.TemplateId,
+		ModerationStatus: "normal",
+		ModeratedAt:      timestamppb.Now(),
 	}, nil
 }
 

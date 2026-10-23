@@ -69,3 +69,7 @@ spec:
               value: {{ .Values.backend.env.appealMaxOpen | quote }}
             - name: REPORT_RATE_PER_HOUR
               value: {{ .Values.backend.env.reportRatePerHour | quote }}
+            - name: MOD_ACTION_RATE_PER_MINUTE
+              value: {{ .Values.backend.env.modActionRatePerMinute | quote }}
+            - name: MOD_SOFT_DELETE_WINDOW_DAYS
+              value: {{ .Values.backend.env.modSoftDeleteWindowDays | quote }}

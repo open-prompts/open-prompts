@@ -33,13 +33,14 @@ type UserFilters struct {
 
 // TemplateFilters describes the admin template list query parameters.
 type TemplateFilters struct {
-	Search     string // ILIKE %s% over title, owner id, owner display_name
-	Visibility string // "" | public | private
-	OwnerID    string // deep-link filter from user detail
-	Sort       string // recently_updated | newest | oldest | most_likes
-	Warning    string // "" = any | "none" | a taxonomy key
-	Limit      int
-	Offset     int
+	Search           string // ILIKE %s% over title, owner id, owner display_name
+	Visibility       string // "" | public | private
+	OwnerID          string // deep-link filter from user detail
+	Sort             string // recently_updated | newest | oldest | most_likes
+	Warning          string // "" = any | "none" | a taxonomy key
+	ModerationStatus string // "" | normal | locked | unpublished_by_admin | soft_deleted
+	Limit            int
+	Offset           int
 }
 
 // AuditFilters describes the admin audit log query parameters.
@@ -82,6 +83,20 @@ type AdminRepository interface {
 	// template (action template.warning_add / template.warning_remove),
 	// newest first, paginated.
 	ListWarningHistory(ctx context.Context, templateID string, limit, offset int) ([]*models.WarningHistoryEntry, int64, error)
+	// SetModerationState sets an arbitrary moderation_status + moderation
+	// metadata (moderated_at/by/reason) on a template. Returns
+	// ErrTemplateNotFound when the id is unknown.
+	SetModerationState(ctx context.Context, templateID, status, actorID, reason string) error
+	// InsertModerationAction records a moderation action for the appeals
+	// lifecycle. Returns the new action id.
+	InsertModerationAction(ctx context.Context, a *models.ModerationAction) (string, error)
+	// MarkModerationActionSuperseded flips the latest active action for a
+	// template to superseded (restore path; makes it non-appealable).
+	MarkModerationActionSuperseded(ctx context.Context, templateID string) error
+	// SetSoftDeleteTimestamp sets deleted_at = now() (restore-window start).
+	SetSoftDeleteTimestamp(ctx context.Context, templateID string) error
+	// ClearSoftDeleteTimestamp clears deleted_at (restore path).
+	ClearSoftDeleteTimestamp(ctx context.Context, templateID string) error
 	// Comments (moderation)
 	ListComments(ctx context.Context, f CommentFilters) ([]*models.AdminComment, int64, error)
 	DeleteComment(ctx context.Context, id string) (bool, int64, error)
@@ -245,7 +260,7 @@ func (r *adminRepository) ListUserIdentities(ctx context.Context, userID string)
 	return identities, nil
 }
 
-const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.rating_sum, t.rating_count, COALESCE(t.category, ''), t.content_warnings, t.locked_warnings, t.created_at, t.updated_at`
+const adminTemplateColumns = `t.id, t.owner_id, COALESCE(u.display_name, ''), t.title, t.description, t.visibility, t.type, t.language, t.tags, t.like_count, t.favorite_count, t.rating_sum, t.rating_count, COALESCE(t.category, ''), t.content_warnings, t.locked_warnings, t.moderation_status, t.moderated_at, COALESCE(t.moderated_by, ''), COALESCE(t.moderation_reason, ''), t.deleted_at, t.created_at, t.updated_at`
 
 func scanAdminTemplate(row interface{ Scan(...interface{}) error }) (*models.AdminTemplate, error) {
 	var t models.AdminTemplate
@@ -254,6 +269,7 @@ func scanAdminTemplate(row interface{ Scan(...interface{}) error }) (*models.Adm
 		&t.Visibility, &t.Type, &t.Language, &t.Tags, &t.LikeCount, &t.FavoriteCount,
 		&t.RatingSum, &t.RatingCount,
 		&t.Category, &t.ContentWarnings, &t.LockedWarnings,
+		&t.ModerationStatus, &t.ModeratedAt, &t.ModeratedBy, &t.ModerationReason, &t.DeletedAt,
 		&t.CreatedAt, &t.UpdatedAt,
 	); err != nil {
 		return nil, err
@@ -281,6 +297,11 @@ func (r *adminRepository) ListTemplates(ctx context.Context, f TemplateFilters) 
 	if f.OwnerID != "" {
 		where += fmt.Sprintf(` AND t.owner_id = $%d`, argID)
 		args = append(args, f.OwnerID)
+		argID++
+	}
+	if f.ModerationStatus != "" {
+		where += fmt.Sprintf(` AND t.moderation_status = $%d`, argID)
+		args = append(args, f.ModerationStatus)
 		argID++
 	}
 	// Warning-state filter (FR-9): "" = any, "none" = no warnings, a
@@ -492,6 +513,80 @@ func (r *adminRepository) SetTemplateModeration(ctx context.Context, templateID 
 	}
 	if rows == 0 {
 		return ErrTemplateNotInReview
+	}
+	return nil
+}
+
+// SetModerationState sets an arbitrary moderation_status + moderation
+// metadata (moderated_at/by/reason) on a template. Returns
+// ErrTemplateNotFound when the id is unknown.
+func (r *adminRepository) SetModerationState(ctx context.Context, templateID, status, actorID, reason string) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE templates
+		SET moderation_status = $1,
+		    moderated_at = now(),
+		    moderated_by = $2,
+		    moderation_reason = $3,
+		    updated_at = now()
+		WHERE id = $4
+	`, status, actorID, reason, templateID)
+	if err != nil {
+		return fmt.Errorf("failed to set moderation state: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to set moderation state: %w", err)
+	}
+	if rows == 0 {
+		return ErrTemplateNotFound
+	}
+	return nil
+}
+
+// InsertModerationAction records a moderation action for the appeals
+// lifecycle. Returns the new action id.
+func (r *adminRepository) InsertModerationAction(ctx context.Context, a *models.ModerationAction) (string, error) {
+	var id string
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO moderation_actions (template_id, action_type, actor_id, actor_email, reason)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, a.TemplateID, a.ActionType, a.ActorID, a.ActorEmail, a.Reason).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("failed to insert moderation action: %w", err)
+	}
+	return id, nil
+}
+
+// MarkModerationActionSuperseded flips the latest active action for a
+// template to superseded (restore path; makes it non-appealable).
+func (r *adminRepository) MarkModerationActionSuperseded(ctx context.Context, templateID string) error {
+	if _, err := r.db.ExecContext(ctx, `
+		UPDATE moderation_actions
+		SET status = 'superseded', superseded_at = now()
+		WHERE template_id = $1 AND status = 'active'
+	`, templateID); err != nil {
+		return fmt.Errorf("failed to mark moderation action superseded: %w", err)
+	}
+	return nil
+}
+
+// SetSoftDeleteTimestamp sets deleted_at = now() (restore-window start).
+func (r *adminRepository) SetSoftDeleteTimestamp(ctx context.Context, templateID string) error {
+	if _, err := r.db.ExecContext(ctx, `
+		UPDATE templates SET deleted_at = now(), updated_at = now() WHERE id = $1
+	`, templateID); err != nil {
+		return fmt.Errorf("failed to set soft-delete timestamp: %w", err)
+	}
+	return nil
+}
+
+// ClearSoftDeleteTimestamp clears deleted_at (restore path).
+func (r *adminRepository) ClearSoftDeleteTimestamp(ctx context.Context, templateID string) error {
+	if _, err := r.db.ExecContext(ctx, `
+		UPDATE templates SET deleted_at = NULL, updated_at = now() WHERE id = $1
+	`, templateID); err != nil {
+		return fmt.Errorf("failed to clear soft-delete timestamp: %w", err)
 	}
 	return nil
 }

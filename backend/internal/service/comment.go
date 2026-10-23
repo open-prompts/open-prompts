@@ -97,6 +97,10 @@ func (s *PromptService) CreateComment(ctx context.Context, req *pb.CreateComment
 	if tpl.Visibility == "private" && tpl.OwnerID != userID {
 		return nil, status.Error(codes.NotFound, "template not found") // indistinguishable
 	}
+	// Locked templates block new comments (FR-3); existing comments remain.
+	if isLocked(tpl) {
+		return nil, status.Error(codes.PermissionDenied, "this template is locked by moderators")
+	}
 
 	// Resolve the parent (if any). Must be a top-level comment on the same
 	// template; replying to a reply is flattened onto the top-level thread.

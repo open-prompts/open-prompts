@@ -22,12 +22,16 @@ type Template struct {
 	LikeCount        int32          `json:"like_count"`
 	FavoriteCount    int32          `json:"favorite_count"`
 	CommentCount     int32          `json:"comment_count"`
-	ViewCount        int32          `json:"view_count"` // denormalized; maintained by the event write path
-	UseCount         int32          `json:"use_count"`  // denormalized; maintained by the event write path + backfill
-	ModerationStatus string         `json:"moderation_status"` // "normal" | "in_review" | "rejected"
+	ViewCount        int32          `json:"view_count"`        // denormalized; maintained by the event write path
+	UseCount         int32          `json:"use_count"`         // denormalized; maintained by the event write path + backfill
+	ModerationStatus string         `json:"moderation_status"` // "normal" | "in_review" | "rejected" | "locked" | "unpublished_by_admin" | "soft_deleted"
 	PublishedAt      sql.NullTime   `json:"published_at"`      // first review-approval time; NULL until approved
 	ContentWarnings  pq.StringArray `json:"content_warnings"`  // active warnings (taxonomy keys)
 	LockedWarnings   pq.StringArray `json:"locked_warnings"`   // moderator-applied subset (creator-immutable)
+	ModeratedAt      sql.NullTime   `json:"moderated_at"`      // last moderation action time; NULL until first action
+	ModeratedBy      string         `json:"moderated_by"`      // admin id of the last moderation action
+	ModerationReason string         `json:"moderation_reason"` // reason of the last moderation action (owner + admins only)
+	DeletedAt        sql.NullTime   `json:"deleted_at"`        // soft-delete restore-window start; NULL otherwise
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 

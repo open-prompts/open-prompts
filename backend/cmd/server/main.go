@@ -176,6 +176,12 @@ func main() {
 	adminSvc.SetReportRepo(reportRepo)
 	adminSvc.SetCommentRepo(commentRepo)
 
+	// Template moderation: the 30-day hard-delete ticker (admin-template-
+	// moderation) reuses the shared cascade service.
+	cascadeSvc := service.NewTemplateCascadeService(pgConn.DB)
+	tickerSvc := service.NewTickerService(pgConn.DB, cascadeSvc)
+	tickerSvc.Start(context.Background())
+
 	// Notification Service (engagement notifications)
 	notificationReadRetentionDays := 90
 	if v := os.Getenv("NOTIFICATION_READ_RETENTION_DAYS"); v != "" {
@@ -2908,6 +2914,7 @@ func main() {
 		req.OwnerId = q.Get("owner_id")
 		req.Sort = q.Get("sort")
 		req.Warning = q.Get("warning")
+		req.ModerationStatus = q.Get("moderation_status")
 		if v, err := strconv.Atoi(q.Get("page")); err == nil {
 			req.Page = int32(v)
 		}
@@ -3122,6 +3129,44 @@ func main() {
 				req.PerPage = int32(v)
 			}
 			resp, err := adminSvc.ListWarningHistory(ctx, req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+			return
+		}
+
+		// Moderation actions:
+		//   POST /api/v1/admin/templates/{id}/unpublish
+		//   POST /api/v1/admin/templates/{id}/lock
+		//   POST /api/v1/admin/templates/{id}/delete
+		//   POST /api/v1/admin/templates/{id}/restore
+		if len(parts) == 2 && r.Method == http.MethodPost {
+			var body struct {
+				Reason string `json:"reason"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "Invalid request body", http.StatusBadRequest)
+				return
+			}
+			var resp *pb.ModerationActionResponse
+			var err error
+			switch parts[1] {
+			case "unpublish":
+				resp, err = adminSvc.UnpublishTemplate(ctx, &pb.ModerationActionRequest{TemplateId: templateID, Reason: body.Reason})
+			case "lock":
+				resp, err = adminSvc.LockTemplate(ctx, &pb.ModerationActionRequest{TemplateId: templateID, Reason: body.Reason})
+			case "delete":
+				resp, err = adminSvc.SoftDeleteTemplate(ctx, &pb.ModerationActionRequest{TemplateId: templateID, Reason: body.Reason})
+			case "restore":
+				resp, err = adminSvc.RestoreTemplate(ctx, &pb.ModerationActionRequest{TemplateId: templateID, Reason: body.Reason})
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
 			if err != nil {
 				writeError(w, err)
 				return

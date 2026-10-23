@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: admin.proto
+// source: api/proto/v1/admin.proto
 
 package v1
 
@@ -48,6 +48,10 @@ const (
 	AdminService_ListReportQueue_FullMethodName         = "/v1.AdminService/ListReportQueue"
 	AdminService_GetReportDetail_FullMethodName         = "/v1.AdminService/GetReportDetail"
 	AdminService_ResolveReportGroup_FullMethodName      = "/v1.AdminService/ResolveReportGroup"
+	AdminService_UnpublishTemplate_FullMethodName       = "/v1.AdminService/UnpublishTemplate"
+	AdminService_LockTemplate_FullMethodName            = "/v1.AdminService/LockTemplate"
+	AdminService_SoftDeleteTemplate_FullMethodName      = "/v1.AdminService/SoftDeleteTemplate"
+	AdminService_RestoreTemplate_FullMethodName         = "/v1.AdminService/RestoreTemplate"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -126,6 +130,18 @@ type AdminServiceClient interface {
 	// ResolveReportGroup resolves all open reports of an item atomically as
 	// dismissed or actioned (409 when none are open).
 	ResolveReportGroup(ctx context.Context, in *ResolveReportGroupRequest, opts ...grpc.CallOption) (*ResolveReportGroupResponse, error)
+	// UnpublishTemplate sets a template's moderation_status to
+	// 'unpublished_by_admin' (public -> private, reversible, reason-required).
+	UnpublishTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error)
+	// LockTemplate sets a template's moderation_status to 'locked' (freezes
+	// edits + new interactions while content stays public).
+	LockTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error)
+	// SoftDeleteTemplate sets a template's moderation_status to 'soft_deleted'
+	// (hidden everywhere, 30-day restore window).
+	SoftDeleteTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error)
+	// RestoreTemplate returns a moderated template to 'normal' (visibility
+	// preserved); the prior moderation action is marked superseded.
+	RestoreTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error)
 }
 
 type adminServiceClient struct {
@@ -426,6 +442,46 @@ func (c *adminServiceClient) ResolveReportGroup(ctx context.Context, in *Resolve
 	return out, nil
 }
 
+func (c *adminServiceClient) UnpublishTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModerationActionResponse)
+	err := c.cc.Invoke(ctx, AdminService_UnpublishTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) LockTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModerationActionResponse)
+	err := c.cc.Invoke(ctx, AdminService_LockTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) SoftDeleteTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModerationActionResponse)
+	err := c.cc.Invoke(ctx, AdminService_SoftDeleteTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) RestoreTemplate(ctx context.Context, in *ModerationActionRequest, opts ...grpc.CallOption) (*ModerationActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModerationActionResponse)
+	err := c.cc.Invoke(ctx, AdminService_RestoreTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -502,6 +558,18 @@ type AdminServiceServer interface {
 	// ResolveReportGroup resolves all open reports of an item atomically as
 	// dismissed or actioned (409 when none are open).
 	ResolveReportGroup(context.Context, *ResolveReportGroupRequest) (*ResolveReportGroupResponse, error)
+	// UnpublishTemplate sets a template's moderation_status to
+	// 'unpublished_by_admin' (public -> private, reversible, reason-required).
+	UnpublishTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error)
+	// LockTemplate sets a template's moderation_status to 'locked' (freezes
+	// edits + new interactions while content stays public).
+	LockTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error)
+	// SoftDeleteTemplate sets a template's moderation_status to 'soft_deleted'
+	// (hidden everywhere, 30-day restore window).
+	SoftDeleteTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error)
+	// RestoreTemplate returns a moderated template to 'normal' (visibility
+	// preserved); the prior moderation action is marked superseded.
+	RestoreTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -598,6 +666,18 @@ func (UnimplementedAdminServiceServer) GetReportDetail(context.Context, *GetRepo
 }
 func (UnimplementedAdminServiceServer) ResolveReportGroup(context.Context, *ResolveReportGroupRequest) (*ResolveReportGroupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveReportGroup not implemented")
+}
+func (UnimplementedAdminServiceServer) UnpublishTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnpublishTemplate not implemented")
+}
+func (UnimplementedAdminServiceServer) LockTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LockTemplate not implemented")
+}
+func (UnimplementedAdminServiceServer) SoftDeleteTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SoftDeleteTemplate not implemented")
+}
+func (UnimplementedAdminServiceServer) RestoreTemplate(context.Context, *ModerationActionRequest) (*ModerationActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreTemplate not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -1142,6 +1222,78 @@ func _AdminService_ResolveReportGroup_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_UnpublishTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModerationActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UnpublishTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UnpublishTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UnpublishTemplate(ctx, req.(*ModerationActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_LockTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModerationActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).LockTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_LockTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).LockTemplate(ctx, req.(*ModerationActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_SoftDeleteTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModerationActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).SoftDeleteTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_SoftDeleteTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).SoftDeleteTemplate(ctx, req.(*ModerationActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_RestoreTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModerationActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).RestoreTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_RestoreTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).RestoreTemplate(ctx, req.(*ModerationActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1265,7 +1417,23 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ResolveReportGroup",
 			Handler:    _AdminService_ResolveReportGroup_Handler,
 		},
+		{
+			MethodName: "UnpublishTemplate",
+			Handler:    _AdminService_UnpublishTemplate_Handler,
+		},
+		{
+			MethodName: "LockTemplate",
+			Handler:    _AdminService_LockTemplate_Handler,
+		},
+		{
+			MethodName: "SoftDeleteTemplate",
+			Handler:    _AdminService_SoftDeleteTemplate_Handler,
+		},
+		{
+			MethodName: "RestoreTemplate",
+			Handler:    _AdminService_RestoreTemplate_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "admin.proto",
+	Metadata: "api/proto/v1/admin.proto",
 }

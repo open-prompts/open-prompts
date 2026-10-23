@@ -158,6 +158,31 @@ func (m *MockAdminRepository) ListWarningHistory(ctx context.Context, templateID
 	return args.Get(0).([]*models.WarningHistoryEntry), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockAdminRepository) SetModerationState(ctx context.Context, templateID, status, actorID, reason string) error {
+	args := m.Called(ctx, templateID, status, actorID, reason)
+	return args.Error(0)
+}
+
+func (m *MockAdminRepository) InsertModerationAction(ctx context.Context, a *models.ModerationAction) (string, error) {
+	args := m.Called(ctx, a)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockAdminRepository) MarkModerationActionSuperseded(ctx context.Context, templateID string) error {
+	args := m.Called(ctx, templateID)
+	return args.Error(0)
+}
+
+func (m *MockAdminRepository) SetSoftDeleteTimestamp(ctx context.Context, templateID string) error {
+	args := m.Called(ctx, templateID)
+	return args.Error(0)
+}
+
+func (m *MockAdminRepository) ClearSoftDeleteTimestamp(ctx context.Context, templateID string) error {
+	args := m.Called(ctx, templateID)
+	return args.Error(0)
+}
+
 // MockAPIKeyLister is a mock implementation of service.APIKeyLister.
 type MockAPIKeyLister struct {
 	mock.Mock

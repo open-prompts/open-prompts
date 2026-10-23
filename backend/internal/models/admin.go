@@ -64,6 +64,11 @@ type AdminTemplate struct {
 	Category         string         `json:"category"`
 	ContentWarnings  pq.StringArray `json:"content_warnings"`
 	LockedWarnings   pq.StringArray `json:"locked_warnings"`
+	ModerationStatus string         `json:"moderation_status"`
+	ModeratedAt      sql.NullTime   `json:"moderated_at"`
+	ModeratedBy      string         `json:"moderated_by"`
+	ModerationReason string         `json:"moderation_reason"`
+	DeletedAt        sql.NullTime   `json:"deleted_at"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 }

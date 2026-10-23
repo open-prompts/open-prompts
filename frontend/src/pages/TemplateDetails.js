@@ -37,6 +37,8 @@ import RelatedRail from '../components/related/RelatedRail';
 import MoreFromAuthorRow from '../components/related/MoreFromAuthorRow';
 import RatingWidget from '../components/RatingWidget';
 import RatingHistogram from '../components/RatingHistogram';
+import OwnerModerationBanner from '../components/moderation/OwnerModerationBanner';
+import LockBanner from '../components/moderation/LockBanner';
 import { usePageAnnouncement } from '../utils/a11y';
 import './TemplateDetails.scss';
 import VersionSelect from '../components/VersionSelect';
@@ -763,6 +765,14 @@ const TemplateDetails = () => {
             </button>
           </div>
         )}
+        {isOwner && ['unpublished_by_admin', 'locked', 'soft_deleted'].includes(template.moderation_status) && (
+          <OwnerModerationBanner
+            status={template.moderation_status}
+            reason={template.moderation_reason}
+            onEdit={() => setIsEditingMetadata(true)}
+          />
+        )}
+        {!isOwner && template.moderation_status === 'locked' && <LockBanner />}
         <div className="header-actions">
           <div className="title-section">
             <div className="title-row">

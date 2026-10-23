@@ -147,10 +147,12 @@ func (r *templateRepository) Get(ctx context.Context, id string, currentUserID s
 			return nil, fmt.Errorf("template not found")
 		}
 	}
-	// in_review/rejected templates are visible only to their owner (admins
-	// use the admin repository, which does not filter). 404-equivalent for
-	// everyone else — no status leak.
-	if t.ModerationStatus != "normal" && t.OwnerID != currentUserID {
+	// Gated templates (in_review/rejected/unpublished_by_admin/soft_deleted)
+	// are visible only to their owner (admins use the admin repository,
+	// which does not filter). 404-equivalent for everyone else — no status
+	// leak. The locked state is intentionally NOT hidden — locked templates
+	// stay publicly visible (FR-3).
+	if t.ModerationStatus != "normal" && t.ModerationStatus != "locked" && t.OwnerID != currentUserID {
 		return nil, fmt.Errorf("template not found")
 	}
 	return &t, nil
@@ -265,10 +267,12 @@ func buildTemplateConditions(filters map[string]interface{}, args []interface{},
 	if val, ok := filters["visibility"]; !ok || val == "" || val == "public" {
 		query += " AND NOT EXISTS (SELECT 1 FROM users bu WHERE bu.id = t.owner_id AND bu.status = 'banned')"
 		// Moderation filter mirrors the banned-owner pattern: gated
-		// (in_review/rejected) templates are hidden from every public
-		// stream except their owner's. $1 is current_user_id ("" for
-		// anonymous), so the bypass never matches for anonymous callers.
-		query += " AND (t.moderation_status = 'normal' OR t.owner_id = $1)"
+		// (in_review/rejected/unpublished_by_admin/soft_deleted) templates
+		// are hidden from every public stream except their owner's. $1 is
+		// current_user_id ("" for anonymous), so the bypass never matches
+		// for anonymous callers. The locked state is intentionally NOT
+		// hidden — locked templates stay publicly visible (FR-3).
+		query += " AND (t.moderation_status IN ('normal', 'locked') OR t.owner_id = $1)"
 		// exclude_warned applies to the public stream only (FR-6): when
 		// true, drop templates carrying any taxonomy warning. The taxonomy
 		// array is a bound parameter, never inlined (constraint 7).
@@ -748,6 +752,7 @@ func relatedQuery(templateID string, tpl *models.Template, currentUserID string,
 		  AND t.id != $1
 		  AND NOT EXISTS (SELECT 1 FROM users bu
 		                  WHERE bu.id = t.owner_id AND bu.status = 'banned')
+		  AND (t.moderation_status IN ('normal', 'locked') OR t.owner_id = $2)
 		ORDER BY
 		    (CASE WHEN t.category = $3 THEN 3 ELSE 0 END
 		    + CASE WHEN t.tags && $4 THEN 2 * cardinality(ARRAY(
@@ -812,6 +817,7 @@ func authorQuery(templateID, ownerID, currentUserID string, limit int) (string, 
 		WHERE t.owner_id = $3
 		  AND t.visibility = 'public'
 		  AND t.id != $1
+		  AND (t.moderation_status IN ('normal', 'locked') OR t.owner_id = $2)
 		ORDER BY t.like_count DESC, t.updated_at DESC, t.id ASC
 		LIMIT $4
 	`

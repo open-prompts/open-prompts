@@ -1,0 +1,34 @@
+.mod-owner-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+
+  &--unpublished {
+    background: var(--warning-bg, #fef3c7);
+    color: var(--warning-fg, #92400e);
+  }
+
+  &--locked {
+    background: var(--warning-bg, #fef3c7);
+    color: var(--warning-fg, #92400e);
+  }
+
+  &--removed {
+    background: var(--danger-bg, #fee2e2);
+    color: var(--danger-fg, #991b1b);
+  }
+
+  &__cta {
+    margin-left: auto;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+  }
+}

@@ -1,0 +1,44 @@
+.admin-action-reason-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  &__consequences {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--text-secondary, #4b5563);
+    font-size: 0.875rem;
+    li + li {
+      margin-top: 0.25rem;
+    }
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  textarea,
+  input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: 6px;
+    font: inherit;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+
+  &__hint {
+    color: var(--danger, #dc2626);
+  }
+
+  &__count {
+    color: var(--text-muted, #6b7280);
+  }
+}

@@ -42,6 +42,9 @@ backend:
     appealMaxOpen: "5"
     # Content reporting: max report submissions per user per hour
     reportRatePerHour: "20"
+    # Template moderation: per-admin write rate limit + soft-delete window
+    modActionRatePerMinute: "10"
+    modSoftDeleteWindowDays: "30"
 
 frontend:
   replicaCount: 1

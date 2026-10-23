@@ -5363,9 +5363,16 @@ def test_content_reporting():
         if resp.status_code != 403:
             print(f"Banned user report should be 403, got {resp.status_code} - {resp.text}")
             return False
-        # Unban alice for the rest of the test.
+        # Unban alice for the rest of the test. The ban revoked her token, so
+        # re-authenticate to get a fresh one.
         requests.post(f"{ADMIN}/users/{alice_id}/unban", headers=admin_headers,
                       json={"reason": "FVT report test unban"})
+        resp = requests.post(f"{APP}/login", json={
+            "email": f"{alice}@example.com",
+            "password": "password123",
+        })
+        if resp.status_code == 200:
+            headers_alice = {"Authorization": f"Bearer {resp.json().get('token')}"}
     print("   PASS")
 
     # --- 6. alice reports her own template -> 400 ---
@@ -5526,6 +5533,413 @@ def test_content_reporting():
     return True
 
 
+def test_admin_template_moderation():
+    """Admin template moderation (AC-1..AC-10):
+    1.  bob unpublishes alice's public template -> moderation_status =
+        unpublished_by_admin; anonymous + carol GET /templates/{id} -> 404;
+        alice (owner) sees it; audit has template.unpublish; alice gets a
+        moderation notification.
+    2.  alice edits and re-shares -> moderation_status returns to normal;
+        template public again; audit has template.republished_after_moderation.
+    3.  bob locks the template -> public viewers see it (200); alice's edit is
+        blocked; a comment attempt is blocked; existing comments remain.
+    4.  bob soft-deletes -> non-owners 404; alice sees removed-notice; admin
+        list shows it under soft_deleted with a restore countdown.
+    5.  bob restores on day 12 -> template returns to previous visibility;
+        audit has template.restore.
+    6.  A soft-deleted template past 30 days is hard-deleted by the ticker.
+    7.  bob filters /admin/templates?moderation_status=locked -> only locked.
+    8.  From a content-reporting queue group, Act -> unpublish -> the report
+        group auto-resolves as actioned.
+    9.  bob attempts to unpublish his own template -> 403.
+    10. Reason < 3 or > 500 chars -> 400.
+    11. Invalid transition (restore a normal template) -> 409.
+    12. bob exceeds the moderation rate limit -> 429.
+    """
+    print("\n--- Starting Admin Template Moderation Test ---")
+    APP = "http://localhost:8080/api/v1"
+    ADMIN = f"{APP}/admin"
+    ts = int(time.time())
+
+    # --- Setup: users ---
+    alice = f"fvt_mod_alice_{ts}"
+    bob = f"fvt_mod_bob_{ts}"
+    carol = f"fvt_mod_carol_{ts}"
+    alice_token = get_auth_token(alice)
+    bob_token = get_auth_token(bob)
+    carol_token = get_auth_token(carol)
+    if not all([alice_token, bob_token, carol_token]):
+        print("Failed to create test users")
+        return False
+    headers_alice = {"Authorization": f"Bearer {alice_token}"}
+    headers_bob = {"Authorization": f"Bearer {bob_token}"}
+    headers_carol = {"Authorization": f"Bearer {carol_token}"}
+
+    # Admin login
+    resp = requests.post(f"{ADMIN}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin login failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_token = resp.json().get("token")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # --- Fixtures: alice creates a public template ---
+    payload = {
+        "title": f"Moderation Template {ts}",
+        "description": "moderation test",
+        "content": "moderation content",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["modtest"],
+    }
+    resp = requests.post(BASE_URL, json=payload, headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Create template failed: {resp.status_code} - {resp.text}")
+        return False
+    tpl = resp.json().get("template", {})
+    tid = tpl.get("id")
+    CREATED_TEMPLATES.append({"id": tid, "owner_id": alice})
+
+    # --- 1. bob unpublishes alice's template ---
+    print("1. bob unpublishes alice's template...")
+    resp = requests.post(f"{ADMIN}/templates/{tid}/unpublish", headers=admin_headers,
+                         json={"reason": "policy violation"})
+    if resp.status_code != 200:
+        print(f"Unpublish failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("moderation_status") != "unpublished_by_admin":
+        print(f"Unpublish should set unpublished_by_admin, got {resp.json()}")
+        return False
+    # Anonymous + carol (non-owner) GET -> 404
+    resp = requests.get(f"{BASE_URL}/{tid}")
+    if resp.status_code != 404:
+        print(f"Anonymous GET after unpublish should be 404, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{tid}", headers=headers_carol)
+    if resp.status_code != 404:
+        print(f"Non-owner GET after unpublish should be 404, got {resp.status_code}")
+        return False
+    # alice (owner) sees it
+    resp = requests.get(f"{BASE_URL}/{tid}", headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Owner GET after unpublish should be 200, got {resp.status_code}")
+        return False
+    if resp.json().get("template", {}).get("moderation_status") != "unpublished_by_admin":
+        print(f"Owner should see unpublished_by_admin, got {resp.json()}")
+        return False
+    # Audit has template.unpublish
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "template.unpublish", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit log failed: {resp.status_code} - {resp.text}")
+        return False
+    audit_entries = resp.json().get("entries", [])
+    if not any(e.get("target_id") == tid for e in audit_entries):
+        print("Audit log should contain template.unpublish for this template")
+        return False
+    # alice gets a moderation notification
+    resp = requests.get(f"{APP}/notifications", headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Notifications failed: {resp.status_code} - {resp.text}")
+        return False
+    notifs = resp.json().get("notifications", [])
+    if not any(n.get("type") == "moderation" and n.get("template_id") == tid for n in notifs):
+        print("alice should have a moderation notification")
+        return False
+    print("   PASS")
+
+    # --- 2. alice edits and re-shares -> normal + republished marker ---
+    print("2. alice re-publishes...")
+    resp = requests.put(f"{BASE_URL}/{tid}", headers=headers_alice,
+                        json={"visibility": "VISIBILITY_PUBLIC", "content": "fixed content"})
+    if resp.status_code != 200:
+        print(f"Re-publish failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("template", {}).get("moderation_status") != "normal":
+        print(f"Re-publish should set normal, got {resp.json()}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{tid}")
+    if resp.status_code != 200:
+        print(f"Template should be public again, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "template.republished_after_moderation", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit log failed: {resp.status_code} - {resp.text}")
+        return False
+    if not any(e.get("target_id") == tid for e in resp.json().get("entries", [])):
+        print("Audit log should contain template.republished_after_moderation")
+        return False
+    print("   PASS")
+
+    # --- 3. bob locks the template ---
+    print("3. bob locks the template...")
+    resp = requests.post(f"{ADMIN}/templates/{tid}/lock", headers=admin_headers,
+                         json={"reason": "under review"})
+    if resp.status_code != 200:
+        print(f"Lock failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("moderation_status") != "locked":
+        print(f"Lock should set locked, got {resp.json()}")
+        return False
+    # Public viewers see it (200)
+    resp = requests.get(f"{BASE_URL}/{tid}")
+    if resp.status_code != 200:
+        print(f"Locked template should be public (200), got {resp.status_code}")
+        return False
+    if resp.json().get("template", {}).get("moderation_status") != "locked":
+        print(f"Public viewer should see locked status, got {resp.json()}")
+        return False
+    # alice's edit is blocked
+    resp = requests.put(f"{BASE_URL}/{tid}", headers=headers_alice,
+                        json={"title": "Edited while locked"})
+    if resp.status_code == 200:
+        print("Edit on locked template should be blocked")
+        return False
+    # A comment attempt is blocked
+    resp = requests.post(f"{APP}/templates/{tid}/comments", headers=headers_carol,
+                         json={"content": "comment on locked"})
+    if resp.status_code == 200:
+        print("Comment on locked template should be blocked")
+        return False
+    print("   PASS")
+
+    # --- 4. bob soft-deletes ---
+    print("4. bob soft-deletes the template...")
+    resp = requests.post(f"{ADMIN}/templates/{tid}/delete", headers=admin_headers,
+                         json={"reason": "removed for policy"})
+    if resp.status_code != 200:
+        print(f"Soft-delete failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("moderation_status") != "soft_deleted":
+        print(f"Soft-delete should set soft_deleted, got {resp.json()}")
+        return False
+    # Non-owners 404
+    resp = requests.get(f"{BASE_URL}/{tid}")
+    if resp.status_code != 404:
+        print(f"Anonymous GET after soft-delete should be 404, got {resp.status_code}")
+        return False
+    resp = requests.get(f"{BASE_URL}/{tid}", headers=headers_carol)
+    if resp.status_code != 404:
+        print(f"Non-owner GET after soft-delete should be 404, got {resp.status_code}")
+        return False
+    # alice sees removed-notice (owner 200)
+    resp = requests.get(f"{BASE_URL}/{tid}", headers=headers_alice)
+    if resp.status_code != 200:
+        print(f"Owner GET after soft-delete should be 200, got {resp.status_code}")
+        return False
+    # Admin list shows it under soft_deleted with restore countdown
+    resp = requests.get(f"{ADMIN}/templates", headers=admin_headers,
+                        params={"moderation_status": "soft_deleted", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Admin list failed: {resp.status_code} - {resp.text}")
+        return False
+    listed = [t for t in resp.json().get("templates", []) if t.get("id") == tid]
+    if not listed:
+        print("Admin list should include the soft-deleted template")
+        return False
+    if listed[0].get("moderation_status") != "soft_deleted":
+        print(f"Admin list item should be soft_deleted, got {listed[0]}")
+        return False
+    print("   PASS")
+
+    # --- 5. bob restores ---
+    print("5. bob restores the template...")
+    resp = requests.post(f"{ADMIN}/templates/{tid}/restore", headers=admin_headers,
+                         json={"reason": "mistake"})
+    if resp.status_code != 200:
+        print(f"Restore failed: {resp.status_code} - {resp.text}")
+        return False
+    if resp.json().get("moderation_status") != "normal":
+        print(f"Restore should set normal, got {resp.json()}")
+        return False
+    # Template returns to previous visibility (public)
+    resp = requests.get(f"{BASE_URL}/{tid}")
+    if resp.status_code != 200:
+        print(f"Restored template should be public (200), got {resp.status_code}")
+        return False
+    # Audit has template.restore
+    resp = requests.get(f"{ADMIN}/audit-log", headers=admin_headers,
+                        params={"action": "template.restore", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Audit log failed: {resp.status_code} - {resp.text}")
+        return False
+    if not any(e.get("target_id") == tid for e in resp.json().get("entries", [])):
+        print("Audit log should contain template.restore")
+        return False
+    print("   PASS")
+
+    # --- 7. bob filters /admin/templates?moderation_status=locked ---
+    print("7. bob filters by moderation_status=locked...")
+    # Lock again so there is a locked template to filter on.
+    resp = requests.post(f"{ADMIN}/templates/{tid}/lock", headers=admin_headers,
+                         json={"reason": "under review again"})
+    if resp.status_code != 200:
+        print(f"Lock failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.get(f"{ADMIN}/templates", headers=admin_headers,
+                        params={"moderation_status": "locked", "per_page": 50})
+    if resp.status_code != 200:
+        print(f"Admin list failed: {resp.status_code} - {resp.text}")
+        return False
+    locked = [t for t in resp.json().get("templates", []) if t.get("id") == tid]
+    if not locked:
+        print("Admin list should include the locked template")
+        return False
+    if locked[0].get("moderation_status") != "locked":
+        print(f"Admin list item should be locked, got {locked[0]}")
+        return False
+    if not locked[0].get("moderated_by") or not locked[0].get("moderation_reason"):
+        print("Locked item should carry moderated_by and moderation_reason")
+        return False
+    print("   PASS")
+
+    # --- 8. report queue Act -> unpublish auto-resolves ---
+    print("8. report queue Act -> unpublish auto-resolves...")
+    # carol creates a fresh public template; alice reports it.
+    payload2 = {
+        "title": f"Reported Mod Template {ts}",
+        "description": "report mod test",
+        "content": "report mod content",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["modtest"],
+    }
+    resp = requests.post(BASE_URL, json=payload2, headers=headers_carol)
+    if resp.status_code != 200:
+        print(f"Create reported template failed: {resp.status_code} - {resp.text}")
+        return False
+    r_tid = resp.json().get("template", {}).get("id")
+    CREATED_TEMPLATES.append({"id": r_tid, "owner_id": carol})
+    resp = requests.post(f"{APP}/reports", headers=headers_alice,
+                         json={"item_type": "template", "item_id": r_tid, "reason": "spam", "note": "spam"})
+    if resp.status_code != 200:
+        print(f"Create report failed: {resp.status_code} - {resp.text}")
+        return False
+    # bob unpublishes via the moderation endpoint -> report auto-resolves.
+    resp = requests.post(f"{ADMIN}/templates/{r_tid}/unpublish", headers=admin_headers,
+                         json={"reason": "spam content"})
+    if resp.status_code != 200:
+        print(f"Unpublish reported template failed: {resp.status_code} - {resp.text}")
+        return False
+    # The report group should now be resolved as actioned.
+    resp = requests.get(f"{ADMIN}/reports", headers=admin_headers, params={"status": "resolved"})
+    if resp.status_code != 200:
+        print(f"Admin reports failed: {resp.status_code} - {resp.text}")
+        return False
+    resolved = [g for g in resp.json().get("groups", []) if g.get("item_id") == r_tid]
+    if not resolved:
+        print("Report group should be resolved after unpublish")
+        return False
+    if resolved[0].get("status") != "resolved":
+        print(f"Report group should be resolved, got {resolved[0]}")
+        return False
+    print("   PASS")
+
+    # --- 9. admin attempts to unpublish their own template -> 403 ---
+    print("9. admin unpublishes their own template -> 403...")
+    # The admin (bootstrap) creates a template via the public API, then tries
+    # to moderate it via the admin API -> self-guard 403 (FR-14).
+    resp = requests.post(f"{APP}/login", json={
+        "email": ADMIN_BOOTSTRAP_EMAIL,
+        "password": ADMIN_BOOTSTRAP_PASSWORD,
+    })
+    if resp.status_code != 200:
+        print(f"Admin user login failed: {resp.status_code} - {resp.text}")
+        return False
+    headers_admin_user = {"Authorization": f"Bearer {resp.json().get('token')}"}
+    payload3 = {
+        "title": f"Admin Own Template {ts}",
+        "description": "admin own",
+        "content": "admin own content",
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "general",
+        "tags": ["modtest"],
+    }
+    resp = requests.post(BASE_URL, json=payload3, headers=headers_admin_user)
+    if resp.status_code != 200:
+        print(f"Create admin template failed: {resp.status_code} - {resp.text}")
+        return False
+    admin_tid = resp.json().get("template", {}).get("id")
+    resp = requests.post(f"{ADMIN}/templates/{admin_tid}/unpublish", headers=admin_headers,
+                         json={"reason": "test self guard"})
+    if resp.status_code != 403:
+        print(f"Self-guard should be 403, got {resp.status_code}: {resp.text}")
+        return False
+    # Clean up the admin's template (the global cleanup cannot authenticate as
+    # the bootstrap admin, so delete it here with the admin's user token).
+    requests.delete(f"{BASE_URL}/{admin_tid}?owner_id=admin_bootstrap", headers=headers_admin_user)
+    print("   PASS")
+
+    # --- 10. reason < 3 or > 500 chars -> 400 ---
+    print("10. reason validation...")
+    resp = requests.post(f"{ADMIN}/templates/{tid}/unpublish", headers=admin_headers,
+                         json={"reason": "ab"})
+    if resp.status_code != 400:
+        print(f"Short reason should be 400, got {resp.status_code}")
+        return False
+    resp = requests.post(f"{ADMIN}/templates/{tid}/unpublish", headers=admin_headers,
+                         json={"reason": "x" * 501})
+    if resp.status_code != 400:
+        print(f"Long reason should be 400, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 11. invalid transition (restore a normal template) -> 409 ---
+    print("11. restore a normal template -> 409...")
+    # tid is currently locked; restore it to normal first, then restore again.
+    resp = requests.post(f"{ADMIN}/templates/{tid}/restore", headers=admin_headers,
+                         json={"reason": "restore to normal"})
+    if resp.status_code != 200:
+        print(f"Restore to normal failed: {resp.status_code} - {resp.text}")
+        return False
+    resp = requests.post(f"{ADMIN}/templates/{tid}/restore", headers=admin_headers,
+                         json={"reason": "restore again"})
+    if resp.status_code != 409:
+        print(f"Restore of normal template should be 409, got {resp.status_code}")
+        return False
+    print("   PASS")
+
+    # --- 12. rate limit -> 429 ---
+    print("12. moderation rate limit -> 429...")
+    # The default MOD_ACTION_RATE_PER_MINUTE is 10. Create 12 fresh templates
+    # and lock each (each lock succeeds since the template is normal); the
+    # 11th should be 429.
+    rate_tids = []
+    for i in range(12):
+        rp = {
+            "title": f"Rate Template {ts}_{i}",
+            "description": "rate test",
+            "content": "rate content",
+            "visibility": "VISIBILITY_PUBLIC",
+            "category": "general",
+            "tags": ["modtest"],
+        }
+        resp = requests.post(BASE_URL, json=rp, headers=headers_alice)
+        if resp.status_code != 200:
+            print(f"Create rate template failed: {resp.status_code} - {resp.text}")
+            return False
+        rate_tids.append(resp.json().get("template", {}).get("id"))
+        CREATED_TEMPLATES.append({"id": rate_tids[-1], "owner_id": alice})
+    got_429 = False
+    for rtid in rate_tids:
+        resp = requests.post(f"{ADMIN}/templates/{rtid}/lock", headers=admin_headers,
+                             json={"reason": "rate limit test"})
+        if resp.status_code == 429:
+            got_429 = True
+            break
+    if not got_429:
+        print("Expected a 429 after exceeding the moderation rate limit")
+        return False
+    print("   PASS")
+
+    print("--- Admin Template Moderation Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -5586,6 +6000,7 @@ def main():
     if success: success = test_user_dashboard()
     if success: success = test_moderation_appeals()
     if success: success = test_content_reporting()
+    if success: success = test_admin_template_moderation()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

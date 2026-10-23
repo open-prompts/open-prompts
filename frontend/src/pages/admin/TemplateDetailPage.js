@@ -6,6 +6,7 @@ import Badge from '../../components/admin/Badge';
 import ErrorBanner from '../../components/admin/ErrorBanner';
 import EmptyState from '../../components/admin/EmptyState';
 import WarningActionsPanel from '../../components/warnings/WarningActionsPanel';
+import ModerationPanel from '../../components/admin/ModerationPanel';
 import ExportButton from '../../components/ExportButton';
 import { formatDate } from '../../utils/adminFormat';
 import './TemplateDetailPage.scss';
@@ -171,6 +172,8 @@ const TemplateDetailPage = () => {
           setLockedWarnings(lw);
         }}
       />
+
+      <ModerationPanel template={template} onChanged={load} />
     </div>
   );
 };

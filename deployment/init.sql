@@ -938,6 +938,99 @@ BEGIN
 END $$;
 
 -- -----------------------------------------------------------------------------
+-- Feature: admin-template-moderation
+-- Description: Graduated, auditable enforcement on templates — Unpublish
+--              (public -> private, reversible), Lock (freeze edits + new
+--              interactions while content stays public), Soft delete (hidden
+--              everywhere, 30-day restore window, then hard-delete cascade).
+--              Populates the moderation_actions table (defined by
+--              moderation-appeals); restore marks the prior action superseded.
+-- -----------------------------------------------------------------------------
+
+-- Widen the moderation_status CHECK (guarded, idempotent). The column and its
+-- original CHECK were introduced by pre-publication-review.
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'templates'::regclass AND conname = 'templates_moderation_status_check';
+    IF def IS NOT NULL AND def NOT LIKE '%unpublished_by_admin%' THEN
+        ALTER TABLE templates DROP CONSTRAINT templates_moderation_status_check;
+        ALTER TABLE templates ADD CONSTRAINT templates_moderation_status_check
+            CHECK (moderation_status IN ('normal', 'in_review', 'rejected',
+                                         'locked', 'unpublished_by_admin', 'soft_deleted'));
+    END IF;
+END $$;
+
+-- Admin-only moderation metadata (NULL until first action).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='moderated_at') THEN
+        ALTER TABLE templates ADD COLUMN moderated_at TIMESTAMPTZ;
+        ALTER TABLE templates ADD COLUMN moderated_by TEXT;
+        ALTER TABLE templates ADD COLUMN moderation_reason TEXT;
+        COMMENT ON COLUMN templates.moderated_at IS 'Timestamp of the last moderation action';
+        COMMENT ON COLUMN templates.moderated_by IS 'Admin id of the last moderation action';
+        COMMENT ON COLUMN templates.moderation_reason IS 'Reason of the last moderation action (shown to owner + admins only)';
+    END IF;
+END $$;
+
+-- Soft-delete restore-window start (NULL until soft-deleted). The 30-day
+-- hard-delete ticker scans on this timestamp.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='templates' AND column_name='deleted_at') THEN
+        ALTER TABLE templates ADD COLUMN deleted_at TIMESTAMPTZ;
+        COMMENT ON COLUMN templates.deleted_at IS 'Soft-delete time; starts the 30-day restore window (NULL otherwise)';
+    END IF;
+END $$;
+
+-- Widen admin_audit_logs.action CHECK for moderation actions (guarded).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'admin_audit_logs'::regclass AND conname = 'admin_audit_logs_action_check';
+    IF def IS NOT NULL AND def NOT LIKE '%template.unpublish%' THEN
+        ALTER TABLE admin_audit_logs DROP CONSTRAINT admin_audit_logs_action_check;
+        ALTER TABLE admin_audit_logs ADD CONSTRAINT admin_audit_logs_action_check
+            CHECK (action IN ('ban', 'unban', 'role_change', 'delete_comment',
+                              'review_approve', 'review_reject', 'settings_change',
+                              'template.warning_add', 'template.warning_remove',
+                              'appeal.create', 'appeal.review', 'appeal.resolve',
+                              'report.dismiss', 'report.actioned',
+                              'template.unpublish', 'template.lock',
+                              'template.soft_delete', 'template.restore',
+                              'template.republished_after_moderation'));
+    END IF;
+END $$;
+
+-- Widen notifications.type CHECK for the moderation event type (guarded).
+DO $$
+DECLARE
+    def TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO def
+    FROM pg_constraint
+    WHERE conrelid = 'notifications'::regclass AND conname = 'notifications_type_check';
+    IF def IS NOT NULL AND def NOT LIKE '%moderation%' THEN
+        ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+        ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+            CHECK (type IN ('like', 'favorite', 'fork', 'comment',
+                            'template_approved', 'template_rejected',
+                            'template_warning_changed', 'follow',
+                            'appeal_resolved', 'comment_reply',
+                            'moderation'));
+    END IF;
+END $$;
+
+-- -----------------------------------------------------------------------------
 -- Feature: comment-replies-threads
 -- Description: Single-level threading on template_comments. reply_count is
 --              maintained transactionally on reply insert/delete; comment_count

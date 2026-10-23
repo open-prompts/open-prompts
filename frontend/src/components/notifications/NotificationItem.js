@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { HeartIcon, StarIcon, ForkIcon, CheckIcon, AlertIcon, ReplyIcon } from '../ui/Icons';
+import { HeartIcon, StarIcon, ForkIcon, CheckIcon, AlertIcon, ReplyIcon, LockIcon } from '../ui/Icons';
 import { formatRelativeTime } from '../../utils/time';
 
 const EVENT_ICONS = {
@@ -12,6 +12,7 @@ const EVENT_ICONS = {
   template_warning_changed: { Icon: AlertIcon, className: 'event-icon-warning' },
   appeal_resolved: { Icon: CheckIcon, className: 'event-icon-approved' },
   comment_reply: { Icon: ReplyIcon, className: 'event-icon-reply' },
+  moderation: { Icon: LockIcon, className: 'event-icon-moderation' },
 };
 
 /**
@@ -38,9 +39,19 @@ const NotificationItem = ({ notification, onOpen, onMarkRead, onDelete, compact 
   const isReviewDecision = n.type === 'template_approved' || n.type === 'template_rejected';
   const isWarningChange = n.type === 'template_warning_changed';
   const isAppealResolved = n.type === 'appeal_resolved';
+  const isModeration = n.type === 'moderation';
 
   let sentence;
-  if (isAppealResolved) {
+  if (isModeration) {
+    // The actor_display_name slot carries the action type
+    // (unpublish|lock|soft_delete|restore); the snippet carries the reason.
+    const action = n.actor_display_name || '';
+    sentence = t(`mod.notif.${action}`, {
+      title: n.template_title,
+      reason: n.snippet || '',
+      defaultValue: `Your template "${n.template_title}" was moderated`,
+    });
+  } else if (isAppealResolved) {
     // The actor_display_name slot carries a JSON payload
     // {"outcome":"...","note":"...","appeal_id":"..."}.
     let payload = {};

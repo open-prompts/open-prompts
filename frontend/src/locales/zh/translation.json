@@ -1162,5 +1162,79 @@
     "withdraw": "撤回举报",
     "withdrawConfirm": "撤回您的举报？",
     "rateLimited": "您最近已提交多次举报 —— 请稍后再试。"
+  },
+  "mod": {
+    "panel": {
+      "title": "审核",
+      "status": "当前状态"
+    },
+    "status": {
+      "normal": "正常",
+      "locked": "已锁定",
+      "unpublished_by_admin": "已被管理员下架",
+      "soft_deleted": "已移除",
+      "in_review": "审核中",
+      "rejected": "已拒绝"
+    },
+    "action": {
+      "unpublish": "下架",
+      "lock": "锁定",
+      "delete": "删除",
+      "restore": "恢复"
+    },
+    "modal": {
+      "unpublish": {
+        "title": "下架此模板？"
+      },
+      "lock": {
+        "title": "锁定此模板？"
+      },
+      "delete": {
+        "title": "删除此模板？"
+      },
+      "restore": {
+        "title": "恢复此模板？"
+      },
+      "consequence": {
+        "public": "从公开页面移除（首页、搜索、嵌入、API）",
+        "ownerKeeps": "所有者仍可访问并编辑",
+        "frozen": "编辑和新的互动将被冻结",
+        "notified": "所有者会收到您的理由通知",
+        "reversible": "可逆：可随时恢复",
+        "window": "在所有地方隐藏；30 天恢复窗口"
+      },
+      "reason": "理由（必填，所有者可见）",
+      "typeTitle": "输入模板标题以确认",
+      "daysLeft_one": "剩余 {{count}} 天",
+      "daysLeft_other": "剩余 {{count}} 天"
+    },
+    "history": {
+      "title": "审核历史",
+      "empty": "暂无审核操作"
+    },
+    "selfGuard": "您不能审核自己的模板",
+    "banner": {
+      "unpublished": "管理员已下架此模板：{{reason}}。您可以编辑后重新分享。",
+      "locked": "此模板已被审核员锁定。审核期间编辑和新的互动将被禁用。",
+      "removed": "此模板已被审核员移除：{{reason}}。如果您认为这是误判，请通过通知回复或联系支持。",
+      "editCta": "编辑模板"
+    },
+    "lock": {
+      "public": "此模板已被审核员锁定",
+      "blocked": "此模板已被审核员锁定"
+    },
+    "notif": {
+      "unpublish": "您的模板“{{title}}”已被下架：{{reason}}",
+      "lock": "您的模板“{{title}}”已被锁定：{{reason}}",
+      "soft_delete": "您的模板“{{title}}”已被移除：{{reason}}",
+      "restore": "您的模板“{{title}}”已恢复"
+    },
+    "filter": {
+      "status": "状态",
+      "empty": "没有匹配的模板"
+    },
+    "toast": {
+      "actioned": "模板已下架；举报已处理"
+    }
   }
 }

@@ -652,6 +652,96 @@ func TestTemplateMutationAuthz(t *testing.T) {
 	})
 }
 
+func TestUpdateTemplateRepublishMarker(t *testing.T) {
+	t.Run("RepublishAfterAdminUnpublishWritesAudit", func(t *testing.T) {
+		mockTemplateRepo := new(MockTemplateRepository)
+		mockAdmin := new(MockAdminRepository)
+		svc := NewPromptService(new(MockPromptRepository), mockTemplateRepo, new(MockTemplateVersionRepository), &MockTemplateAliasRepository{}, nil, nil, nil, nil)
+		svc.SetAdminRepo(mockAdmin)
+
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{
+				ID:               "t_1",
+				OwnerID:          "owner_1",
+				Visibility:       "private",
+				ModerationStatus: "unpublished_by_admin",
+			}, nil
+		}
+		mockTemplateRepo.UpdateFunc = func(ctx context.Context, tpl *models.Template) error {
+			return nil
+		}
+		mockAdmin.On("InsertAuditLog", mock.Anything, mock.MatchedBy(func(e *models.AdminAuditLog) bool {
+			return e.Action == "template.republished_after_moderation" && e.TargetID == "t_1"
+		})).Return(nil).Once()
+
+		ctx := ContextWithUserID(context.Background(), "owner_1")
+		_, err := svc.UpdateTemplate(ctx, &pb.UpdateTemplateRequest{
+			TemplateId: "t_1",
+			Visibility: pb.Visibility_VISIBILITY_PUBLIC,
+			Content:    "new content",
+		})
+		assert.NoError(t, err)
+		mockAdmin.AssertExpectations(t)
+	})
+
+	t.Run("RepublishAuditErrorLogged", func(t *testing.T) {
+		mockTemplateRepo := new(MockTemplateRepository)
+		mockAdmin := new(MockAdminRepository)
+		svc := NewPromptService(new(MockPromptRepository), mockTemplateRepo, new(MockTemplateVersionRepository), &MockTemplateAliasRepository{}, nil, nil, nil, nil)
+		svc.SetAdminRepo(mockAdmin)
+
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{
+				ID:               "t_1",
+				OwnerID:          "owner_1",
+				Visibility:       "private",
+				ModerationStatus: "unpublished_by_admin",
+			}, nil
+		}
+		mockTemplateRepo.UpdateFunc = func(ctx context.Context, tpl *models.Template) error {
+			return nil
+		}
+		mockAdmin.On("InsertAuditLog", mock.Anything, mock.Anything).Return(assert.AnError).Once()
+
+		ctx := ContextWithUserID(context.Background(), "owner_1")
+		_, err := svc.UpdateTemplate(ctx, &pb.UpdateTemplateRequest{
+			TemplateId: "t_1",
+			Visibility: pb.Visibility_VISIBILITY_PUBLIC,
+			Content:    "new content",
+		})
+		assert.NoError(t, err)
+		mockAdmin.AssertExpectations(t)
+	})
+
+	t.Run("NoMarkerWhenNotUnpublished", func(t *testing.T) {
+		mockTemplateRepo := new(MockTemplateRepository)
+		mockAdmin := new(MockAdminRepository)
+		svc := NewPromptService(new(MockPromptRepository), mockTemplateRepo, new(MockTemplateVersionRepository), &MockTemplateAliasRepository{}, nil, nil, nil, nil)
+		svc.SetAdminRepo(mockAdmin)
+
+		mockTemplateRepo.GetFunc = func(ctx context.Context, id, currentUserID string) (*models.Template, error) {
+			return &models.Template{
+				ID:               "t_1",
+				OwnerID:          "owner_1",
+				Visibility:       "private",
+				ModerationStatus: "normal",
+			}, nil
+		}
+		mockTemplateRepo.UpdateFunc = func(ctx context.Context, tpl *models.Template) error {
+			return nil
+		}
+
+		ctx := ContextWithUserID(context.Background(), "owner_1")
+		_, err := svc.UpdateTemplate(ctx, &pb.UpdateTemplateRequest{
+			TemplateId: "t_1",
+			Visibility: pb.Visibility_VISIBILITY_PUBLIC,
+			Content:    "new content",
+		})
+		assert.NoError(t, err)
+		mockAdmin.AssertNotCalled(t, "InsertAuditLog", mock.Anything, mock.Anything)
+	})
+}
+
 func TestAliasMutationAuthz(t *testing.T) {
 	mockTemplateRepo := new(MockTemplateRepository)
 	aliasRepo := &MockTemplateAliasRepository{}

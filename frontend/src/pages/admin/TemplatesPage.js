@@ -9,6 +9,8 @@ import Badge from '../../components/admin/Badge';
 import Pagination from '../../components/admin/Pagination';
 import EmptyState from '../../components/admin/EmptyState';
 import ErrorBanner from '../../components/admin/ErrorBanner';
+import StatusChip from '../../components/admin/StatusChip';
+import RestoreCountdown from '../../components/admin/RestoreCountdown';
 import { formatRelativeTime, formatNumber } from '../../utils/adminFormat';
 import './TemplatesPage.scss';
 
@@ -26,6 +28,7 @@ const TemplatesPage = () => {
   const ownerId = searchParams.get('owner_id') || '';
   const sort = searchParams.get('sort') || 'recently_updated';
   const warning = searchParams.get('warning') || '';
+  const moderationStatus = searchParams.get('moderation_status') || '';
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const perPage = Math.max(1, parseInt(searchParams.get('per_page') || '20', 10) || 20);
 
@@ -52,6 +55,7 @@ const TemplatesPage = () => {
       if (visibility) params.visibility = visibility;
       if (ownerId) params.owner_id = ownerId;
       if (warning) params.warning = warning;
+      if (moderationStatus) params.moderation_status = moderationStatus;
       const resp = await getAdminTemplates(params);
       setData(resp.data);
     } catch (err) {
@@ -59,14 +63,14 @@ const TemplatesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [q, visibility, ownerId, sort, warning, page, perPage]);
+  }, [q, visibility, ownerId, sort, warning, moderationStatus, page, perPage]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const lang = i18n.language || 'en';
-  const hasFilters = q || visibility || ownerId || warning;
+  const hasFilters = q || visibility || ownerId || warning || moderationStatus;
 
   const columns = [
     {
@@ -92,6 +96,18 @@ const TemplatesPage = () => {
         <Badge tone={tpl.visibility === 'public' ? 'success' : 'neutral'}>
           {tpl.visibility === 'public' ? t('admin.templates.public') : t('admin.templates.private')}
         </Badge>
+      ),
+    },
+    {
+      key: 'moderation_status',
+      header: t('mod.filter.status'),
+      render: (tpl) => (
+        <div className="admin-templates__mod-cell">
+          <StatusChip status={tpl.moderation_status || 'normal'} />
+          {tpl.moderation_status === 'soft_deleted' && (
+            <RestoreCountdown deletedAt={tpl.deleted_at} />
+          )}
+        </div>
       ),
     },
     {
@@ -206,6 +222,18 @@ const TemplatesPage = () => {
             { value: 'sensitive', label: t('warnings.type.sensitive') },
           ]}
         />
+        <AdminSelect
+          label={t('mod.filter.status')}
+          value={moderationStatus}
+          onChange={(e) => setParam({ moderation_status: e.target.value })}
+          options={[
+            { value: '', label: t('admin.users.all') },
+            { value: 'normal', label: t('mod.status.normal') },
+            { value: 'locked', label: t('mod.status.locked') },
+            { value: 'unpublished_by_admin', label: t('mod.status.unpublished') },
+            { value: 'soft_deleted', label: t('mod.status.soft_deleted') },
+          ]}
+        />
       </div>
 
       {error && <ErrorBanner message={error} onRetry={load} />}
@@ -223,7 +251,7 @@ const TemplatesPage = () => {
               action={
                 <button
                   className="admin-btn admin-btn--ghost"
-                  onClick={() => setParam({ q: '', visibility: '', owner_id: '' })}
+                  onClick={() => setParam({ q: '', visibility: '', owner_id: '', moderation_status: '' })}
                 >
                   {t('admin.templates.clear_filters')}
                 </button>

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { CloseIcon } from '../ui/Icons';
-import { getAdminReportDetail, resolveReportGroup } from '../../services/adminApi';
+import { getAdminReportDetail, resolveReportGroup, unpublishTemplate } from '../../services/adminApi';
 import ReasonPopover from './ReasonPopover';
 import { formatRelativeTime } from '../../utils/adminFormat';
 import './ReviewDrawer.scss';
@@ -67,7 +67,14 @@ const ReviewDrawer = ({ open, itemType, itemId, onClose, onResolved }) => {
     setBusy(true);
     setError('');
     try {
-      await resolveReportGroup(itemType, itemId, { resolution, reason });
+      // "Act → unpublish template" (FR-10): call the real moderation
+      // unpublish endpoint, which auto-resolves the report group as
+      // actioned in the same transaction.
+      if (isTemplate && resolution === 'actioned') {
+        await unpublishTemplate(itemId, { reason });
+      } else {
+        await resolveReportGroup(itemType, itemId, { resolution, reason });
+      }
       setPopover(null);
       onResolved && onResolved();
       onClose();
