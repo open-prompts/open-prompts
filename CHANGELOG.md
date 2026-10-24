@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/open-prompts/open-prompts/compare/v1.35.1...v1.36.0) (2026-10-24)
+
+
+### Features
+
+* **notifications:** add notification preferences ([f04e467](https://github.com/open-prompts/open-prompts/commit/f04e4677a6ec2ec33fb38ca5eb0bb514567eed58))
+
 ## [1.35.1](https://github.com/open-prompts/open-prompts/compare/v1.35.0...v1.35.1) (2026-10-23)
 
 
