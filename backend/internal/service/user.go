@@ -42,13 +42,14 @@ type RedisStore interface {
 
 type UserService struct {
 	pb.UnimplementedUserServiceServer
-	Repo             repository.UserRepository
-	APIKeyRepo       *repository.APIKeyRepository
-	Redis            RedisStore
-	EmailSvc         EmailService
-	JWTSecret        []byte
-	FollowRepo       repository.FollowRepository
-	NotificationRepo repository.NotificationRepository
+	Repo                  repository.UserRepository
+	APIKeyRepo            *repository.APIKeyRepository
+	Redis                 RedisStore
+	EmailSvc              EmailService
+	JWTSecret             []byte
+	FollowRepo            repository.FollowRepository
+	NotificationRepo      repository.NotificationRepository
+	NotificationPrefsRepo repository.NotificationPreferencesRepository
 }
 
 func NewUserService(repo repository.UserRepository, apiKeyRepo *repository.APIKeyRepository, redisClient RedisStore, emailSvc EmailService, jwtSecret string) *UserService {
@@ -71,6 +72,12 @@ func (s *UserService) SetFollowRepo(repo repository.FollowRepository) {
 // (nil-safe; the follow notification hook is skipped when nil).
 func (s *UserService) SetNotificationRepo(repo repository.NotificationRepository) {
 	s.NotificationRepo = repo
+}
+
+// SetNotificationPrefsRepo wires the notification-preferences repository
+// after construction (nil-safe; the preference check fails open when nil).
+func (s *UserService) SetNotificationPrefsRepo(repo repository.NotificationPreferencesRepository) {
+	s.NotificationPrefsRepo = repo
 }
 
 func (s *UserService) SendVerificationCode(ctx context.Context, req *pb.SendVerificationCodeRequest) (*pb.SendVerificationCodeResponse, error) {
@@ -484,12 +491,121 @@ func (s *UserService) checkFollowRate(ctx context.Context, userID string) (int, 
 	return 0, true
 }
 
+// notifPrefsRatePerMinuteDef is the default max PATCH preference changes per
+// account per minute (anti-tamper).
+const notifPrefsRatePerMinuteDef = 30
+
+// checkPrefsRate enforces NOTIF_PREFS_RATE_PER_MINUTE using a fixed-window
+// counter in Redis (mirrors checkFollowRate). Returns (retryAfterSeconds,
+// false) when over limit. Fail-open when Redis is unavailable.
+func (s *UserService) checkPrefsRate(ctx context.Context, userID string) (int, bool) {
+	if s.Redis == nil {
+		return 0, true
+	}
+	key := "notif_prefs_rate_min:" + userID
+	max, _ := strconv.Atoi(os.Getenv("NOTIF_PREFS_RATE_PER_MINUTE"))
+	if max <= 0 {
+		max = notifPrefsRatePerMinuteDef
+	}
+	window := time.Minute
+	v, err := s.Redis.Get(ctx, key)
+	if err != nil || v == "" {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	var count int
+	var expires int64
+	if _, err := fmt.Sscanf(v, "%d:%d", &count, &expires); err != nil {
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if time.Now().Unix() >= expires { // window elapsed: reset
+		_ = s.Redis.Set(ctx, key, "1:"+strconv.FormatInt(time.Now().Add(window).Unix(), 10), window)
+		return 0, true
+	}
+	if count >= max {
+		return int(expires - time.Now().Unix()), false
+	}
+	_ = s.Redis.Set(ctx, key,
+		fmt.Sprintf("%d:%d", count+1, expires),
+		time.Duration(expires-time.Now().Unix())*time.Second)
+	return 0, true
+}
+
+// GetNotificationPreferences returns the caller's effective notification
+// preferences (defaults materialized when no row exists).
+func (s *UserService) GetNotificationPreferences(ctx context.Context, _ *pb.GetNotificationPreferencesRequest) (*pb.NotificationPreferences, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.NotificationPrefsRepo == nil {
+		return nil, status.Error(codes.Internal, "notification preferences unavailable")
+	}
+	prefs, found, err := s.NotificationPrefsRepo.Get(ctx, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to load notification preferences: %v", err)
+	}
+	return prefsToProto(prefs, found), nil
+}
+
+// UpdateNotificationPreferences applies a subset of the preference fields
+// (rate-limited) and returns the full effective preferences.
+func (s *UserService) UpdateNotificationPreferences(ctx context.Context, req *pb.UpdateNotificationPreferencesRequest) (*pb.NotificationPreferences, error) {
+	userID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s.NotificationPrefsRepo == nil {
+		return nil, status.Error(codes.Internal, "notification preferences unavailable")
+	}
+	// Rate limit (anti-tamper): NOTIF_PREFS_RATE_PER_MINUTE (default 30).
+	if retryAfter, ok := s.checkPrefsRate(ctx, userID); !ok {
+		return nil, status.Errorf(codes.ResourceExhausted,
+			"rate limit exceeded, retry after %d seconds", retryAfter)
+	}
+	// Build the partial update from the optional fields.
+	var like, favorite, fork, comment, follow, paused *bool
+	if req.LikeEnabled != nil {
+		like = req.LikeEnabled
+	}
+	if req.FavoriteEnabled != nil {
+		favorite = req.FavoriteEnabled
+	}
+	if req.ForkEnabled != nil {
+		fork = req.ForkEnabled
+	}
+	if req.CommentEnabled != nil {
+		comment = req.CommentEnabled
+	}
+	if req.FollowEnabled != nil {
+		follow = req.FollowEnabled
+	}
+	if req.PausedAll != nil {
+		paused = req.PausedAll
+	}
+	if err := s.NotificationPrefsRepo.Upsert(ctx, userID, like, favorite, fork, comment, follow, paused); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update notification preferences: %v", err)
+	}
+	// Invalidate the in-process cache so the change takes effect immediately.
+	notifPrefsCache.invalidate(userID)
+	// Return the full effective preferences.
+	updated, found, err := s.NotificationPrefsRepo.Get(ctx, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to reload notification preferences: %v", err)
+	}
+	return prefsToProto(updated, found), nil
+}
+
 // emitFollowNotification sends a best-effort 'follow' notification to the
 // followee. Nil-safe: skipped when the notification repo is absent. Self
 // follows are rejected earlier, so no self-suppression is needed here.
 func (s *UserService) emitFollowNotification(ctx context.Context, followeeID, followerID string) {
 	if s.NotificationRepo == nil || s.Repo == nil {
 		return
+	}
+	if !prefsAllow(ctx, s.NotificationPrefsRepo, followeeID, "follow") {
+		return // suppressed by preference
 	}
 	actor, err := s.Repo.GetByID(ctx, followerID)
 	if err != nil || actor == nil {

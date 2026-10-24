@@ -7,6 +7,8 @@ import notificationsReducer, {
   fetchNotifications,
   markAllRead,
 } from '../../store/notificationsSlice';
+import notificationPreferencesReducer from '../../store/notificationPreferencesSlice';
+import { NotificationProvider } from '../../context/NotificationContext';
 import NotificationBell from './NotificationBell';
 
 jest.mock('../../hooks/useNotificationPolling', () => jest.fn());
@@ -61,7 +63,7 @@ const renderBell = (notificationsState) => {
     return next(action);
   };
   const store = configureStore({
-    reducer: { notifications: notificationsReducer },
+    reducer: { notifications: notificationsReducer, notificationPreferences: notificationPreferencesReducer },
     preloadedState: notificationsState
       ? { notifications: notificationsState }
       : undefined,
@@ -70,7 +72,9 @@ const renderBell = (notificationsState) => {
   render(
     <Provider store={store}>
       <BrowserRouter>
-        <NotificationBell />
+        <NotificationProvider>
+          <NotificationBell />
+        </NotificationProvider>
       </BrowserRouter>
     </Provider>
   );

@@ -97,6 +97,7 @@ func main() {
 	templateVersionRepo := repository.NewTemplateVersionRepository(pgConn.DB)
 	templateAliasRepo := repository.NewTemplateAliasRepository(pgConn.DB)
 	notificationRepo := repository.NewNotificationRepository(pgConn.DB)
+	notificationPrefsRepo := repository.NewNotificationPreferencesRepository(pgConn.DB)
 	commentRepo := repository.NewCommentRepository(pgConn.DB)
 	followRepo := repository.NewFollowRepository(pgConn.DB)
 
@@ -121,6 +122,7 @@ func main() {
 	reviewRepo := repository.NewReviewRepository(pgConn.DB)
 	svc.SetReviewRepo(reviewRepo)
 	svc.SetFollowRepo(followRepo)
+	svc.SetNotificationPrefsRepo(notificationPrefsRepo)
 
 	// Prompt analytics: usage events + aggregation.
 	analyticsRepo := repository.NewAnalyticsRepository(pgConn.DB)
@@ -148,6 +150,7 @@ func main() {
 	userSvc := service.NewUserService(userRepo, apiKeyRepo, redisClient, emailSvc, jwtSecret)
 	userSvc.SetFollowRepo(followRepo)
 	userSvc.SetNotificationRepo(notificationRepo)
+	userSvc.SetNotificationPrefsRepo(notificationPrefsRepo)
 
 	// Admin Service
 	adminRepo := repository.NewAdminRepository(pgConn.DB)
@@ -1383,6 +1386,61 @@ func main() {
 			b, _ := marshaler.Marshal(resp)
 			_, _ = w.Write(b)
 
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Notification preferences: /api/v1/users/me/notification-preferences
+	// (GET + PATCH). Registered before the /{userId} patterns so "me" is never
+	// captured as a userId. The user is always derived from the token.
+	http.HandleFunc("/api/v1/users/me/notification-preferences", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := authInterceptor.VerifyAnyToken(r.Context(), tokenStr)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := service.ContextWithUserID(context.Background(), userID)
+
+		switch r.Method {
+		case http.MethodGet:
+			resp, err := userSvc.GetNotificationPreferences(ctx, &pb.GetNotificationPreferencesRequest{})
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
+		case http.MethodPatch:
+			body, _ := io.ReadAll(r.Body)
+			var req pb.UpdateNotificationPreferencesRequest
+			if err := unmarshaler.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			resp, err := userSvc.UpdateNotificationPreferences(ctx, &req)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			b, _ := marshaler.Marshal(resp)
+			_, _ = w.Write(b)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}

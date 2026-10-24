@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/Header';
 import Layout from '../components/Layout';
 import Modal from '../components/ui/Modal';
+import { GearIcon } from '../components/ui/Icons';
 import NotificationItem from '../components/notifications/NotificationItem';
+import NotificationPreferencesPanel from '../components/notifications/NotificationPreferencesPanel';
 import { useNotification } from '../context/NotificationContext';
 import {
   fetchNotifications,
@@ -32,6 +34,7 @@ const NotificationsPage = () => {
     items, unreadCount, filter, nextPageToken, hasMore, loading, error,
   } = useSelector((state) => state.notifications);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -125,16 +128,26 @@ const NotificationsPage = () => {
         <div className="notifications-page">
           <div className="notifications-page-header">
             <h1>{t('notifications.title')}</h1>
-            {unreadCount > 0 && (
+            <div className="notifications-page-actions">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleMarkAllRead}
+                  disabled={loading}
+                >
+                  {t('notifications.mark_all_read')}
+                </button>
+              )}
               <button
                 type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={handleMarkAllRead}
-                disabled={loading}
+                className="icon-btn notifications-prefs-gear"
+                onClick={() => setPrefsOpen(true)}
+                aria-label={t('notifPrefs.open')}
               >
-                {t('notifications.mark_all_read')}
+                <GearIcon size={19} />
               </button>
-            )}
+            </div>
           </div>
 
           <nav className="notifications-filter-tabs" aria-label={t('notifications.title')}>
@@ -218,6 +231,8 @@ const NotificationsPage = () => {
       >
         <p>{t('notifications.confirm.delete')}</p>
       </Modal>
+
+      <NotificationPreferencesPanel open={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </React.Fragment>
   );
 };

@@ -105,6 +105,8 @@ def get_auth_token(user_id):
         "display_name": "Test User",
         "verification_code": "123456"
     })
+    if resp.status_code != 200:
+        print(f"Register failed for {user_id}: {resp.status_code} {resp.text[:100]}")
     return resp.json().get("token")
 
 def test_profile_update():
@@ -5944,6 +5946,243 @@ def test_admin_template_moderation():
     return True
 
 
+def test_notification_preferences():
+    """Notification preferences (AC-1..AC-10):
+    1. Fresh user GET returns all defaults (like/favorite/fork/comment/follow
+       true, paused_all false).
+    2. PATCH a subset updates only those fields; GET returns effective prefs.
+    3. Suppression: disabling likes suppresses like notifications (no row,
+       no badge, no history).
+    4. Pause-all suppresses all five types; existing history remains browsable.
+    5. While paused, a type toggle PATCH is still accepted server-side and
+       takes effect once unpaused.
+    6. Re-enable: unpausing restores like notifications.
+    7. PATCH with a non-boolean value -> 400.
+    8. PATCH with an unknown field -> ignored (200, unchanged).
+    9. Cross-user isolation: only /me exists; no path to another user's prefs.
+    10. Unauthenticated -> 401 on both endpoints.
+    11. Rate limit: >30 PATCHes in a minute -> 429 with Retry-After.
+    """
+    print("\n--- Starting Notification Preferences Test ---")
+
+    APP = "http://localhost:8080/api/v1"
+    PREFS = f"{APP}/users/me/notification-preferences"
+    NOTIF_URL = f"{APP}/notifications"
+
+    owner_id = f"pref_owner_{int(time.time())}"
+    token_owner = get_auth_token(owner_id)
+    headers_owner = {"Authorization": f"Bearer {token_owner}"}
+
+    actor_id = f"pref_actor_{int(time.time())}"
+    token_actor = get_auth_token(actor_id)
+    headers_actor = {"Authorization": f"Bearer {token_actor}"}
+
+    # 1. Fresh user GET -> all defaults.
+    print("1. Fresh user GET returns defaults...")
+    resp = requests.get(PREFS, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"GET prefs failed: {resp.status_code} {resp.text}")
+        return False
+    prefs = resp.json()
+    if not (prefs.get("like_enabled") is True and prefs.get("favorite_enabled") is True
+            and prefs.get("fork_enabled") is True and prefs.get("comment_enabled") is True
+            and prefs.get("follow_enabled") is True and prefs.get("paused_all") is False):
+        print(f"Defaults mismatch: {prefs}")
+        return False
+    print("   PASS")
+
+    # 10. Unauthenticated -> 401 on both endpoints.
+    print("10. Unauthenticated -> 401...")
+    if requests.get(PREFS).status_code != 401:
+        print("GET prefs without token should be 401")
+        return False
+    if requests.patch(PREFS, json={"like_enabled": False}).status_code != 401:
+        print("PATCH prefs without token should be 401")
+        return False
+    print("   PASS")
+
+    # 2. PATCH a subset updates only those fields.
+    print("2. PATCH subset updates only those fields...")
+    resp = requests.patch(PREFS, headers=headers_owner, json={"like_enabled": False})
+    if resp.status_code != 200:
+        print(f"PATCH prefs failed: {resp.status_code} {resp.text}")
+        return False
+    prefs = resp.json()
+    if prefs.get("like_enabled") is not False or prefs.get("favorite_enabled") is not True \
+            or prefs.get("fork_enabled") is not True or prefs.get("comment_enabled") is not True \
+            or prefs.get("follow_enabled") is not True or prefs.get("paused_all") is not False:
+        print(f"Partial update mismatch: {prefs}")
+        return False
+    # GET reflects the persisted state.
+    resp = requests.get(PREFS, headers=headers_owner)
+    if resp.json().get("like_enabled") is not False:
+        print("GET should reflect persisted like_enabled=false")
+        return False
+    print("   PASS")
+
+    # 3. Suppression: owner creates a template; actor likes it; owner has
+    #    like_enabled=false -> no like notification.
+    print("3. Disabled likes suppress like notifications...")
+    t_data = {
+        "title": "Prefs Template",
+        "description": "For notification preferences tests",
+        "content": "Prefs content",
+        "owner_id": owner_id,
+        "visibility": "VISIBILITY_PUBLIC",
+        "category": "Social",
+        "tags": ["prefs"]
+    }
+    resp = requests.post(BASE_URL, json=t_data, headers=headers_owner)
+    if resp.status_code != 200:
+        print(f"Failed to create template: {resp.text}")
+        return False
+    t_id = resp.json()["template"]["id"]
+    CREATED_TEMPLATES.append({'id': t_id, 'owner_id': owner_id})
+
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    baseline_unread = resp.json().get("count", 0)
+
+    resp = requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)
+    if resp.status_code != 200 or not resp.json().get("is_liked"):
+        print(f"Like failed: {resp.text}")
+        return False
+
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    if resp.json().get("count", -1) != baseline_unread:
+        print(f"Like suppressed: unread should stay {baseline_unread}, got {resp.json().get('count')}")
+        return False
+    resp = requests.get(NOTIF_URL, headers=headers_owner, params={"filter": "all"})
+    for n in resp.json().get("notifications", []):
+        if n.get("type") == "like":
+            print("Like notification should be suppressed")
+            return False
+    print("   PASS")
+
+    # 4. Pause-all suppresses all five types.
+    print("4. Pause-all suppresses all five types...")
+    resp = requests.patch(PREFS, headers=headers_owner, json={"paused_all": True})
+    if resp.status_code != 200 or resp.json().get("paused_all") is not True:
+        print(f"Pause-all failed: {resp.status_code} {resp.text}")
+        return False
+
+    # favorite + fork + comment + follow while paused -> no notifications.
+    resp = requests.post(f"{BASE_URL}/{t_id}/favorite", headers=headers_actor)
+    if resp.status_code != 200:
+        print(f"Favorite failed: {resp.text}")
+        return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/fork", headers=headers_actor)
+    if resp.status_code != 200:
+        print(f"Fork failed: {resp.text}")
+        return False
+    resp = requests.post(f"{BASE_URL}/{t_id}/comments", headers=headers_actor,
+                         json={"content": "Paused comment"})
+    if resp.status_code != 200:
+        print(f"Comment failed: {resp.text}")
+        return False
+    resp = requests.post(f"{APP}/users/{owner_id}/follow", headers=headers_actor)
+    if resp.status_code != 200:
+        print(f"Follow failed: {resp.text}")
+        return False
+
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    if resp.json().get("count", -1) != baseline_unread:
+        print(f"Pause-all: unread should stay {baseline_unread}, got {resp.json().get('count')}")
+        return False
+    # Existing history remains browsable (the earlier like was suppressed, so
+    # the list is empty but the endpoint still returns 200).
+    resp = requests.get(NOTIF_URL, headers=headers_owner, params={"filter": "all"})
+    if resp.status_code != 200:
+        print("History should remain browsable while paused")
+        return False
+    print("   PASS")
+
+    # 5. While paused, a type toggle PATCH is accepted server-side and stored.
+    print("5. Type toggle PATCH accepted while paused...")
+    resp = requests.patch(PREFS, headers=headers_owner, json={"follow_enabled": False})
+    if resp.status_code != 200 or resp.json().get("follow_enabled") is not False:
+        print(f"PATCH while paused failed: {resp.status_code} {resp.text}")
+        return False
+    print("   PASS")
+
+    # 6. Re-enable: unpause; a new like creates a notification.
+    print("6. Unpause restores like notifications...")
+    resp = requests.patch(PREFS, headers=headers_owner, json={"paused_all": False})
+    if resp.status_code != 200 or resp.json().get("paused_all") is not False:
+        print(f"Unpause failed: {resp.status_code} {resp.text}")
+        return False
+    # like_enabled is still false from step 2, so re-enable it too.
+    resp = requests.patch(PREFS, headers=headers_owner, json={"like_enabled": True})
+    if resp.status_code != 200:
+        print(f"Re-enable likes failed: {resp.status_code} {resp.text}")
+        return False
+    # The template is already liked from step 3; unlike first so the next
+    # like is a fresh ON toggle that emits a notification.
+    requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)
+    resp = requests.post(f"{BASE_URL}/{t_id}/like", headers=headers_actor)
+    if resp.status_code != 200:
+        print(f"Like after unpause failed: {resp.text}")
+        return False
+    resp = requests.get(f"{NOTIF_URL}/unread-count", headers=headers_owner)
+    if resp.json().get("count", -1) != baseline_unread + 1:
+        print(f"Unpause: unread should be {baseline_unread + 1}, got {resp.json().get('count')}")
+        return False
+    print("   PASS")
+
+    # 7. PATCH with a non-boolean value -> 400.
+    print("7. Non-boolean PATCH -> 400...")
+    resp = requests.patch(PREFS, headers=headers_owner, json={"like_enabled": "yes"})
+    if resp.status_code != 400:
+        print(f"Non-boolean should be 400, got {resp.status_code}: {resp.text}")
+        return False
+    print("   PASS")
+
+    # 8. PATCH with an unknown field -> ignored (200, unchanged).
+    print("8. Unknown field PATCH -> ignored...")
+    resp = requests.patch(PREFS, headers=headers_owner, json={"bogus_field": True})
+    if resp.status_code != 200:
+        print(f"Unknown field should be 200, got {resp.status_code}: {resp.text}")
+        return False
+    resp = requests.get(PREFS, headers=headers_owner)
+    if resp.json().get("like_enabled") is not True:
+        print("Unknown field should not change prefs")
+        return False
+    print("   PASS")
+
+    # 9. Cross-user isolation: only /me exists; a second user's prefs are
+    #    independent (no IDOR surface).
+    print("9. Cross-user isolation...")
+    resp = requests.get(PREFS, headers=headers_actor)
+    if resp.status_code != 200:
+        print(f"Second user GET failed: {resp.status_code} {resp.text}")
+        return False
+    if resp.json().get("like_enabled") is not True:
+        print("Second user should have independent defaults")
+        return False
+    print("   PASS")
+
+    # 11. Rate limit: >30 PATCHes in a minute -> 429 with Retry-After.
+    print("11. Rate limit -> 429...")
+    got_429 = False
+    for i in range(35):
+        resp = requests.patch(PREFS, headers=headers_owner, json={"like_enabled": True})
+        if resp.status_code == 429:
+            got_429 = True
+            if "Retry-After" not in resp.headers:
+                print("429 should include Retry-After header")
+                return False
+            break
+        if resp.status_code != 200:
+            print(f"Unexpected PATCH status {resp.status_code}: {resp.text}")
+            return False
+    if not got_429:
+        print("Expected a 429 after exceeding the preference rate limit")
+        return False
+    print("   PASS")
+
+    print("--- Notification Preferences Test Passed ---")
+    return True
+
+
 def main():
     # Start containers. ADMIN_BOOTSTRAP_* is passed as an env prefix on the
     # compose command rather than baked into docker-compose.yml, so the stack
@@ -6005,6 +6244,7 @@ def main():
     if success: success = test_moderation_appeals()
     if success: success = test_content_reporting()
     if success: success = test_admin_template_moderation()
+    if success: success = test_notification_preferences()
     # Restore the default threshold for post-run manual verification.
     set_review_threshold(3, "FVT: restore default threshold")
 

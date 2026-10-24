@@ -55,6 +55,8 @@ services:
       # Template moderation: per-admin write rate limit + soft-delete window
       MOD_ACTION_RATE_PER_MINUTE: ${MOD_ACTION_RATE_PER_MINUTE:-10}
       MOD_SOFT_DELETE_WINDOW_DAYS: ${MOD_SOFT_DELETE_WINDOW_DAYS:-30}
+      # Notification preferences: max PATCH preference changes per minute
+      NOTIF_PREFS_RATE_PER_MINUTE: ${NOTIF_PREFS_RATE_PER_MINUTE:-30}
     depends_on:
       - postgres
       - redis

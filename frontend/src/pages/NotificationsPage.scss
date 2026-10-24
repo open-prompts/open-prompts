@@ -17,6 +17,20 @@
     }
   }
 
+  .notifications-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .notifications-prefs-gear {
+    color: var(--text-2, #c9d1d9);
+
+    &:hover {
+      color: var(--text-1, #e6edf3);
+    }
+  }
+
   .notifications-filter-tabs {
     display: flex;
     gap: 20px;

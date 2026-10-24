@@ -1236,5 +1236,27 @@
     "toast": {
       "actioned": "Template unpublished; report resolved"
     }
+  },
+  "notifPrefs": {
+    "title": "Notification preferences",
+    "pauseAll": "Pause all notifications",
+    "pauseAllDesc": "Stop all notifications of every type.",
+    "type": {
+      "like": "Likes",
+      "like.desc": "Someone likes your template.",
+      "favorite": "Favorites",
+      "favorite.desc": "Someone favorites your template.",
+      "fork": "Forks",
+      "fork.desc": "Someone forks your template.",
+      "comment": "Comments",
+      "comment.desc": "Someone comments on your template.",
+      "follow": "Follows",
+      "follow.desc": "Someone follows you."
+    },
+    "pausedNote": "Paused all is on — turn it off to adjust individual types.",
+    "autoSave": "Changes save automatically.",
+    "saved": "Saved",
+    "error": "Couldn't save. Try again.",
+    "open": "Notification preferences"
   }
 }

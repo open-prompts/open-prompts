@@ -45,6 +45,8 @@ backend:
     # Template moderation: per-admin write rate limit + soft-delete window
     modActionRatePerMinute: "10"
     modSoftDeleteWindowDays: "30"
+    # Notification preferences: max PATCH preference changes per minute
+    notifPrefsRatePerMinute: "30"
 
 frontend:
   replicaCount: 1

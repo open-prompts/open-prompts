@@ -1140,3 +1140,40 @@ BEGIN
                               'report.dismiss', 'report.actioned'));
     END IF;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- Feature: notification-preferences
+-- Description: Per-type opt-out + master pause for in-app notifications.
+--              One row per user, created lazily on first preference change
+--              (absence = all-enabled / not-paused). Read at event-emission
+--              time to suppress disabled/paused types.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    like_enabled BOOLEAN NOT NULL DEFAULT true,
+    favorite_enabled BOOLEAN NOT NULL DEFAULT true,
+    fork_enabled BOOLEAN NOT NULL DEFAULT true,
+    comment_enabled BOOLEAN NOT NULL DEFAULT true,
+    follow_enabled BOOLEAN NOT NULL DEFAULT true,
+    paused_all BOOLEAN NOT NULL DEFAULT false,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE notification_preferences IS
+    'Per-user notification preferences; absent row = all defaults';
+COMMENT ON COLUMN notification_preferences.user_id IS
+    'User owning these preferences (PK, cascade-deleted with the user)';
+COMMENT ON COLUMN notification_preferences.like_enabled IS
+    'Receive like notifications (default true)';
+COMMENT ON COLUMN notification_preferences.favorite_enabled IS
+    'Receive favorite notifications (default true)';
+COMMENT ON COLUMN notification_preferences.fork_enabled IS
+    'Receive fork notifications (default true)';
+COMMENT ON COLUMN notification_preferences.comment_enabled IS
+    'Receive comment notifications (default true)';
+COMMENT ON COLUMN notification_preferences.follow_enabled IS
+    'Receive follow notifications (default true)';
+COMMENT ON COLUMN notification_preferences.paused_all IS
+    'Master pause: when true, no notification of any type is created';
+COMMENT ON COLUMN notification_preferences.updated_at IS
+    'Last preference change timestamp';

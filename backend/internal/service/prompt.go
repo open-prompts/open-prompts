@@ -27,20 +27,21 @@ import (
 
 type PromptService struct {
 	pb.UnimplementedPromptServiceServer
-	PromptRepo          repository.PromptRepository
-	TemplateRepo        repository.TemplateRepository
-	TemplateVersionRepo repository.TemplateVersionRepository
-	TemplateAliasRepo   repository.TemplateAliasRepository
-	NotificationRepo    repository.NotificationRepository
-	UserRepo            repository.UserRepository
-	CommentRepo         repository.CommentRepository
-	ReviewRepo          repository.ReviewRepository
-	FollowRepo          repository.FollowRepository
-	AnalyticsRepo       AnalyticsRepo
-	AppealRepo          repository.AppealRepository
-	ReportRepo          repository.ReportRepository
-	AdminRepo           repository.AdminRepository
-	Redis               RedisStore
+	PromptRepo            repository.PromptRepository
+	TemplateRepo          repository.TemplateRepository
+	TemplateVersionRepo   repository.TemplateVersionRepository
+	TemplateAliasRepo     repository.TemplateAliasRepository
+	NotificationRepo      repository.NotificationRepository
+	NotificationPrefsRepo repository.NotificationPreferencesRepository
+	UserRepo              repository.UserRepository
+	CommentRepo           repository.CommentRepository
+	ReviewRepo            repository.ReviewRepository
+	FollowRepo            repository.FollowRepository
+	AnalyticsRepo         AnalyticsRepo
+	AppealRepo            repository.AppealRepository
+	ReportRepo            repository.ReportRepository
+	AdminRepo             repository.AdminRepository
+	Redis                 RedisStore
 
 	// settingsCache caches platform settings (review thresholds) for
 	// settingsCacheTTL to keep the publish hot path free of per-request
@@ -109,6 +110,12 @@ func (s *PromptService) SetReviewRepo(repo repository.ReviewRepository) {
 // owner enrichment is skipped when absent).
 func (s *PromptService) SetFollowRepo(repo repository.FollowRepository) {
 	s.FollowRepo = repo
+}
+
+// SetNotificationPrefsRepo wires the notification-preferences repository
+// after construction (nil-safe; the preference check fails open when nil).
+func (s *PromptService) SetNotificationPrefsRepo(repo repository.NotificationPreferencesRepository) {
+	s.NotificationPrefsRepo = repo
 }
 
 // SetAnalyticsRepo wires the analytics repository after construction
@@ -308,6 +315,9 @@ func (s *PromptService) createEngagementNotification(ctx context.Context, notifi
 	}
 	if ownerID == actorID {
 		return
+	}
+	if !prefsAllow(ctx, s.NotificationPrefsRepo, ownerID, notificationType) {
+		return // suppressed by preference
 	}
 	actor, err := s.UserRepo.GetByID(ctx, actorID)
 	if err != nil || actor == nil {

@@ -293,6 +293,9 @@ func (s *PromptService) notifyCommentReply(ctx context.Context, tpl *models.Temp
 	if parent.UserID == actorID {
 		return // replying to your own comment sends no notification
 	}
+	if !prefsAllow(ctx, s.NotificationPrefsRepo, parent.UserID, "comment") {
+		return // suppressed by preference
+	}
 	actor, err := s.UserRepo.GetByID(ctx, actorID)
 	if err != nil || actor == nil {
 		zap.S().Warnf("comment_reply hook: failed to load actor %s: %v", actorID, err)

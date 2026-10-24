@@ -46,6 +46,13 @@ service UserService {
   rpc ListFollowing(ListUserRelationsRequest) returns (ListUserRelationsResponse);
   rpc GetFollowingFeed(GetFollowingFeedRequest) returns (GetFollowingFeedResponse);
   rpc ListTopCreators(ListTopCreatorsRequest) returns (ListTopCreatorsResponse);
+
+  // GetNotificationPreferences returns the caller's effective notification
+  // preferences (defaults materialized when no row exists).
+  rpc GetNotificationPreferences(GetNotificationPreferencesRequest) returns (NotificationPreferences);
+  // UpdateNotificationPreferences applies a subset of the preference fields
+  // and returns the full effective preferences.
+  rpc UpdateNotificationPreferences(UpdateNotificationPreferencesRequest) returns (NotificationPreferences);
 }
 
 // PromptService defines the RPC methods for managing templates and prompts.
@@ -763,6 +770,32 @@ message ListTopCreatorsRequest {
 message ListTopCreatorsResponse {
   repeated UserCard users = 1;
   int32 total_count = 2;
+}
+
+// GetNotificationPreferencesRequest is the request message for
+// GetNotificationPreferences. The user is derived from the auth token.
+message GetNotificationPreferencesRequest {}
+
+// NotificationPreferences is the caller's effective notification preferences.
+message NotificationPreferences {
+  bool like_enabled = 1;
+  bool favorite_enabled = 2;
+  bool fork_enabled = 3;
+  bool comment_enabled = 4;
+  bool follow_enabled = 5;
+  bool paused_all = 6;
+}
+
+// UpdateNotificationPreferencesRequest applies a subset of the preference
+// fields. Optional bool fields: only the fields explicitly present are
+// updated (proto3 optional distinguishes absent from false).
+message UpdateNotificationPreferencesRequest {
+  optional bool like_enabled = 1;
+  optional bool favorite_enabled = 2;
+  optional bool fork_enabled = 3;
+  optional bool comment_enabled = 4;
+  optional bool follow_enabled = 5;
+  optional bool paused_all = 6;
 }
 
 // OwnerInfo is the public owner identity on a template detail response.

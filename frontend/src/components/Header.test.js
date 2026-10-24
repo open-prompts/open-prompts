@@ -5,18 +5,22 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../store/authSlice';
 import notificationsReducer from '../store/notificationsSlice';
+import notificationPreferencesReducer from '../store/notificationPreferencesSlice';
+import { NotificationProvider } from '../context/NotificationContext';
 import Header from './Header';
 
 // Helper to render with Redux
 const renderWithRedux = (component, { initialState } = {}) => {
   const store = configureStore({
-    reducer: { auth: authReducer, notifications: notificationsReducer },
+    reducer: { auth: authReducer, notifications: notificationsReducer, notificationPreferences: notificationPreferencesReducer },
     preloadedState: initialState,
   });
   return {
     ...render(
       <Provider store={store}>
-        {component}
+        <NotificationProvider>
+          {component}
+        </NotificationProvider>
       </Provider>
     ),
     store,

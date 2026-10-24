@@ -19,27 +19,29 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Register_FullMethodName             = "/v1.UserService/Register"
-	UserService_Login_FullMethodName                = "/v1.UserService/Login"
-	UserService_LoginWithOAuth_FullMethodName       = "/v1.UserService/LoginWithOAuth"
-	UserService_SendVerificationCode_FullMethodName = "/v1.UserService/SendVerificationCode"
-	UserService_UpdateProfile_FullMethodName        = "/v1.UserService/UpdateProfile"
-	UserService_GetProfile_FullMethodName           = "/v1.UserService/GetProfile"
-	UserService_CreateAlias_FullMethodName          = "/v1.UserService/CreateAlias"
-	UserService_ListAliases_FullMethodName          = "/v1.UserService/ListAliases"
-	UserService_UpdateAlias_FullMethodName          = "/v1.UserService/UpdateAlias"
-	UserService_DeleteAlias_FullMethodName          = "/v1.UserService/DeleteAlias"
-	UserService_GetPromptByAlias_FullMethodName     = "/v1.UserService/GetPromptByAlias"
-	UserService_CreateAPIKey_FullMethodName         = "/v1.UserService/CreateAPIKey"
-	UserService_ListAPIKeys_FullMethodName          = "/v1.UserService/ListAPIKeys"
-	UserService_DeleteAPIKey_FullMethodName         = "/v1.UserService/DeleteAPIKey"
-	UserService_FollowUser_FullMethodName           = "/v1.UserService/FollowUser"
-	UserService_UnfollowUser_FullMethodName         = "/v1.UserService/UnfollowUser"
-	UserService_GetCreatorProfile_FullMethodName    = "/v1.UserService/GetCreatorProfile"
-	UserService_ListFollowers_FullMethodName        = "/v1.UserService/ListFollowers"
-	UserService_ListFollowing_FullMethodName        = "/v1.UserService/ListFollowing"
-	UserService_GetFollowingFeed_FullMethodName     = "/v1.UserService/GetFollowingFeed"
-	UserService_ListTopCreators_FullMethodName      = "/v1.UserService/ListTopCreators"
+	UserService_Register_FullMethodName                      = "/v1.UserService/Register"
+	UserService_Login_FullMethodName                         = "/v1.UserService/Login"
+	UserService_LoginWithOAuth_FullMethodName                = "/v1.UserService/LoginWithOAuth"
+	UserService_SendVerificationCode_FullMethodName          = "/v1.UserService/SendVerificationCode"
+	UserService_UpdateProfile_FullMethodName                 = "/v1.UserService/UpdateProfile"
+	UserService_GetProfile_FullMethodName                    = "/v1.UserService/GetProfile"
+	UserService_CreateAlias_FullMethodName                   = "/v1.UserService/CreateAlias"
+	UserService_ListAliases_FullMethodName                   = "/v1.UserService/ListAliases"
+	UserService_UpdateAlias_FullMethodName                   = "/v1.UserService/UpdateAlias"
+	UserService_DeleteAlias_FullMethodName                   = "/v1.UserService/DeleteAlias"
+	UserService_GetPromptByAlias_FullMethodName              = "/v1.UserService/GetPromptByAlias"
+	UserService_CreateAPIKey_FullMethodName                  = "/v1.UserService/CreateAPIKey"
+	UserService_ListAPIKeys_FullMethodName                   = "/v1.UserService/ListAPIKeys"
+	UserService_DeleteAPIKey_FullMethodName                  = "/v1.UserService/DeleteAPIKey"
+	UserService_FollowUser_FullMethodName                    = "/v1.UserService/FollowUser"
+	UserService_UnfollowUser_FullMethodName                  = "/v1.UserService/UnfollowUser"
+	UserService_GetCreatorProfile_FullMethodName             = "/v1.UserService/GetCreatorProfile"
+	UserService_ListFollowers_FullMethodName                 = "/v1.UserService/ListFollowers"
+	UserService_ListFollowing_FullMethodName                 = "/v1.UserService/ListFollowing"
+	UserService_GetFollowingFeed_FullMethodName              = "/v1.UserService/GetFollowingFeed"
+	UserService_ListTopCreators_FullMethodName               = "/v1.UserService/ListTopCreators"
+	UserService_GetNotificationPreferences_FullMethodName    = "/v1.UserService/GetNotificationPreferences"
+	UserService_UpdateNotificationPreferences_FullMethodName = "/v1.UserService/UpdateNotificationPreferences"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -78,6 +80,12 @@ type UserServiceClient interface {
 	ListFollowing(ctx context.Context, in *ListUserRelationsRequest, opts ...grpc.CallOption) (*ListUserRelationsResponse, error)
 	GetFollowingFeed(ctx context.Context, in *GetFollowingFeedRequest, opts ...grpc.CallOption) (*GetFollowingFeedResponse, error)
 	ListTopCreators(ctx context.Context, in *ListTopCreatorsRequest, opts ...grpc.CallOption) (*ListTopCreatorsResponse, error)
+	// GetNotificationPreferences returns the caller's effective notification
+	// preferences (defaults materialized when no row exists).
+	GetNotificationPreferences(ctx context.Context, in *GetNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferences, error)
+	// UpdateNotificationPreferences applies a subset of the preference fields
+	// and returns the full effective preferences.
+	UpdateNotificationPreferences(ctx context.Context, in *UpdateNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferences, error)
 }
 
 type userServiceClient struct {
@@ -298,6 +306,26 @@ func (c *userServiceClient) ListTopCreators(ctx context.Context, in *ListTopCrea
 	return out, nil
 }
 
+func (c *userServiceClient) GetNotificationPreferences(ctx context.Context, in *GetNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferences, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationPreferences)
+	err := c.cc.Invoke(ctx, UserService_GetNotificationPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) UpdateNotificationPreferences(ctx context.Context, in *UpdateNotificationPreferencesRequest, opts ...grpc.CallOption) (*NotificationPreferences, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationPreferences)
+	err := c.cc.Invoke(ctx, UserService_UpdateNotificationPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -334,6 +362,12 @@ type UserServiceServer interface {
 	ListFollowing(context.Context, *ListUserRelationsRequest) (*ListUserRelationsResponse, error)
 	GetFollowingFeed(context.Context, *GetFollowingFeedRequest) (*GetFollowingFeedResponse, error)
 	ListTopCreators(context.Context, *ListTopCreatorsRequest) (*ListTopCreatorsResponse, error)
+	// GetNotificationPreferences returns the caller's effective notification
+	// preferences (defaults materialized when no row exists).
+	GetNotificationPreferences(context.Context, *GetNotificationPreferencesRequest) (*NotificationPreferences, error)
+	// UpdateNotificationPreferences applies a subset of the preference fields
+	// and returns the full effective preferences.
+	UpdateNotificationPreferences(context.Context, *UpdateNotificationPreferencesRequest) (*NotificationPreferences, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -406,6 +440,12 @@ func (UnimplementedUserServiceServer) GetFollowingFeed(context.Context, *GetFoll
 }
 func (UnimplementedUserServiceServer) ListTopCreators(context.Context, *ListTopCreatorsRequest) (*ListTopCreatorsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTopCreators not implemented")
+}
+func (UnimplementedUserServiceServer) GetNotificationPreferences(context.Context, *GetNotificationPreferencesRequest) (*NotificationPreferences, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNotificationPreferences not implemented")
+}
+func (UnimplementedUserServiceServer) UpdateNotificationPreferences(context.Context, *UpdateNotificationPreferencesRequest) (*NotificationPreferences, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateNotificationPreferences not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -806,6 +846,42 @@ func _UserService_ListTopCreators_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetNotificationPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNotificationPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetNotificationPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetNotificationPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetNotificationPreferences(ctx, req.(*GetNotificationPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_UpdateNotificationPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateNotificationPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UpdateNotificationPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UpdateNotificationPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UpdateNotificationPreferences(ctx, req.(*UpdateNotificationPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -896,6 +972,14 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTopCreators",
 			Handler:    _UserService_ListTopCreators_Handler,
+		},
+		{
+			MethodName: "GetNotificationPreferences",
+			Handler:    _UserService_GetNotificationPreferences_Handler,
+		},
+		{
+			MethodName: "UpdateNotificationPreferences",
+			Handler:    _UserService_UpdateNotificationPreferences_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

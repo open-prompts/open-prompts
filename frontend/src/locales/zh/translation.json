@@ -1236,5 +1236,27 @@
     "toast": {
       "actioned": "模板已下架；举报已处理"
     }
+  },
+  "notifPrefs": {
+    "title": "通知偏好",
+    "pauseAll": "暂停所有通知",
+    "pauseAllDesc": "停止所有类型的通知。",
+    "type": {
+      "like": "点赞",
+      "like.desc": "有人点赞了你的模板。",
+      "favorite": "收藏",
+      "favorite.desc": "有人收藏了你的模板。",
+      "fork": "Fork",
+      "fork.desc": "有人 fork 了你的模板。",
+      "comment": "评论",
+      "comment.desc": "有人评论了你的模板。",
+      "follow": "关注",
+      "follow.desc": "有人关注了你。"
+    },
+    "pausedNote": "暂停全部已开启 —— 关闭后可调整单个类型。",
+    "autoSave": "更改自动保存。",
+    "saved": "已保存",
+    "error": "保存失败。请重试。",
+    "open": "通知偏好"
   }
 }

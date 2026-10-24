@@ -208,6 +208,15 @@ export const deleteNotification = (id) => {
   return api.delete(`/notifications/${id}`);
 };
 
+// API methods for Notification Preferences
+export const getNotificationPreferences = () => {
+  return api.get('/users/me/notification-preferences');
+};
+
+export const updateNotificationPreferences = (patch) => {
+  return api.patch('/users/me/notification-preferences', patch);
+};
+
 // API methods for Comments
 export const listTemplateComments = (templateId, params) => {
   return api.get(`/templates/${templateId}/comments`, { params });

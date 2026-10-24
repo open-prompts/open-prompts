@@ -73,3 +73,5 @@ spec:
               value: {{ .Values.backend.env.modActionRatePerMinute | quote }}
             - name: MOD_SOFT_DELETE_WINDOW_DAYS
               value: {{ .Values.backend.env.modSoftDeleteWindowDays | quote }}
+            - name: NOTIF_PREFS_RATE_PER_MINUTE
+              value: {{ .Values.backend.env.notifPrefsRatePerMinute | quote }}

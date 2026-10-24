@@ -11,6 +11,7 @@ import {
   markAllRead,
 } from '../../store/notificationsSlice';
 import NotificationItem from './NotificationItem';
+import NotificationPreferencesPanel from './NotificationPreferencesPanel';
 import './NotificationBell.scss';
 
 /**
@@ -23,6 +24,7 @@ const NotificationBell = () => {
   const navigate = useNavigate();
   const { items, unreadCount, loading, error } = useSelector((state) => state.notifications);
   const [isOpen, setIsOpen] = React.useState(false);
+  const [prefsOpen, setPrefsOpen] = React.useState(false);
   const wrapperRef = useDismissable(isOpen, () => setIsOpen(false));
   const bellRef = React.useRef(null);
 
@@ -151,8 +153,20 @@ const NotificationBell = () => {
           >
             {t('notifications.view_all')}
           </button>
+          <button
+            type="button"
+            className="notification-dropdown-footer notification-dropdown-prefs"
+            onClick={() => {
+              setIsOpen(false);
+              setPrefsOpen(true);
+            }}
+          >
+            {t('notifPrefs.open')}
+          </button>
         </div>
       )}
+
+      <NotificationPreferencesPanel open={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </div>
   );
 };
