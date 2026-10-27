@@ -1,3 +1,10 @@
+## [1.36.3](https://github.com/open-prompts/open-prompts/compare/v1.36.2...v1.36.3) (2026-10-27)
+
+
+### Bug Fixes
+
+* **ui:** prevent template card and related-rail overflow ([2f32572](https://github.com/open-prompts/open-prompts/commit/2f325729808f9f45c60847ca82eb7be1fedc99d9))
+
 ## [1.36.2](https://github.com/open-prompts/open-prompts/compare/v1.36.1...v1.36.2) (2026-10-27)
 
 
