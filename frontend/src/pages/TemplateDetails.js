@@ -1228,22 +1228,22 @@ print(prompt)`}
             </div>
 
             {isOwner && <OwnerStatsSection templateId={id} />}
-
-            {template.visibility === 'VISIBILITY_PUBLIC' && (
-              <>
-                <RelatedRail
-                  templateId={id}
-                  category={template.category}
-                  tags={template.tags}
-                />
-                <MoreFromAuthorRow
-                  templateId={id}
-                  authorName={template.owner_display_name || template.owner_id}
-                />
-              </>
-            )}
           </div>
         </div>
+
+        {template.visibility === 'VISIBILITY_PUBLIC' && (
+          <>
+            <RelatedRail
+              templateId={id}
+              category={template.category}
+              tags={template.tags}
+            />
+            <MoreFromAuthorRow
+              templateId={id}
+              authorName={template.owner_display_name || template.owner_id}
+            />
+          </>
+        )}
       </div>
 
       <Modal
