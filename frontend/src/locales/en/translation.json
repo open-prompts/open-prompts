@@ -51,6 +51,7 @@
     "success": "Success",
     "confirmation": "Confirmation",
     "delete": "Delete",
+    "edit": "Edit",
     "more": "More...",
     "save_changes": "Save Changes",
     "none": "None",
@@ -923,6 +924,7 @@
     },
     "new": "New collection",
     "items": "{{count}} templates",
+    "items_one": "{{count}} template",
     "items_other": "{{count}} templates",
     "by": "by {{name}}",
     "updated": "Updated {{date}}",
@@ -1015,7 +1017,9 @@
       "prompts": "Prompts",
       "collections": "Collections",
       "api_keys": "API Keys",
-      "aria": "{{label}}, {{count}} items"
+      "aria": "{{label}}, {{count}} items",
+      "aria_one": "{{label}}, {{count}} item",
+      "aria_other": "{{label}}, {{count}} items"
     },
     "activity": {
       "title": "Recent activity",

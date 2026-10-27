@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Header from '../components/Header';
 import Layout from '../components/Layout';
 import AppealStateChip from '../components/AppealStateChip';
 import { getAppeal } from '../services/api';
@@ -46,7 +45,6 @@ const AppealDetailPage = () => {
 
   return (
     <Layout>
-      <Header />
       <div className="appeal-detail">
         <button type="button" className="appeal-detail__back" onClick={() => navigate('/appeals')}>
           ← {t('appeal.list.title')}

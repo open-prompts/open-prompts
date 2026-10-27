@@ -91,7 +91,7 @@ const DailyChart = ({ series = [] }) => {
           aria-label={`${t('analytics.chart.title')} — ${t(`analytics.chart.${metric}`)}`}
         >
           <line x1="8" y1={height - 8} x2={width - 8} y2={height - 8} className="daily-chart__axis" />
-          <polyline points={path} fill="none" className="daily-chart__line" />
+          <path d={path} fill="none" className="daily-chart__line" />
           {points.map((p) => (
             <circle key={p.date} cx={p.x} cy={p.y} r="2.5" className="daily-chart__dot">
               <title>{`${p.date}: ${p.value}`}</title>

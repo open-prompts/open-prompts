@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Header from '../components/Header';
 import Layout from '../components/Layout';
 import AppealStateChip from '../components/AppealStateChip';
 import { listAppeals } from '../services/api';
@@ -45,7 +44,6 @@ const AppealsPage = () => {
 
   return (
     <Layout>
-      <Header />
       <div className="appeals-page">
         <h1 className="appeals-page__title">{t('appeal.list.title')}</h1>
         {error && <div className="appeals-page__error" role="alert">{error}</div>}

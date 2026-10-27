@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Header from '../components/Header';
 import Layout from '../components/Layout';
 import Modal from '../components/ui/Modal';
 import { GearIcon } from '../components/ui/Icons';
@@ -123,7 +122,6 @@ const NotificationsPage = () => {
 
   return (
     <React.Fragment>
-      <Header />
       <Layout showSidebar={false} showCreateButton={false}>
         <div className="notifications-page">
           <div className="notifications-page-header">

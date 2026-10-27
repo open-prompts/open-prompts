@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
  */
 const Sparkline = ({ series = [] }) => {
   const { t } = useTranslation();
-  const { path, width, height } = useMemo(() => {
+  const { path, width, height, pts } = useMemo(() => {
     const w = 120;
     const h = 32;
     const pad = 2;
@@ -21,7 +21,7 @@ const Sparkline = ({ series = [] }) => {
       return { x, y };
     });
     const p = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
-    return { path: p, width: w, height: h };
+    return { path: p, width: w, height: h, pts };
   }, [series]);
 
   const peak = useMemo(() => {
@@ -36,7 +36,7 @@ const Sparkline = ({ series = [] }) => {
       role="img"
       aria-label={t('analytics.owner_stats.sparkline', { peak })}
     >
-      <polyline points={path} fill="none" className="sparkline__line" />
+      {pts.length > 1 && <path d={path} fill="none" className="sparkline__line" />}
     </svg>
   );
 };

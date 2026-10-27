@@ -51,6 +51,7 @@
     "success": "成功",
     "confirmation": "确认",
     "delete": "删除",
+    "edit": "编辑",
     "more": "更多...",
     "save_changes": "保存更改",
     "none": "无",
@@ -923,6 +924,7 @@
     },
     "new": "新建合集",
     "items": "{{count}} 个模板",
+    "items_one": "{{count}} 个模板",
     "items_other": "{{count}} 个模板",
     "by": "由 {{name}} 创建",
     "updated": "更新于 {{date}}",
@@ -1015,7 +1017,9 @@
       "prompts": "提示词",
       "collections": "合集",
       "api_keys": "API 密钥",
-      "aria": "{{label}}，{{count}} 项"
+      "aria": "{{label}}，{{count}} 项",
+      "aria_one": "{{label}}，{{count}} 项",
+      "aria_other": "{{label}}，{{count}} 项"
     },
     "activity": {
       "title": "最近动态",
