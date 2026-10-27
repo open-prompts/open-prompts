@@ -1,3 +1,10 @@
+## [1.36.2](https://github.com/open-prompts/open-prompts/compare/v1.36.1...v1.36.2) (2026-10-27)
+
+
+### Bug Fixes
+
+* **ui:** move related and more-from-author sections to full content width ([0a01501](https://github.com/open-prompts/open-prompts/commit/0a01501b842c234faa6240cbbcd80f6634456ce4))
+
 ## [1.36.1](https://github.com/open-prompts/open-prompts/compare/v1.36.0...v1.36.1) (2026-10-27)
 
 
