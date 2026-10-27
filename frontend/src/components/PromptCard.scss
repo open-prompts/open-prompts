@@ -100,12 +100,14 @@
   gap: 10px;
   margin-top: auto;
   padding-top: 2px;
+  flex-wrap: wrap;
 }
 
 .card-footer .tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
 }
 
 .card-footer .tags .tag {

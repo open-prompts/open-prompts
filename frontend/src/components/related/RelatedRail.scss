@@ -17,6 +17,10 @@
   gap: 16px;
 }
 
+.related-rail__grid > * {
+  min-width: 0;
+}
+
 @media (max-width: 1024px) {
   .related-rail__grid {
     grid-template-columns: repeat(2, 1fr);

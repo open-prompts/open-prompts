@@ -17,6 +17,10 @@
   gap: 16px;
 }
 
+.more-from-author__grid > * {
+  min-width: 0;
+}
+
 @media (max-width: 1024px) {
   .more-from-author__grid {
     grid-template-columns: repeat(2, 1fr);
