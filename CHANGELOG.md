@@ -1,3 +1,10 @@
+## [1.36.1](https://github.com/open-prompts/open-prompts/compare/v1.36.0...v1.36.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **ui:** resolve duplicated header, chart polyline error, and i18n gaps ([244b8fc](https://github.com/open-prompts/open-prompts/commit/244b8fc57257a3dd55a430b7b3f283d52cbdee7b))
+
 # [1.36.0](https://github.com/open-prompts/open-prompts/compare/v1.35.1...v1.36.0) (2026-10-24)
 
 
