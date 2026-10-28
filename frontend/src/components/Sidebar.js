@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '../context/NotificationContext';
 import { getCategories, getTags } from '../services/api';
@@ -17,11 +17,31 @@ import './Sidebar.scss';
  */
 const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sharedCategories, mobileOpen, onClose }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
+
+  // When the sidebar is rendered outside the browse page (e.g. dashboard,
+  // collections, analytics), there is no onFilterChange handler. Category,
+  // tag and special-filter selections then navigate back to the browse page,
+  // carrying the filter through the URL so it is applied there.
+  const applyOrNavigate = (partial) => {
+    if (onFilterChange) {
+      onFilterChange(partial);
+      return;
+    }
+    const params = new URLSearchParams();
+    if (partial.category) params.set('category', partial.category);
+    if (partial.tags && partial.tags.length > 0) params.set('tags', partial.tags.join(','));
+    if (partial.visibility) params.set('visibility', partial.visibility);
+    if (partial.my_likes) params.set('my_likes', '1');
+    if (partial.my_favorites) params.set('my_favorites', '1');
+    const qs = params.toString();
+    navigate(qs ? `/?${qs}` : '/');
+  };
 
   const handleSelection = (callback) => {
     if (callback) callback();
@@ -66,7 +86,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
 
   const handleCategoryClick = (category, visibility) => {
     handleSelection(() => {
-        onFilterChange({
+        applyOrNavigate({
             category,
             visibility,
             tags: [],
@@ -83,7 +103,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
         const nextTags = currentTags.includes(tag)
           ? currentTags.filter((tg) => tg !== tag)
           : [...currentTags, tag];
-        onFilterChange({
+        applyOrNavigate({
             tags: nextTags,
             my_likes: false,
             my_favorites: false
@@ -94,7 +114,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
   const handleSpecialFilterClick = (type) => {
     handleSelection(() => {
       if (type === 'likes') {
-          onFilterChange({
+          applyOrNavigate({
             category: '',
             tags: [],
             visibility: '', // Search all visibilities
@@ -103,7 +123,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
             my_favorites: false
           });
       } else if (type === 'favorites') {
-          onFilterChange({
+          applyOrNavigate({
             category: '',
             tags: [],
             visibility: '',
@@ -117,7 +137,7 @@ const Sidebar = ({ onFilterChange, currentFilters, availableTags, categories: sh
 
   const handleMyAllClick = () => {
     handleSelection(() => {
-      onFilterChange({
+      applyOrNavigate({
         category: '',
         tags: [],
         visibility: '',

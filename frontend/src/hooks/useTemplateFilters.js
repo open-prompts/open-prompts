@@ -46,8 +46,8 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
       tags: parseTagsParam(searchParams.get('tags')),
       sort: normalizeSort(searchParams.get('sort') || ''),
       visibility: defaultVisibility,
-      myLikes: false,
-      myFavorites: false,
+      myLikes: searchParams.get('my_likes') === '1',
+      myFavorites: searchParams.get('my_favorites') === '1',
       ownerId: '',
       excludeWarned: urlHideWarned || savedHideWarned,
     };
@@ -89,6 +89,8 @@ const useTemplateFilters = ({ pageSize = 20, isAuthenticated = false, currentUse
       if (next.tags && next.tags.length > 0) params.tags = next.tags.join(',');
       if (next.sort && next.sort !== 'newest') params.sort = next.sort;
       if (next.visibility) params.visibility = next.visibility;
+      if (next.myLikes) params.my_likes = '1';
+      if (next.myFavorites) params.my_favorites = '1';
       if (next.excludeWarned) params.hideWarned = '1';
       setSearchParams(params, { replace });
     },

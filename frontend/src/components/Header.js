@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { MenuIcon, MoonIcon, SunIcon, TranslateIcon, UserIcon, ChevronDownIcon } from './ui/Icons';
+import { MenuIcon, MoonIcon, SunIcon, TranslateIcon, UserIcon, ChevronDownIcon, KeyIcon, LogoutIcon } from './ui/Icons';
 import NotificationBell from './notifications/NotificationBell';
 import { logout } from '../store/authSlice';
 import './Header.scss';
@@ -180,14 +180,17 @@ const Header = ({ onMenuClick }) => {
                   </div>
                 </div>
                 <button type="button" role="menuitem" className="dropdown-item" onClick={() => { navigate('/profile'); setIsDropdownOpen(false); }}>
-                  {t('header.profile')}
+                  <UserIcon size={16} className="dropdown-item__icon" />
+                  <span>{t('header.profile')}</span>
                 </button>
                 <button type="button" role="menuitem" className="dropdown-item" onClick={() => { navigate('/api-keys'); setIsDropdownOpen(false); }}>
-                  {t('api_keys.title', 'API Keys')}
+                  <KeyIcon size={16} className="dropdown-item__icon" />
+                  <span>{t('api_keys.title', 'API Keys')}</span>
                 </button>
                 <div className="dropdown-divider" />
                 <button type="button" role="menuitem" className="dropdown-item logout" onClick={handleLogout}>
-                  {t('header.logout')}
+                  <LogoutIcon size={16} className="dropdown-item__icon" />
+                  <span>{t('header.logout')}</span>
                 </button>
               </div>
             )}

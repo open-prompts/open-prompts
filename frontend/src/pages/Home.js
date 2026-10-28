@@ -158,6 +158,13 @@ const Home = () => {
     setActiveTab(next);
   };
 
+  // Sidebar category/tag/visibility selections always return to the Browse
+  // tab (and the browse page), regardless of the current sub-page/tab.
+  const handleSidebarFilterChange = (partial) => {
+    setActiveTab('browse');
+    applyFilterChange(partial);
+  };
+
   const handleRemoveKeyword = () => submitKeyword('');
   const handleRemoveCategory = () => setCategory('');
   const handleRemoveSort = () => setSort('newest');
@@ -180,7 +187,7 @@ const Home = () => {
 
   return (
     <Layout
-      onFilterChange={applyFilterChange}
+      onFilterChange={handleSidebarFilterChange}
       currentFilters={{
         category: filters.category,
         visibility: filters.visibility,

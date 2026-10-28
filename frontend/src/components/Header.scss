@@ -177,9 +177,9 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  min-width: 230px;
+  min-width: 248px;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   padding: 6px;
@@ -195,10 +195,11 @@
 .dropdown-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 6px;
+  min-width: 0;
 }
 
 .dropdown-avatar {
@@ -221,21 +222,41 @@
   font-family: var(--font-heading);
 }
 
+.dropdown-user-info {
+  min-width: 0;
+}
+
 .dropdown-user-name {
   font-weight: 650;
   font-size: 14px;
   color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropdown-user-email {
   font-size: 12px;
   color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
   padding: 9px 12px;
+  border: none;
   border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
   font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--text-2);
   cursor: pointer;
   transition: background var(--t-fast), color var(--t-fast);
@@ -244,12 +265,30 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.dropdown-item__icon {
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition: color var(--t-fast);
+}
+.dropdown-item:hover .dropdown-item__icon {
+  color: var(--accent);
+}
 
 .dropdown-item.logout {
   color: var(--danger);
 }
+.dropdown-item.logout .dropdown-item__icon {
+  color: var(--danger);
+}
 .dropdown-item.logout:hover {
   background: var(--danger-soft);
+  color: var(--danger);
+}
+.dropdown-item.logout:hover .dropdown-item__icon {
   color: var(--danger);
 }
 
