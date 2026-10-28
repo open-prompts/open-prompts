@@ -1,3 +1,10 @@
+## [1.36.4](https://github.com/open-prompts/open-prompts/compare/v1.36.3...v1.36.4) (2026-10-28)
+
+
+### Bug Fixes
+
+* **ui:** sidebar category/tag always returns to browse; polish user menu ([ba41342](https://github.com/open-prompts/open-prompts/commit/ba41342f5f50e865addcf7ee760417855a8abe3e))
+
 ## [1.36.3](https://github.com/open-prompts/open-prompts/compare/v1.36.2...v1.36.3) (2026-10-27)
 
 
