@@ -1,3 +1,10 @@
+## [1.36.5](https://github.com/open-prompts/open-prompts/compare/v1.36.4...v1.36.5) (2026-10-29)
+
+
+### Bug Fixes
+
+* **ui:** define admin console CSS tokens and fix light/dark visual errors ([3b0eba6](https://github.com/open-prompts/open-prompts/commit/3b0eba611f5caaca08752022cc49f3a260c16971))
+
 ## [1.36.4](https://github.com/open-prompts/open-prompts/compare/v1.36.3...v1.36.4) (2026-10-28)
 
 
