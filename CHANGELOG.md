@@ -1,3 +1,10 @@
+## [1.36.6](https://github.com/open-prompts/open-prompts/compare/v1.36.5...v1.36.6) (2026-10-29)
+
+
+### Bug Fixes
+
+* **ui:** polish admin topbar icon buttons to match user header ([bfef5d9](https://github.com/open-prompts/open-prompts/commit/bfef5d94eef75c1c57fa4f27d55ef6b076637b83))
+
 ## [1.36.5](https://github.com/open-prompts/open-prompts/compare/v1.36.4...v1.36.5) (2026-10-29)
 
 
