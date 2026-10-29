@@ -15,13 +15,13 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--admin-text-secondary, #9aa0a6);
+  color: var(--text-secondary);
 }
 
 .review-detail__section {
   padding: 16px;
   border-radius: 10px;
-  background: var(--admin-surface-raised, rgba(127, 127, 127, 0.06));
+  background: var(--surface-2);
 }
 
 .review-detail__section h2 {
@@ -30,22 +30,22 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--admin-text-secondary, #9aa0a6);
+  color: var(--text-secondary);
 }
 
 .review-detail__desc {
   margin: 0 0 12px;
   font-size: 14px;
-  color: var(--admin-text-primary, #e8eaed);
+  color: var(--text-primary);
 }
 
 .review-detail__content {
   margin: 0;
   padding: 14px;
   border-radius: 8px;
-  background: var(--admin-surface, #14161a);
-  border: 1px solid var(--admin-border, rgba(127, 127, 127, 0.2));
-  color: var(--admin-text-primary, #e8eaed);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
   font-family: var(--font-mono, 'SFMono-Regular', Consolas, monospace);
   font-size: 13px;
   line-height: 1.55;
@@ -65,13 +65,13 @@
 
 .review-detail__tag {
   font-size: 12px;
-  color: var(--admin-text-secondary, #9aa0a6);
+  color: var(--text-secondary);
 }
 
 .review-detail__author {
   margin: 0 0 8px;
   font-size: 14px;
-  color: var(--admin-text-primary, #e8eaed);
+  color: var(--text-primary);
 }
 
 .review-detail__chain {
@@ -89,17 +89,17 @@
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: var(--admin-text-primary, #e8eaed);
+  color: var(--text-primary);
 }
 
 .review-detail__chain-empty {
   margin: 0;
   font-size: 13px;
-  color: var(--admin-text-secondary, #9aa0a6);
+  color: var(--text-secondary);
 }
 
 .review-detail__chain-note {
-  color: var(--admin-text-secondary, #9aa0a6);
+  color: var(--text-secondary);
   font-style: italic;
 }
 
@@ -112,7 +112,7 @@
 
 .review-detail__kbd-hint {
   font-size: 12px;
-  color: var(--admin-text-secondary, #9aa0a6);
+  color: var(--text-secondary);
 }
 
 .review-reject-dialog__reasons {
@@ -128,7 +128,7 @@
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: var(--admin-text-primary, #e8eaed);
+  color: var(--text-primary);
 }
 
 .review-reject-dialog__reason {
@@ -142,7 +142,7 @@
 .review-reject-dialog__hint {
   margin: 0 0 12px;
   font-size: 12px;
-  color: var(--admin-warning, #f5a623);
+  color: var(--warning);
 }
 
 .review-reject-dialog__note-label {
@@ -150,16 +150,16 @@
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: var(--admin-text-primary, #e8eaed);
+  color: var(--text-primary);
 }
 
 .review-reject-dialog__note {
   width: 100%;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid var(--admin-border, rgba(127, 127, 127, 0.25));
-  background: var(--admin-surface, #14161a);
-  color: var(--admin-text-primary, #e8eaed);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 14px;
   resize: vertical;
 }
@@ -169,6 +169,6 @@
     position: sticky;
     bottom: 0;
     padding: 12px 0;
-    background: var(--admin-bg, #0f1115);
+    background: var(--background);
   }
 }

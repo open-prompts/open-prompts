@@ -1,6 +1,4 @@
 .appeals-queue {
-  padding: 24px;
-
   &__title {
     font-size: 22px;
     font-weight: 700;
@@ -15,15 +13,27 @@
   &__tab {
     padding: 6px 14px;
     border-radius: 999px;
-    border: 1px solid rgba(127, 127, 127, 0.3);
+    border: 1px solid var(--border);
     background: transparent;
-    color: inherit;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 13px;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      color: var(--text-primary);
+      background: var(--surface-hover);
+    }
+
     &--active {
-      background: #007aff;
-      border-color: #007aff;
+      background: var(--primary);
+      border-color: var(--primary);
       color: #fff;
+
+      &:hover {
+        background: var(--primary);
+        color: #fff;
+      }
     }
   }
   &__age {

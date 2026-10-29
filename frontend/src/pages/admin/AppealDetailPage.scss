@@ -1,6 +1,4 @@
 .appeal-admin-detail {
-  padding: 24px;
-
   &__heading {
     display: flex;
     align-items: center;
@@ -19,13 +17,14 @@
   &__pane {
     padding: 16px;
     border-radius: 10px;
-    border: 1px solid rgba(127, 127, 127, 0.2);
+    border: 1px solid var(--border);
+    background: var(--surface);
     h2 {
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      opacity: 0.7;
+      color: var(--text-secondary);
       margin-bottom: 10px;
     }
   }
@@ -34,10 +33,11 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
+    color: var(--text-primary);
   }
   &__meta {
     font-size: 12px;
-    opacity: 0.7;
+    color: var(--text-secondary);
     margin-top: 10px;
   }
   &__action {
@@ -47,29 +47,32 @@
   }
   &__action-type {
     font-weight: 600;
+    color: var(--text-primary);
   }
   &__action-reason {
     font-size: 13px;
+    color: var(--text-primary);
   }
   &__action-meta {
     font-size: 12px;
-    opacity: 0.7;
+    color: var(--text-secondary);
   }
   &__audit {
     font-size: 12px;
-    opacity: 0.7;
+    color: var(--text-secondary);
     margin-top: 4px;
   }
   &__resolution {
     padding: 16px;
     border-radius: 10px;
-    border: 1px solid rgba(127, 127, 127, 0.2);
+    border: 1px solid var(--border);
+    background: var(--surface);
     h2 {
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      opacity: 0.7;
+      color: var(--text-secondary);
       margin-bottom: 10px;
     }
   }
@@ -77,6 +80,7 @@
     font-size: 14px;
     line-height: 1.5;
     white-space: pre-wrap;
+    color: var(--text-primary);
   }
   &__actions {
     display: flex;
@@ -86,7 +90,7 @@
   }
   &__self-guard {
     font-size: 13px;
-    color: #b26a00;
+    color: var(--warning);
   }
   &__resolve-form {
     display: flex;
@@ -101,35 +105,38 @@
     legend {
       margin-bottom: 6px;
       font-weight: 600;
+      color: var(--text-primary);
     }
     label {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      color: var(--text-primary);
     }
   }
   &__confirm {
     font-size: 13px;
-    color: #b26a00;
+    color: var(--warning);
   }
   &__note-label {
     font-size: 13px;
     font-weight: 600;
+    color: var(--text-primary);
   }
   &__note {
     width: 100%;
     min-height: 90px;
     padding: 10px 12px;
     border-radius: 8px;
-    border: 1px solid rgba(127, 127, 127, 0.3);
-    background: transparent;
-    color: inherit;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
     font-family: inherit;
     font-size: 14px;
     resize: vertical;
   }
   &__note-rule {
     font-size: 12px;
-    opacity: 0.7;
+    color: var(--text-secondary);
   }
 }

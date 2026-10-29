@@ -43,7 +43,7 @@
   }
 
   &__empty {
-    color: var(--text-muted, #6b7280);
+    color: var(--text-3);
     font-size: 0.875rem;
   }
 
@@ -58,7 +58,7 @@
     gap: 0.75rem;
     align-items: baseline;
     padding: 0.4rem 0;
-    border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+    border-bottom: 1px solid var(--border);
     font-size: 0.85rem;
   }
 
@@ -68,10 +68,10 @@
 
   &__history-actor,
   &__history-time {
-    color: var(--text-muted, #6b7280);
+    color: var(--text-3);
   }
 
   &__history-reason {
-    color: var(--text-secondary, #4b5563);
+    color: var(--text-secondary);
   }
 }
