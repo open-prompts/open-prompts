@@ -128,7 +128,41 @@
   }
 
   &__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
     color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: color var(--t-fast), background var(--t-fast);
+
+    &:hover {
+      color: var(--text-primary);
+      background: var(--surface-hover);
+    }
+  }
+
+  &__lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 550;
+    transition: color var(--t-fast), background var(--t-fast);
+
+    &:hover {
+      color: var(--text-primary);
+      background: var(--surface-hover);
+    }
   }
 }
 

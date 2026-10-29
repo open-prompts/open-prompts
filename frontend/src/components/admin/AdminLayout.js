@@ -128,12 +128,13 @@ const AdminLayout = () => {
               {theme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}
             </button>
             <button
-              className="icon-btn admin-topbar__icon-btn"
+              className="admin-topbar__lang-btn"
               onClick={toggleLanguage}
               aria-label={t('admin.common.language')}
               title={t('admin.common.language')}
             >
               <TranslateIcon size={18} />
+              <span>{i18n.language && (i18n.language === 'zh' || i18n.language.startsWith('zh')) ? t('template.en') : t('template.zh')}</span>
             </button>
             <button className="admin-btn admin-btn--ghost" onClick={handleLogout}>
               {t('admin.common.logout')}
